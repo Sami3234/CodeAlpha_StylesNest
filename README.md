@@ -1,2 +1,1 @@
 # StylesNest
-StylesNest Store

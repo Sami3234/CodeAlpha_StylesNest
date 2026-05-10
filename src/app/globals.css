@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /** Total fixed header height (top bar + navbar); updated by Header ResizeObserver */
+  --site-header-h: 90px;
+}
+
+/* Prevent horizontal scroll on narrow viewports (100vw / fixed widths) */
+html {
+  overflow-x: clip;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Orange announcement strip (below main navbar; only visible when scroll is at page top) */
+.top-announcement-bar-shell {
+  overflow: hidden;
+  max-height: 120px;
+  transition:
+    max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.28s ease;
+  opacity: 1;
+}
+
+.top-announcement-bar-shell--collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-announcement-bar-shell {
+    transition-duration: 0.01ms;
+  }
+}
+
+.top-announcement-bar {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 52%, #ff8c42 100%);
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.top-announcement-inner {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 8px 15px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  row-gap: 8px;
+}
+
+.top-announcement-marquee {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+
+.top-announcement-track {
+  display: inline-flex;
+  gap: 4rem;
+  white-space: nowrap;
+  animation: top-announcement-scroll 48s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-announcement-track {
+    animation: none;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+}
+
+@keyframes top-announcement-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.top-announcement-text {
+  display: inline-block;
+}
+
+.top-announcement-spacer {
+  display: block;
+  min-height: 1em;
+}
+
+.top-announcement-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  flex-shrink: 0;
+}
+
+.top-announcement-extra-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.top-announcement-extra-link {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.top-announcement-extra-link:hover {
+  text-decoration: underline;
+}
+
+.top-announcement-care {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.top-announcement-care:hover {
+  text-decoration: underline;
+}
+
+.top-announcement-icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-announcement-icon {
+  color: #fff;
+  opacity: 0.95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.top-announcement-icon:hover {
+  opacity: 1;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  overflow-x: clip;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  /** Respect safe areas on notched phones */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}

@@ -1,0 +1,427 @@
+/**
+ * Multi-item orders admin page — readable typography & card layout.
+ */
+
+.aco-wrap {
+  max-width: 1200px;
+}
+
+.aco-hero {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.aco-title {
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem;
+  line-height: 1.25;
+}
+
+.aco-lede {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #475569;
+  max-width: 52rem;
+}
+
+.aco-lede strong {
+  color: #334155;
+  font-weight: 700;
+}
+
+.aco-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.aco-back:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.aco-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.aco-search {
+  flex: 1 1 260px;
+  max-width: 28rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.9375rem;
+  color: #0f172a;
+  background: #fff;
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.aco-search::placeholder {
+  color: #94a3b8;
+}
+
+.aco-search:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.aco-count {
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.aco-count strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.aco-empty {
+  background: #fff;
+  border-radius: 14px;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 1rem;
+}
+
+.aco-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.aco-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.06),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.aco-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.aco-card__head-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+}
+
+.aco-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1e293b;
+  background: #fff;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.aco-expand:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.aco-order-id {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.aco-when {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .aco-when {
+    text-align: left;
+    width: 100%;
+  }
+}
+
+.aco-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .aco-meta {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(180px, 220px);
+    align-items: start;
+  }
+}
+
+.aco-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.aco-customer-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.aco-customer-phone {
+  margin-top: 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.aco-city {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.aco-address {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.aco-total-col {
+  padding-top: 0.25rem;
+}
+
+@media (min-width: 768px) {
+  .aco-total-col {
+    text-align: right;
+    padding-top: 0;
+    border-left: 1px solid #e2e8f0;
+    padding-left: 1.25rem;
+    margin-left: 0;
+  }
+}
+
+.aco-total-amt {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #4f46e5;
+  letter-spacing: -0.02em;
+}
+
+.aco-status-field {
+  margin-top: 0.85rem;
+}
+
+.aco-status-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 0.35rem;
+}
+
+.aco-select {
+  width: 100%;
+  max-width: 220px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #fff;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .aco-select {
+    margin-left: auto;
+    display: block;
+  }
+}
+
+.aco-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.aco-lines {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.aco-lines > .aco-label:first-of-type {
+  margin-bottom: 0.5rem;
+}
+
+.aco-table-scroll {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.aco-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.aco-table thead {
+  background: #e2e8f0;
+}
+
+.aco-table th {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #334155;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.aco-table th:last-child {
+  text-align: right;
+}
+
+.aco-table td {
+  padding: 0.85rem;
+  vertical-align: top;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.aco-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.aco-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.aco-td-num {
+  font-weight: 700;
+  color: #475569;
+  width: 2.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.aco-td-product {
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.45;
+  min-width: 200px;
+}
+
+.aco-td-qty {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+}
+
+.aco-td-price {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+}
+
+.aco-td-line {
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.aco-loading {
+  color: #475569;
+  font-size: 0.9375rem;
+}
+
+/* Status pills — consistent with card chrome */
+.aco-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}
+
+.aco-badge--pending {
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #fde047;
+}
+
+.aco-badge--processing {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border-color: #93c5fd;
+}
+
+.aco-badge--shipped {
+  background: #e0e7ff;
+  color: #312e81;
+  border-color: #a5b4fc;
+}
+
+.aco-badge--delivered {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #6ee7b7;
+}
+
+.aco-badge--cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
