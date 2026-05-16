@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Playfair_Display, Poppins } from "next/font/google";
 import "./globals.css";
 import { ProductProvider } from "@/context/ProductContext";
@@ -6,6 +5,11 @@ import { OrderProvider } from "@/context/OrderContext";
 import { CartProvider } from "@/context/CartContext";
 import AuthProvider from "@/components/providers/AuthProvider";
 import { LoginModalProvider } from "@/context/LoginModalContext";
+import JsonLd from "@/components/seo/JsonLd";
+import { rootMetadata } from "@/lib/seo/metadata";
+import { onlineStoreJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld-builders";
+
+export { rootMetadata as metadata };
 
 const poppins = Poppins({
   weight: ['400', '500', '600', '700'],
@@ -25,12 +29,6 @@ const brandMark = Playfair_Display({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "StylesNest - Best Deals with Free Delivery",
-  description: "Best deals on electronics, cosmetics, watches and more with free delivery across Pakistan. Cash on delivery available.",
-  keywords: "StylesNest, Pakistan, online shopping, electronics, cosmetics, watches, free delivery",
-};
-
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -49,6 +47,7 @@ export default function RootLayout({
         style={{ backgroundColor: '#f5f5f5', color: '#171717' }}
         suppressHydrationWarning
       >
+        <JsonLd data={[organizationJsonLd(), websiteJsonLd(), onlineStoreJsonLd()]} />
         <AuthProvider>
           <LoginModalProvider>
             <ProductProvider>
