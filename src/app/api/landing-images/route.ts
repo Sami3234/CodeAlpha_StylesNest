@@ -3,6 +3,7 @@ import { sql } from '@/lib/db';
 import { v2 as cloudinary } from 'cloudinary';
 import { configureCloudinary } from '@/lib/cloudinary-config';
 import { landingImageFolder, sanitizePathSegment } from '@/lib/cloudinary-folders';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 configureCloudinary();
 
@@ -191,23 +192,15 @@ export async function POST(request: NextRequest) {
       } catch (cloudinaryError) {
         console.error('Error cleaning up Cloudinary:', cloudinaryError);
       }
-      return NextResponse.json(
-        { 
-          error: 'Failed to save image to database. Please check your database connection.',
-          details: dbError instanceof Error ? dbError.message : 'Database connection error'
-        },
-        { status: 500 }
-      );
+      return apiErrorResponse({
+        message: 'Failed to save image. Please try again.',
+        status: 500,
+        cause: dbError,
+      });
     }
   } catch (error) {
     console.error('Error uploading landing image:', error);
-    return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : 'Failed to upload image',
-        details: error instanceof Error ? error.stack : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to upload image', status: 500, cause: error });
   }
 }
 

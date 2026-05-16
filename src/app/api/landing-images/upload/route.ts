@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import { configureCloudinary } from '@/lib/cloudinary-config';
 import { landingImageFolder, sanitizePathSegment } from '@/lib/cloudinary-folders';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 configureCloudinary();
 
@@ -52,11 +53,7 @@ export async function POST(request: NextRequest) {
       message: 'Image uploaded successfully'
     });
   } catch (error) {
-    console.error('Error uploading image:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to upload image' },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to upload image', status: 500, cause: error });
   }
 }
 

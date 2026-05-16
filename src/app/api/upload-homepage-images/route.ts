@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { configureCloudinary } from '@/lib/cloudinary-config';
 import { homepageBulkFolder, sanitizePathSegment } from '@/lib/cloudinary-folders';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 configureCloudinary();
 
@@ -34,9 +35,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Upload error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to upload' },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to upload', status: 500, cause: error });
   }
 }

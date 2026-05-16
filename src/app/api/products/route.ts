@@ -1,11 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { ensureProductSchema } from '@/lib/ensure-product-schema';
+import { mapProductRow } from '@/lib/product-mapper';
+import { categoryShowsGender, validateCategoryOptions } from '@/lib/category-form-fields';
+import { isClothesCategory, parseClothesOptions } from '@/lib/clothes-options';
+import { normalizeProductMetaForSave, parseProductMeta } from '@/lib/product-meta';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
+
+function serializeClothesOptions(category: string, clothesOptions: unknown) {
+  if (!categoryShowsGender(category) && !isClothesCategory(category)) {
+    return null;
+  }
+  const parsed = parseClothesOptions(clothesOptions);
+  const check = validateCategoryOptions(category, parsed);
+  if (!check.valid) {
+    return { error: check.error };
+  }
+  return { value: JSON.stringify(parsed) };
+}
 
 // GET all products
 export async function GET() {
   try {
+    await ensureProductSchema();
+
     const rows = await sql`
       SELECT 
         id,
@@ -24,6 +44,8 @@ export async function GET() {
         features_en,
         features_ar,
         pricing_tiers,
+        clothes_options,
+        product_meta,
         status,
         created_at,
         updated_at
@@ -31,46 +53,19 @@ export async function GET() {
       ORDER BY created_at DESC
     `;
 
-    // Transform database rows to Product format
-    const products = rows.map((row) => ({
-      id: row.id,
-      title: {
-        en: row.title_en,
-        ar: row.title_ar,
-      },
-      description: {
-        en: row.description_en,
-        ar: row.description_ar,
-      },
-      currentPrice: parseFloat(row.current_price),
-      originalPrice: parseFloat(row.original_price),
-      discount: row.discount,
-      image: row.image,
-      images: row.images || [],
-      freeDelivery: row.free_delivery,
-      soldCount: row.sold_count,
-      category: row.category,
-      features: (row.features_en && row.features_en.length > 0) ? {
-        en: row.features_en,
-        ar: row.features_ar,
-      } : undefined,
-      pricingTiers: row.pricing_tiers || [],
-      status: row.status,
-    }));
+    const products = rows.map((row) => mapProductRow(row as Record<string, unknown>));
 
     return NextResponse.json({ products });
   } catch (error) {
-    console.error('Error fetching products:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch products' },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to fetch products', status: 500, cause: error });
   }
 }
 
 // POST - Create new product
 export async function POST(request: NextRequest) {
   try {
+    await ensureProductSchema();
+
     const body = await request.json();
     console.log('Received product data:', JSON.stringify(body, null, 2));
     
@@ -88,11 +83,11 @@ export async function POST(request: NextRequest) {
       features,
       pricingTiers,
       status,
+      clothesOptions,
+      productMeta,
     } = body;
 
-    // Validation
     if (!title || !title.en || !title.ar) {
-      console.error('Validation error: Title missing');
       return NextResponse.json(
         { error: 'Title (English and Arabic) is required' },
         { status: 400 }
@@ -100,7 +95,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (!description || !description.en || !description.ar) {
-      console.error('Validation error: Description missing');
       return NextResponse.json(
         { error: 'Description (English and Arabic) is required' },
         { status: 400 }
@@ -108,14 +102,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (!image || !image.trim()) {
-      console.error('Validation error: Image URL missing');
       return NextResponse.json(
         { error: 'Image URL is required' },
         { status: 400 }
       );
     }
 
-    console.log('Inserting into database...');
+    const clothesSerialized = serializeClothesOptions(category, clothesOptions);
+    if (clothesSerialized && 'error' in clothesSerialized) {
+      return NextResponse.json({ error: clothesSerialized.error }, { status: 400 });
+    }
+
+    const metaJson = JSON.stringify(
+      normalizeProductMetaForSave(parseProductMeta(productMeta) ?? {})
+    );
+
     const result = await sql`
       INSERT INTO products (
         title_en,
@@ -133,6 +134,8 @@ export async function POST(request: NextRequest) {
         features_en,
         features_ar,
         pricing_tiers,
+        clothes_options,
+        product_meta,
         status
       )
       VALUES (
@@ -151,58 +154,26 @@ export async function POST(request: NextRequest) {
         ${JSON.stringify(features?.en || [])},
         ${JSON.stringify(features?.ar || [])},
         ${JSON.stringify(pricingTiers || [])},
+        ${clothesSerialized && 'value' in clothesSerialized ? clothesSerialized.value : null},
+        ${metaJson},
         ${status || 'active'}
       )
       RETURNING *
     `;
 
-    const row = result[0];
-    const product = {
-      id: row.id,
-      title: {
-        en: row.title_en,
-        ar: row.title_ar,
-      },
-      description: {
-        en: row.description_en,
-        ar: row.description_ar,
-      },
-      currentPrice: parseFloat(row.current_price),
-      originalPrice: parseFloat(row.original_price),
-      discount: row.discount,
-      image: row.image,
-      images: row.images || [],
-      freeDelivery: row.free_delivery,
-      soldCount: row.sold_count,
-      category: row.category,
-      features: (row.features_en && row.features_en.length > 0) ? {
-        en: row.features_en,
-        ar: row.features_ar,
-      } : undefined,
-      pricingTiers: row.pricing_tiers || [],
-      status: row.status,
-    };
+    const product = mapProductRow(result[0] as Record<string, unknown>);
 
-    console.log('Product created successfully:', product.id);
     return NextResponse.json({ product }, { status: 201 });
   } catch (error) {
-    console.error('Error creating product:', error);
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    return NextResponse.json(
-      { 
-        error: 'Failed to create product',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        hint: 'Check server logs for more details'
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to create product', status: 500, cause: error });
   }
 }
 
 // PUT - Update product
 export async function PUT(request: NextRequest) {
   try {
+    await ensureProductSchema();
+
     const body = await request.json();
     const {
       id,
@@ -219,7 +190,18 @@ export async function PUT(request: NextRequest) {
       features,
       pricingTiers,
       status,
+      clothesOptions,
+      productMeta,
     } = body;
+
+    const clothesSerialized = serializeClothesOptions(category, clothesOptions);
+    if (clothesSerialized && 'error' in clothesSerialized) {
+      return NextResponse.json({ error: clothesSerialized.error }, { status: 400 });
+    }
+
+    const metaJson = JSON.stringify(
+      normalizeProductMetaForSave(parseProductMeta(productMeta) ?? {})
+    );
 
     const result = await sql`
       UPDATE products
@@ -239,6 +221,8 @@ export async function PUT(request: NextRequest) {
         features_en = ${JSON.stringify(features?.en || [])},
         features_ar = ${JSON.stringify(features?.ar || [])},
         pricing_tiers = ${JSON.stringify(pricingTiers || [])},
+        clothes_options = ${clothesSerialized && 'value' in clothesSerialized ? clothesSerialized.value : null},
+        product_meta = ${metaJson},
         status = ${status || 'active'},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
@@ -252,32 +236,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const row = result[0];
-    const product = {
-      id: row.id,
-      title: {
-        en: row.title_en,
-        ar: row.title_ar,
-      },
-      description: {
-        en: row.description_en,
-        ar: row.description_ar,
-      },
-      currentPrice: parseFloat(row.current_price),
-      originalPrice: parseFloat(row.original_price),
-      discount: row.discount,
-      image: row.image,
-      images: row.images || [],
-      freeDelivery: row.free_delivery,
-      soldCount: row.sold_count,
-      category: row.category,
-      features: (row.features_en && row.features_en.length > 0) ? {
-        en: row.features_en,
-        ar: row.features_ar,
-      } : undefined,
-      pricingTiers: row.pricing_tiers || [],
-      status: row.status,
-    };
+    const product = mapProductRow(result[0] as Record<string, unknown>);
 
     return NextResponse.json({ product });
   } catch (error) {
@@ -302,20 +261,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const result = await sql`
-      DELETE FROM products
-      WHERE id = ${id}
-      RETURNING id
-    `;
+    await sql`DELETE FROM products WHERE id = ${id}`;
 
-    if (result.length === 0) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, id: result[0].id });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting product:', error);
     return NextResponse.json(
@@ -324,4 +272,3 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
-

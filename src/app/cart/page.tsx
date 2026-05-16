@@ -12,6 +12,7 @@ import { useCart } from '@/context/CartContext';
 import { useProducts } from '@/context/ProductContext';
 import { persistCheckoutProductIds } from '@/lib/checkout-selection';
 import { getProductTitle } from '@/utils/getProductText';
+import { formatPrice } from '@/utils/formatPrice';
 
 function CartPageContent() {
   const router = useRouter();
@@ -201,7 +202,7 @@ function CartPageContent() {
                 </button>
                 <span className="text-sm text-slate-500">
                   {selectedCount} of {selectableRows.length} items selected ·{' '}
-                  <span className="font-semibold text-[#667eea]">{selectedSubtotal.toFixed(2)} PKR</span>
+                  <span className="font-semibold text-[#667eea]">{formatPrice(selectedSubtotal)} PKR</span>
                 </span>
               </div>
             ) : null}
@@ -281,7 +282,7 @@ function CartPageContent() {
                             {getProductTitle(product)}
                           </Link>
                           <p style={{ color: '#64748b', fontSize: '14px', marginTop: '6px' }}>
-                            {product.currentPrice.toFixed(2)} PKR each
+                            {formatPrice(product.currentPrice)} PKR each
                           </p>
                         </>
                       ) : (
@@ -325,7 +326,7 @@ function CartPageContent() {
                       </button>
                       {product ? (
                         <p className="w-full text-right text-lg font-bold text-[#c44569] sm:w-auto">
-                          {(product.currentPrice * line.quantity).toFixed(2)} PKR
+                          {formatPrice(product.currentPrice * line.quantity)} PKR
                         </p>
                       ) : null}
                     </div>
@@ -339,7 +340,7 @@ function CartPageContent() {
                 <div>
                   <span style={{ fontSize: '14px', fontWeight: 600, color: '#64748b' }}>Cart subtotal</span>
                   <div style={{ fontSize: '22px', fontWeight: 800, color: '#667eea' }}>
-                    {subtotalAll.toFixed(2)} PKR
+                    {formatPrice(subtotalAll)} PKR
                   </div>
                 </div>
                 <div className="text-right">
@@ -347,7 +348,7 @@ function CartPageContent() {
                     Selected for order
                   </span>
                   <div style={{ fontSize: '22px', fontWeight: 800, color: '#c44569' }}>
-                    {selectedSubtotal.toFixed(2)} PKR
+                    {formatPrice(selectedSubtotal)} PKR
                   </div>
                 </div>
               </div>

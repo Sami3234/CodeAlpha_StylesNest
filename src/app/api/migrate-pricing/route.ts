@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,14 +75,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Pricing migration failed:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Pricing migration failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Pricing migration failed', status: 500, cause: error });
   }
 }
 

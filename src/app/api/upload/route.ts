@@ -13,7 +13,11 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const category = formData.get('category') as string;
-    const productName = formData.get('productName') as string;
+    const productNameRaw = formData.get('productName');
+    const productName =
+      typeof productNameRaw === 'string' && productNameRaw.trim()
+        ? productNameRaw.trim()
+        : 'product';
     
     if (!file) {
       return NextResponse.json(
@@ -22,9 +26,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!category || !productName) {
+    if (!category) {
       return NextResponse.json(
-        { error: 'Category and product name are required' },
+        { error: 'Category is required' },
         { status: 400 }
       );
     }

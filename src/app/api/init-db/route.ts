@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { initDatabase } from '@/lib/init-db';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,15 +16,7 @@ export async function GET() {
       message: 'Database initialized successfully' 
     });
   } catch (error) {
-    console.error('Failed to initialize database:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to initialize database',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to initialize database', status: 500, cause: error });
   }
 }
 

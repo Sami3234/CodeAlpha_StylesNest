@@ -4,6 +4,7 @@ import {
   ensureContactLandingExtrasColumns,
   ensureContactSocialColumns,
 } from './contact-settings-schema';
+import { ensureShopUsersTable } from './shop-users-schema';
 
 /**
  * Initialize database tables
@@ -32,10 +33,16 @@ export async function initDatabase() {
         features_en JSONB DEFAULT '[]',
         features_ar JSONB DEFAULT '[]',
         pricing_tiers JSONB DEFAULT '[]',
+        clothes_options JSONB DEFAULT NULL,
         status TEXT DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `;
+
+    await sql`
+      ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS clothes_options JSONB DEFAULT NULL
     `;
 
     // Create orders table
@@ -105,6 +112,7 @@ export async function initDatabase() {
     await ensureContactSocialColumns();
     await ensureContactAnnouncementColumns();
     await ensureContactLandingExtrasColumns();
+    await ensureShopUsersTable();
 
     await sql`
       INSERT INTO contact_settings (id, whatsapp, phone, email, address, social_whatsapp, social_facebook, social_tiktok, social_daraz, social_shopify)

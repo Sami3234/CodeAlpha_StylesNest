@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -865,14 +866,7 @@ export async function POST() {
     
   } catch (error: unknown) {
     console.error('Error in add-general-store-products:', error);
-    const errorMsg = error instanceof Error ? error.message : 'Failed to add products';
-    return NextResponse.json(
-      { 
-        success: false,
-        error: errorMsg
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to add products', status: 500, cause: error });
   }
 }
 

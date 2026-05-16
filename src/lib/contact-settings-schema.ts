@@ -20,3 +20,7 @@ export async function ensureContactLandingExtrasColumns(): Promise<void> {
   await sql`ALTER TABLE contact_settings ADD COLUMN IF NOT EXISTS footer_services_json TEXT DEFAULT ''`;
   await sql`ALTER TABLE contact_settings ADD COLUMN IF NOT EXISTS top_bar_links_json TEXT DEFAULT ''`;
 }
+
+export async function ensurePaymentMethodsColumn(): Promise<void> {
+  await sql`ALTER TABLE contact_settings ADD COLUMN IF NOT EXISTS payment_methods_json TEXT DEFAULT ''`;
+}

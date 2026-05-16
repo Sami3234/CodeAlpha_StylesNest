@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { products as initialProducts, Product } from '@/data/products';
+import { Product } from '@/data/products';
+import { clientMessageFromApi, GENERIC_CLIENT_ERROR, sanitizeClientMessage } from '@/lib/safe-errors';
 
 interface ProductContextType {
   products: Product[];
@@ -10,6 +11,7 @@ interface ProductContextType {
   deleteProduct: (id: number) => void;
   toggleProductStatus: (id: number) => void;
   getActiveProducts: () => Product[];
+  reloadProducts: () => Promise<void>;
   loading: boolean;
 }
 
@@ -26,17 +28,24 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products', { cache: 'no-store' });
+      let response = await fetch('/api/products', { cache: 'no-store' });
+
+      if (!response.ok) {
+        await fetch('/api/update-schema', { method: 'POST', cache: 'no-store' });
+        response = await fetch('/api/products', { cache: 'no-store' });
+      }
+
       if (response.ok) {
         const data = await response.json();
-        setProducts(data.products);
+        setProducts(Array.isArray(data.products) ? data.products : []);
       } else {
-        console.error('Failed to fetch products from API, using initial products');
-        setProducts(initialProducts);
+        const errBody = await response.json().catch(() => ({}));
+        console.error('Failed to fetch products from API:', errBody);
+        setProducts([]);
       }
-  } catch (error) {
+    } catch (error) {
       console.error('Error fetching products:', error);
-      setProducts(initialProducts);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -82,6 +91,8 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         : undefined,
       pricingTiers: productData.pricingTiers || [],
       status: productData.status || 'active',
+      clothesOptions: productData.clothesOptions,
+      productMeta: productData.productMeta,
     };
     
     console.log('🔄 ProductContext - Adding product with pricingTiers:', newProduct.pricingTiers);
@@ -109,26 +120,26 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         
         console.error('Failed to add product:', errorData);
         
-        const detailsStr =
+        const rawDetail =
           typeof errorData.details === 'string' ? errorData.details : '';
-        if (detailsStr.includes('duplicate key')) {
-          return { 
-            success: false, 
-            error: 'Product ID already exists. Please reset the database sequence first by visiting: /api/reset-sequence' 
+        if (rawDetail.includes('duplicate key')) {
+          return {
+            success: false,
+            error: sanitizeClientMessage('Failed to add product', GENERIC_CLIENT_ERROR),
           };
         }
-        
-        const errStr =
-          detailsStr ||
-          (typeof errorData.error === 'string' ? errorData.error : '') ||
-          (typeof errorData.message === 'string' ? errorData.message : '');
-        const errorMessage =
-          errStr || `Failed to add product (${response.status})`;
-        return { success: false, error: errorMessage };
+
+        return {
+          success: false,
+          error: clientMessageFromApi(
+            errorData as { error?: string; message?: string },
+            'Failed to add product'
+          ),
+        };
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Network error occurred' };
+      return { success: false, error: GENERIC_CLIENT_ERROR };
     }
   };
 
@@ -193,6 +204,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       deleteProduct,
       toggleProductStatus,
       getActiveProducts,
+      reloadProducts: fetchProducts,
       loading,
     }}>
       {children}

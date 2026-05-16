@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -192,10 +193,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error importing orders:', error);
-    return NextResponse.json(
-      { error: 'Failed to import orders', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to import orders', status: 500, cause: error });
   }
 }
 

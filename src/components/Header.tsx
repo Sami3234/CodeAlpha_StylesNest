@@ -9,6 +9,7 @@ import { WORDMARK_GRADIENT } from '@/lib/brand-wordmark';
 import TopAnnouncementBar from '@/components/TopAnnouncementBar';
 import { IoBagOutline } from 'react-icons/io5';
 import { useCart } from '@/context/CartContext';
+import HeaderProfile, { HeaderProfileMobile } from '@/components/HeaderProfile';
 
 const LOGO_MARK = '/StylesNest_Transparent.png';
 
@@ -317,6 +318,8 @@ export default function Header() {
                 </motion.button>
               </Link>
 
+              <HeaderProfile />
+
               <Link
                 href="/cart"
                 aria-label={`Shopping cart${cartHydrated && totalQuantity > 0 ? `, ${totalQuantity} items` : ''}`}
@@ -481,6 +484,8 @@ export default function Header() {
                 About
               </motion.button>
             </Link>
+
+            <HeaderProfileMobile onNavigate={() => setMobileMenuOpen(false)} />
 
             <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
               <motion.button

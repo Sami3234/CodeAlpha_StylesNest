@@ -5,6 +5,7 @@ import {
   ensureContactLandingExtrasColumns,
   ensureContactSocialColumns,
 } from '@/lib/contact-settings-schema';
+import { apiErrorResponse } from '@/lib/safe-errors';
 import { sanitizeAnnouncementText, sanitizeCustomerCareUrl } from '@/lib/sanitize-announcement';
 import { sanitizeSocialUrl } from '@/lib/sanitize-social-url';
 import {
@@ -163,14 +164,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get contact settings error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json(
-      { 
-        error: 'Failed to get contact settings',
-        details: errorMessage 
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to get contact settings', status: 500, cause: error });
   }
 }
 
@@ -373,14 +367,7 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('Update contact settings error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json(
-      { 
-        error: 'Failed to update contact settings',
-        details: errorMessage 
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to update contact settings', status: 500, cause: error });
   }
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { products as initialProducts } from '@/data/products';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,14 +81,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Migration failed:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Migration failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Migration failed', status: 500, cause: error });
   }
 }
 

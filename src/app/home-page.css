@@ -3,20 +3,17 @@
  * Plain CSS so Turbopack does not fail on styled-jsx in the large client page.
  */
 
-/* Hero banner: fixed-height slot — no layout jump; spinner while loading; dashed “No image” when empty */
+/* Hero banner: 1920×600 aspect — full cropped image visible (no extra crop on site) */
 .hero-banner-slot-frame {
   position: relative;
   width: 100%;
-  height: clamp(200px, 30vw, 480px);
+  aspect-ratio: 1920 / 600;
+  max-height: min(37.5vw, 600px);
+  height: auto;
   overflow: hidden;
   border-radius: 12px;
   box-sizing: border-box;
-}
-
-@media (min-width: 768px) {
-  .hero-banner-slot-frame {
-    height: clamp(280px, 22vw, 520px);
-  }
+  background: #1a1a2e;
 }
 
 .hero-banner-image--fill {
@@ -24,7 +21,8 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
   z-index: 1;
 }
@@ -609,6 +607,31 @@
 .hero-carousel-wrap {
   position: relative;
   width: 100%;
+}
+
+.hero-carousel-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.hero-carousel-slide {
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  background: #1a1a2e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel-track {
+    transition: none;
+  }
 }
 
 .hero-carousel-btn {

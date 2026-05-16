@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppFab from '@/components/WhatsAppFab';
@@ -55,28 +55,14 @@ export default function Home() {
     .filter((u) => u.length > 0)
     .slice(0, MAX_HERO_IMAGES);
 
+  const HERO_AUTO_INTERVAL_MS = 4500;
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const [heroCarouselPaused, setHeroCarouselPaused] = useState(false);
   const heroKey = heroSlides.join('|');
-  /** Current slide image decoded (spinner until onLoad / cached complete) */
-  const [heroSlideImageReady, setHeroSlideImageReady] = useState(false);
-  const heroImgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     setHeroSlideIndex(0);
   }, [heroKey]);
-
-  useLayoutEffect(() => {
-    if (!heroKey) {
-      setHeroSlideImageReady(false);
-      return;
-    }
-    const el = heroImgRef.current;
-    if (el?.complete && el.naturalHeight > 0) {
-      setHeroSlideImageReady(true);
-    } else {
-      setHeroSlideImageReady(false);
-    }
-  }, [heroKey, heroSlideIndex]);
 
   const heroSlidePrev = () => {
     if (heroSlides.length <= 1) return;
@@ -86,6 +72,22 @@ export default function Home() {
     if (heroSlides.length <= 1) return;
     setHeroSlideIndex((i) => (i + 1) % heroSlides.length);
   };
+
+  /** Auto-advance hero banners right → left; pauses on hover/focus */
+  useEffect(() => {
+    if (heroSlides.length <= 1 || heroCarouselPaused) return;
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    const intervalId = window.setInterval(() => {
+      setHeroSlideIndex((i) => (i + 1) % heroSlides.length);
+    }, HERO_AUTO_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [heroSlides.length, heroCarouselPaused, heroKey]);
 
   // Fetch landing images from database
   useEffect(() => {
@@ -210,7 +212,13 @@ export default function Home() {
           }}
           className="hero-banner-container"
         >
-          <div className="hero-carousel-wrap">
+          <div
+            className="hero-carousel-wrap"
+            onMouseEnter={() => setHeroCarouselPaused(true)}
+            onMouseLeave={() => setHeroCarouselPaused(false)}
+            onFocusCapture={() => setHeroCarouselPaused(true)}
+            onBlurCapture={() => setHeroCarouselPaused(false)}
+          >
             {heroSlides.length > 1 ? (
               <>
                 <button
@@ -266,50 +274,32 @@ export default function Home() {
             >
               <div className="hero-banner-slot-frame">
                 {heroSlides.length > 0 ? (
-                  <>
-                    {!heroSlideImageReady ? (
+                  <div
+                    className="hero-carousel-track"
+                    style={{ transform: `translateX(-${heroSlideIndex * 100}%)` }}
+                    aria-live="polite"
+                  >
+                    {heroSlides.map((slideSrc, slideIdx) => (
                       <div
-                        className="hero-banner-img-loading-overlay"
-                        role="status"
-                        aria-live="polite"
-                        aria-label="Banner image loading"
+                        key={`${slideIdx}-${slideSrc}`}
+                        className="hero-carousel-slide"
+                        aria-hidden={slideIdx !== heroSlideIndex}
                       >
-                        <span className="hero-banner-spinner" aria-hidden />
-                        <span className="hero-banner-loading-text">Loading banner…</span>
-                      </div>
-                    ) : null}
-                    <img
-                      ref={heroImgRef}
-                      key={`${heroSlideIndex}-${heroSlides[heroSlideIndex]}`}
-                      src={heroSlides[heroSlideIndex]}
-                      alt={`StylesNest banner ${heroSlideIndex + 1}`}
-                      className="hero-banner-image hero-banner-image--fill"
-                      style={{
-                        filter: 'brightness(1.05) contrast(1.1) saturate(1.1)',
-                        transition: 'opacity 0.35s ease, transform 0.5s ease',
-                        opacity: heroSlideImageReady ? 1 : 0,
-                      }}
-                      onLoad={() => setHeroSlideImageReady(true)}
-                      onError={() => setHeroSlideImageReady(true)}
-                      onMouseEnter={(e) => {
-                        if (typeof window !== 'undefined' && window.innerWidth > 768) {
-                          e.currentTarget.style.transform = 'scale(1.02)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                    />
-                    {heroSlideImageReady ? (
-                      <>
-                        <div
-                          className="hero-banner-image-overlay-gradient"
-                          aria-hidden
+                        <img
+                          src={slideSrc}
+                          alt={`StylesNest banner ${slideIdx + 1}`}
+                          className="hero-banner-image hero-banner-image--fill"
+                          style={{
+                            filter: 'brightness(1.05) contrast(1.1) saturate(1.1)',
+                          }}
+                          loading={slideIdx === 0 ? 'eager' : 'lazy'}
+                          decoding="async"
                         />
+                        <div className="hero-banner-image-overlay-gradient" aria-hidden />
                         <div className="hero-banner-image-overlay-shine" aria-hidden />
-                      </>
-                    ) : null}
-                  </>
+                      </div>
+                    ))}
+                  </div>
                 ) : loadingImages ? (
                   <div
                     className="hero-banner-placeholder hero-banner-placeholder--fetching"

@@ -1,35 +1,82 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import Cropper, { Area } from 'react-easy-crop';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import Cropper, { Area, MediaSize } from 'react-easy-crop';
 
 interface ImageCropperProps {
   image: File | string;
-  aspectRatio: number; // width/height
+  aspectRatio: number;
   onCrop: (croppedFile: File) => void;
   onCancel: () => void;
   targetWidth: number;
   targetHeight: number;
 }
 
-export default function ImageCropper({ 
-  image, 
-  aspectRatio, 
-  onCrop, 
+/** Minimum zoom so the crop frame is filled (no empty gaps). */
+function getCoverZoom(mediaWidth: number, mediaHeight: number, aspect: number): number {
+  const mediaAspect = mediaWidth / mediaHeight;
+  if (mediaAspect > aspect) {
+    return mediaAspect / aspect;
+  }
+  return aspect / mediaAspect;
+}
+
+/** Zoom so the entire image is visible inside the crop frame (less zoomed in). */
+function getFitZoom(mediaWidth: number, mediaHeight: number, aspect: number): number {
+  const mediaAspect = mediaWidth / mediaHeight;
+  if (mediaAspect > aspect) {
+    return aspect / mediaAspect;
+  }
+  return mediaAspect / aspect;
+}
+
+type FitMode = 'fit' | 'cover';
+
+export default function ImageCropper({
+  image,
+  aspectRatio,
+  onCrop,
   onCancel,
   targetWidth,
-  targetHeight 
+  targetHeight,
 }: ImageCropperProps) {
-  const [imageSrc, setImageSrc] = useState<string>('');
+  const [imageSrc, setImageSrc] = useState('');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [minZoom, setMinZoom] = useState(0.1);
+  const [maxZoom, setMaxZoom] = useState(6);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(
+    null
+  );
   const [isCropping, setIsCropping] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [initialZoom, setInitialZoom] = useState(1);
+  const [fitMode, setFitMode] = useState<FitMode>('fit');
 
-  // Load image and get dimensions
+  const aspectLabel = useMemo(
+    () => `${targetWidth} × ${targetHeight}px`,
+    [targetWidth, targetHeight]
+  );
+
+  const applyZoomMode = useCallback(
+    (media: MediaSize, mode: FitMode) => {
+      const cover = getCoverZoom(media.naturalWidth, media.naturalHeight, aspectRatio);
+      const fit = getFitZoom(media.naturalWidth, media.naturalHeight, aspectRatio);
+
+      const nextZoom =
+        mode === 'fit'
+          ? Math.max(fit * 0.98, 0.05)
+          : Math.max(cover * 1.01, fit);
+
+      setMinZoom(Math.max(fit * 0.4, 0.05));
+      setMaxZoom(Math.max(cover * 3, 2, nextZoom + 1));
+      setZoom(nextZoom);
+      setCrop({ x: 0, y: 0 });
+      setFitMode(mode);
+    },
+    [aspectRatio]
+  );
+
   useEffect(() => {
     const loadImage = async () => {
       try {
@@ -44,62 +91,77 @@ export default function ImageCropper({
             reader.readAsDataURL(image);
           });
         }
-        
+
         setImageSrc(src);
-        
-        // Get image dimensions and calculate initial zoom
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
+        setError(null);
+        setFitMode('fit');
+
         const img = new Image();
         img.onload = () => {
-          const dimensions = { width: img.naturalWidth, height: img.naturalHeight };
-          setImageDimensions(dimensions);
-          
-          // Calculate initial zoom to fit image properly in container
-          // Container is approximately 800px wide and 400px tall
-          const containerWidth = 800;
-          const containerHeight = 400;
-          
-          // Calculate scale needed to fit image in container while maintaining aspect ratio
-          const scaleX = containerWidth / dimensions.width;
-          const scaleY = containerHeight / dimensions.height;
-          const scaleToFit = Math.min(scaleX, scaleY);
-          
-          // Set initial zoom to show full image (zoom < 1 means zoomed out)
-          // We want to start slightly zoomed out so user can see the full image
-          const calculatedZoom = Math.min(scaleToFit * 0.9, 0.8); // Start at 80% or less to show full image
-          setInitialZoom(calculatedZoom);
-          setZoom(calculatedZoom);
+          setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
         };
-        img.onerror = () => {
-          setError('Failed to load image');
-        };
+        img.onerror = () => setError('Failed to load image');
         img.src = src;
       } catch (err) {
         setError('Failed to load image. Please try again.');
         console.error('Error loading image:', err);
       }
     };
-    
+
     loadImage();
   }, [image]);
 
-  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
+  const onMediaLoaded = useCallback(
+    (media: MediaSize) => {
+      setImageDimensions({ width: media.naturalWidth, height: media.naturalHeight });
+      applyZoomMode(media, 'fit');
+    },
+    [applyZoomMode]
+  );
+
+  const onCropComplete = useCallback((_croppedArea: Area, pixels: Area) => {
+    setCroppedAreaPixels(pixels);
   }, []);
 
-  const createImage = (url: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.addEventListener('load', () => resolve(image));
-      image.addEventListener('error', (error) => reject(error));
-      image.src = url;
-    });
+  const handleFitFull = () => {
+    if (!imageDimensions) return;
+    applyZoomMode(
+      {
+        naturalWidth: imageDimensions.width,
+        naturalHeight: imageDimensions.height,
+        width: imageDimensions.width,
+        height: imageDimensions.height,
+      },
+      'fit'
+    );
   };
 
-  const getCroppedImg = async (
-    imageSrc: string,
-    pixelCrop: Area
-  ): Promise<Blob> => {
-    const image = await createImage(imageSrc);
+  const handleFillFrame = () => {
+    if (!imageDimensions) return;
+    applyZoomMode(
+      {
+        naturalWidth: imageDimensions.width,
+        naturalHeight: imageDimensions.height,
+        width: imageDimensions.width,
+        height: imageDimensions.height,
+      },
+      'cover'
+    );
+  };
+
+  const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.addEventListener('load', () => resolve(img));
+      img.addEventListener('error', (e) => reject(e));
+      img.src = url;
+    });
+
+  const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+    const imageEl = await createImage(imageSrc);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -107,73 +169,42 @@ export default function ImageCropper({
       throw new Error('Unable to create canvas context');
     }
 
-    // Validate crop area is within image bounds
-    const imgWidth = image.naturalWidth;
-    const imgHeight = image.naturalHeight;
-    
-    // Clamp crop coordinates to image bounds
+    const imgWidth = imageEl.naturalWidth;
+    const imgHeight = imageEl.naturalHeight;
+
     const cropX = Math.max(0, Math.min(pixelCrop.x, imgWidth));
     const cropY = Math.max(0, Math.min(pixelCrop.y, imgHeight));
     const cropWidth = Math.max(1, Math.min(pixelCrop.width, imgWidth - cropX));
     const cropHeight = Math.max(1, Math.min(pixelCrop.height, imgHeight - cropY));
 
-    // Validate crop area
-    if (cropWidth <= 0 || cropHeight <= 0) {
-      throw new Error('Invalid crop area. Please adjust the crop selection.');
-    }
-
-    if (cropX < 0 || cropY < 0 || cropX + cropWidth > imgWidth || cropY + cropHeight > imgHeight) {
-      throw new Error('Crop area is outside image bounds. Please adjust the selection.');
-    }
-
-    // Set canvas size to target dimensions
     canvas.width = targetWidth;
     canvas.height = targetHeight;
 
-    // Clear canvas with white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, targetWidth, targetHeight);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-    // Draw cropped image with error handling
-    try {
-      ctx.drawImage(
-        image,
-        cropX,
-        cropY,
-        cropWidth,
-        cropHeight,
-        0,
-        0,
-        targetWidth,
-        targetHeight
-      );
-    } catch (drawError) {
-      throw new Error('Failed to draw image on canvas. Please try again.');
-    }
+    ctx.drawImage(imageEl, cropX, cropY, cropWidth, cropHeight, 0, 0, targetWidth, targetHeight);
 
     return new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Failed to create image file. Canvas may be empty.'));
-          return;
-        }
-        if (blob.size === 0) {
-          reject(new Error('Generated image is empty. Please try again.'));
-          return;
-        }
-        resolve(blob);
-      }, 'image/png', 1.0);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size === 0) {
+            reject(new Error('Failed to create image file. Please try again.'));
+            return;
+          }
+          resolve(blob);
+        },
+        'image/png',
+        1
+      );
     });
   };
 
   const handleCrop = async () => {
     if (!croppedAreaPixels || !imageSrc) {
-      setError('Please wait for image to load completely.');
-      return;
-    }
-
-    if (!imageDimensions) {
-      setError('Image dimensions not available. Please try again.');
+      setError('Please wait for the image to load, then position your crop.');
       return;
     }
 
@@ -182,14 +213,17 @@ export default function ImageCropper({
 
     try {
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
-      const file = new File([croppedImage], `cropped_${Date.now()}.png`, { type: 'image/png' });
+      const file = new File([croppedImage], `cropped_${targetWidth}x${targetHeight}_${Date.now()}.png`, {
+        type: 'image/png',
+      });
       onCrop(file);
-    } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'An error occurred while cropping the image. Please try again.';
+    } catch (cropError) {
+      const errorMessage =
+        cropError instanceof Error
+          ? cropError.message
+          : 'An error occurred while cropping the image. Please try again.';
       setError(errorMessage);
-      console.error('Error cropping image:', error);
+      console.error('Error cropping image:', cropError);
     } finally {
       setIsCropping(false);
     }
@@ -198,48 +232,24 @@ export default function ImageCropper({
   if (!imageSrc) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.9)',
-      zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
-      <div style={{
-        backgroundColor: '#fff',
-        borderRadius: '12px',
-        padding: '24px',
-        maxHeight: '90vh',
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        maxWidth: '800px'
-      }}>
-        <h3 style={{ 
-          marginBottom: '20px', 
-          fontSize: '20px', 
-          fontWeight: '600',
-          color: '#333'
-        }}>
-          Crop Banner Image ({targetWidth}x{targetHeight}px)
+    <div
+      className="image-cropper-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="image-cropper-title"
+    >
+      <div className="image-cropper-panel">
+        <h3 id="image-cropper-title" className="image-cropper-title">
+          Custom crop — fixed output {aspectLabel}
         </h3>
-        
-        <div style={{
-          position: 'relative',
-          width: '100%',
-          height: '400px',
-          backgroundColor: '#000',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          marginBottom: '20px'
-        }}>
+        <p className="image-cropper-subtitle">
+          Drag the image to choose the area · zoom only if needed · orange frame = exact size on site
+        </p>
+
+        <div
+          className="image-cropper-viewport"
+          style={{ aspectRatio: `${targetWidth} / ${targetHeight}` }}
+        >
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -248,151 +258,254 @@ export default function ImageCropper({
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
+            onMediaLoaded={onMediaLoaded}
+            objectFit="contain"
             restrictPosition={false}
-            minZoom={0.5}
-            maxZoom={5}
+            showGrid
+            zoomWithScroll
+            minZoom={minZoom}
+            maxZoom={maxZoom}
+            cropShape="rect"
             style={{
               containerStyle: {
                 width: '100%',
-                height: '100%'
-              }
+                height: '100%',
+                borderRadius: '8px',
+              },
+              cropAreaStyle: {
+                border: '2px solid rgba(255, 140, 66, 0.95)',
+                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.55)',
+              },
             }}
           />
         </div>
 
-        {/* Zoom Control */}
-        <div style={{
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <label style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#333',
-            minWidth: '60px'
-          }}>
-            Zoom:
+        <div className="image-cropper-preset-row">
+          <button
+            type="button"
+            className={`image-cropper-preset-btn${fitMode === 'fit' ? ' is-active' : ''}`}
+            onClick={handleFitFull}
+          >
+            Full image
+          </button>
+          <button
+            type="button"
+            className={`image-cropper-preset-btn${fitMode === 'cover' ? ' is-active' : ''}`}
+            onClick={handleFillFrame}
+          >
+            Fill frame
+          </button>
+          <span className="image-cropper-preset-hint">Output size stays {aspectLabel}</span>
+        </div>
+
+        <div className="image-cropper-controls">
+          <label className="image-cropper-zoom-label" htmlFor="crop-zoom">
+            Zoom
           </label>
           <input
+            id="crop-zoom"
             type="range"
             value={zoom}
-            min={0.5}
-            max={5}
-            step={0.1}
+            min={minZoom}
+            max={maxZoom}
+            step={0.01}
             onChange={(e) => setZoom(Number(e.target.value))}
-            style={{
-              flex: 1,
-              height: '6px',
-              borderRadius: '3px',
-              background: '#ddd',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
+            className="image-cropper-zoom-slider"
           />
-          <span style={{
-            fontSize: '14px',
-            color: '#666',
-            minWidth: '40px',
-            textAlign: 'right'
-          }}>
-            {zoom.toFixed(1)}x
-          </span>
+          <span className="image-cropper-zoom-value">{zoom.toFixed(2)}×</span>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div style={{
-            backgroundColor: '#fee',
-            border: '1px solid #fcc',
-            color: '#c33',
-            padding: '12px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            fontSize: '13px',
-            lineHeight: '1.5'
-          }}>
+        {error ? (
+          <div className="image-cropper-error" role="alert">
             <strong>Error:</strong> {error}
           </div>
-        )}
+        ) : null}
 
-        {/* Instructions */}
-        <div style={{
-          backgroundColor: '#f0f7ff',
-          padding: '12px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          fontSize: '13px',
-          color: '#555',
-          lineHeight: '1.5'
-        }}>
-          <strong>Instructions:</strong> Drag the image to position it, and use the zoom slider to adjust. The image will be cropped to {targetWidth}x{targetHeight}px.
-          {imageDimensions && (
-            <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-              Original size: {imageDimensions.width}x{imageDimensions.height}px
-            </div>
-          )}
+        <div className="image-cropper-hint">
+          <strong>How it works:</strong> The frame ratio is fixed ({aspectLabel}). You move and zoom the
+          photo underneath — only the part inside the frame is saved. Start with <em>Full image</em> so
+          nothing is over-zoomed; use <em>Fill frame</em> only if you want edge-to-edge coverage.
+          {imageDimensions ? (
+            <span className="image-cropper-hint-meta">
+              Your file: {imageDimensions.width}×{imageDimensions.height}px
+            </span>
+          ) : null}
         </div>
 
-        {/* Buttons */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          justifyContent: 'flex-end'
-        }}>
-          <button
-            onClick={onCancel}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#e0e0e0',
-              color: '#333',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#d0d0d0';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#e0e0e0';
-            }}
-          >
+        <div className="image-cropper-actions">
+          <button type="button" className="image-cropper-cancel-btn" onClick={onCancel}>
             Cancel
           </button>
           <button
+            type="button"
+            className="image-cropper-submit-btn"
             onClick={handleCrop}
             disabled={isCropping || !croppedAreaPixels}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: isCropping || !croppedAreaPixels ? '#95a5a6' : '#3498db',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isCropping || !croppedAreaPixels ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              transition: 'background-color 0.2s',
-              opacity: isCropping || !croppedAreaPixels ? 0.6 : 1
-            }}
-            onMouseEnter={(e) => {
-              if (!isCropping && croppedAreaPixels) {
-                e.currentTarget.style.backgroundColor = '#2980b9';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isCropping && croppedAreaPixels) {
-                e.currentTarget.style.backgroundColor = '#3498db';
-              }
-            }}
           >
-            {isCropping ? 'Cropping...' : 'Crop & Upload'}
+            {isCropping ? 'Saving…' : 'Crop & upload'}
           </button>
         </div>
       </div>
+
+      <style jsx>{`
+        .image-cropper-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(0, 0, 0, 0.88);
+        }
+        .image-cropper-panel {
+          width: 100%;
+          max-width: min(960px, 96vw);
+          max-height: 94vh;
+          overflow-y: auto;
+          background: #fff;
+          border-radius: 14px;
+          padding: 22px 24px 24px;
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        }
+        .image-cropper-title {
+          margin: 0 0 6px;
+          font-size: 20px;
+          font-weight: 700;
+          color: #1a202c;
+        }
+        .image-cropper-subtitle {
+          margin: 0 0 16px;
+          font-size: 13px;
+          color: #64748b;
+          line-height: 1.45;
+        }
+        .image-cropper-viewport {
+          position: relative;
+          width: 100%;
+          max-height: min(52vh, 420px);
+          background: #0f172a;
+          border-radius: 10px;
+          overflow: hidden;
+          margin-bottom: 14px;
+        }
+        .image-cropper-preset-row {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .image-cropper-preset-btn {
+          padding: 8px 16px;
+          border-radius: 8px;
+          border: 2px solid #cbd5e1;
+          background: #f8fafc;
+          color: #334155;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition:
+            background 0.15s ease,
+            border-color 0.15s ease,
+            color 0.15s ease;
+        }
+        .image-cropper-preset-btn:hover {
+          border-color: #94a3b8;
+          background: #f1f5f9;
+        }
+        .image-cropper-preset-btn.is-active {
+          border-color: #3498db;
+          background: #eff6ff;
+          color: #1d4ed8;
+        }
+        .image-cropper-preset-hint {
+          font-size: 12px;
+          color: #64748b;
+        }
+        .image-cropper-controls {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px 14px;
+          margin-bottom: 14px;
+        }
+        .image-cropper-zoom-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #334155;
+        }
+        .image-cropper-zoom-slider {
+          flex: 1;
+          min-width: 140px;
+          height: 6px;
+          accent-color: #3498db;
+          cursor: pointer;
+        }
+        .image-cropper-zoom-value {
+          font-size: 13px;
+          color: #64748b;
+          min-width: 48px;
+          text-align: right;
+        }
+        .image-cropper-error {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
+          padding: 12px;
+          border-radius: 8px;
+          margin-bottom: 14px;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+        .image-cropper-hint {
+          background: #f0f7ff;
+          padding: 12px 14px;
+          border-radius: 8px;
+          margin-bottom: 18px;
+          font-size: 13px;
+          color: #475569;
+          line-height: 1.55;
+        }
+        .image-cropper-hint-meta {
+          display: block;
+          margin-top: 6px;
+          font-size: 12px;
+          color: #64748b;
+        }
+        .image-cropper-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+        }
+        .image-cropper-cancel-btn,
+        .image-cropper-submit-btn {
+          padding: 12px 22px;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .image-cropper-cancel-btn {
+          background: #e2e8f0;
+          color: #334155;
+        }
+        .image-cropper-cancel-btn:hover {
+          background: #cbd5e1;
+        }
+        .image-cropper-submit-btn {
+          background: #3498db;
+          color: #fff;
+        }
+        .image-cropper-submit-btn:hover:not(:disabled) {
+          background: #2980b9;
+        }
+        .image-cropper-submit-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+      `}</style>
     </div>
   );
 }

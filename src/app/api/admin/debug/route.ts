@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import crypto from 'crypto';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -35,13 +36,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Debug error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch admin data',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to fetch admin data', status: 500, cause: error });
   }
 }
 
@@ -87,12 +82,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Debug POST error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to process request',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to process request', status: 500, cause: error });
   }
 }

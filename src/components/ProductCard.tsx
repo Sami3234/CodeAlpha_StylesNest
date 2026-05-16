@@ -8,6 +8,9 @@ import { motion } from 'framer-motion';
 import { getProductTitle } from '@/utils/getProductText';
 import { IoBagAddOutline } from 'react-icons/io5';
 import { useCart } from '@/context/CartContext';
+import { formatPrice } from '@/utils/formatPrice';
+import ClothesStitchBadge, { ClothesMetaRow } from '@/components/ClothesImageBadges';
+import { ProductShortSummary } from '@/components/ProductMetaDisplay';
 
 interface ProductCardProps {
   product: Product;
@@ -117,6 +120,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               )}
             </div>
 
+            <ClothesStitchBadge product={product} />
+
             {product.freeDelivery && (
               <motion.span
                 className="badge-delivery absolute z-10"
@@ -164,7 +169,11 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               (typeof product.title === 'object' ? product.title.en : String(product.title || 'Product'))}
           </h3>
 
-          <div className="product-pricing flex items-baseline" style={{ marginTop: '14px', gap: '12px' }}>
+          <ProductShortSummary product={product} compact />
+
+          <ClothesMetaRow product={product} />
+
+          <div className="product-pricing flex items-baseline" style={{ marginTop: '8px', gap: '12px' }}>
             <motion.span
               className="current-price font-bold"
               style={{
@@ -178,13 +187,13 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               }}
               whileHover={{ scale: 1.05 }}
             >
-              {product.currentPrice.toFixed(2)} PKR
+              {formatPrice(product.currentPrice)} PKR
             </motion.span>
             <span
               className="original-price line-through"
               style={{ color: '#999999', fontSize: '14px', fontWeight: '400' }}
             >
-              {product.originalPrice.toFixed(2)} PKR
+              {formatPrice(product.originalPrice)} PKR
             </span>
           </div>
         </div>

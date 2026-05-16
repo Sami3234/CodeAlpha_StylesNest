@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { requireShopSession } from '@/lib/require-shop-session';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,9 +79,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new order
+// POST - Create new order (requires customer login)
 export async function POST(request: NextRequest) {
   try {
+    const { error: authError } = await requireShopSession();
+    if (authError) return authError;
+
     const body = await request.json();
     const {
       id,
@@ -141,12 +146,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ order }, { status: 201 });
   } catch (error) {
-    console.error('Error creating order:', error);
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
-    return NextResponse.json(
-      { error: 'Failed to create order', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to create order', status: 500, cause: error });
   }
 }
 

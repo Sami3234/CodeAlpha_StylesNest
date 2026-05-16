@@ -5,6 +5,7 @@ import {
   ensureContactLandingExtrasColumns,
   ensureContactSocialColumns,
 } from '@/lib/contact-settings-schema';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 /**
  * Quick endpoint to create contact_settings table
@@ -46,15 +47,11 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to create contact_settings table:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create contact_settings table',
-        details: errorMessage,
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({
+      message: 'Failed to create contact settings table',
+      status: 500,
+      cause: error,
+    });
   }
 }
 

@@ -26,6 +26,8 @@ const categoryItems = [
   { id: 'makeup', icon: BiSpa },
   { id: 'clothes', icon: BiSpa },
   { id: 'electronics', icon: BiChip },
+  { id: 'bags', icon: BiShoppingBag },
+  { id: 'menfashion', icon: BiShoppingBag },
   { id: 'general', icon: BiBox },
 ];
 
@@ -77,6 +79,8 @@ const categoryLabels: Record<string, string> = {
   clothes: 'Clothes',
   makeup: 'Makeup',
   general: 'General',
+  bags: 'Bags',
+  menfashion: 'Men Fashion',
   mobile: 'Mobile',
   kitchen: 'Kitchen',
   other: 'Other',
@@ -858,6 +862,115 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                   <span>Footer &amp; links</span>
                 </Link>
               </div>
+            </li>
+
+            {/* Shop customers (login) */}
+            <li>
+              <Link
+                href="/admin/users"
+                onClick={isMobile ? onClose : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '16px 20px',
+                  color: pathname === '/admin/users' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  textDecoration: 'none',
+                  backgroundColor: pathname === '/admin/users'
+                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
+                    : 'transparent',
+                  borderLeft: pathname === '/admin/users' ? '4px solid #3498db' : '4px solid transparent',
+                  borderRadius: pathname === '/admin/users' ? '0 12px 12px 0' : '0',
+                  transition: 'all 0.3s ease',
+                  marginRight: '8px',
+                }}
+                onMouseEnter={(e) => {
+                  if (pathname !== '/admin/users') {
+                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (pathname !== '/admin/users') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.transform = 'translateX(0)';
+                  }
+                }}
+              >
+                <span
+                  style={{
+                    opacity: pathname === '/admin/users' ? 1 : 0.7,
+                    color: pathname === '/admin/users' ? '#3498db' : 'inherit',
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: pathname === '/admin/users' ? '600' : '400',
+                    letterSpacing: '0.3px',
+                  }}
+                >
+                  Customers
+                </span>
+              </Link>
+            </li>
+
+            {/* Payment methods */}
+            <li>
+              <Link
+                href="/admin/payment-methods"
+                onClick={isMobile ? onClose : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '16px 20px',
+                  color: pathname === '/admin/payment-methods' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  textDecoration: 'none',
+                  backgroundColor: pathname === '/admin/payment-methods'
+                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
+                    : 'transparent',
+                  borderLeft: pathname === '/admin/payment-methods' ? '4px solid #3498db' : '4px solid transparent',
+                  borderRadius: pathname === '/admin/payment-methods' ? '0 12px 12px 0' : '0',
+                  transition: 'all 0.3s ease',
+                  marginRight: '8px',
+                }}
+                onMouseEnter={(e) => {
+                  if (pathname !== '/admin/payment-methods') {
+                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (pathname !== '/admin/payment-methods') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.transform = 'translateX(0)';
+                  }
+                }}
+              >
+                <span style={{
+                  opacity: pathname === '/admin/payment-methods' ? 1 : 0.7,
+                  color: pathname === '/admin/payment-methods' ? '#3498db' : 'inherit',
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                </span>
+                <span style={{
+                  fontSize: '15px',
+                  fontWeight: pathname === '/admin/payment-methods' ? '600' : '400',
+                  letterSpacing: '0.3px',
+                }}>
+                  Payment methods
+                </span>
+              </Link>
             </li>
 
             {/* Profile - End */}

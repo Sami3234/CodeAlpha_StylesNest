@@ -1142,7 +1142,7 @@ function AdminOrdersContent() {
       }
     } catch (error) {
       console.error('Error importing Excel:', error);
-      showToast(`Error: ${error instanceof Error ? error.message : 'Failed to read Excel file'}`, 'error');
+      showToast('Failed to read Excel file. Please try again.', 'error');
     }
 
     // Reset file input

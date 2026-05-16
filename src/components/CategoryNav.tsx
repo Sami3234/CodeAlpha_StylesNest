@@ -21,6 +21,8 @@ const categoryImages: Record<string, string> = {
   electronics:
     'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=200&h=200&fit=crop',
   general: '/images/general.webp',
+  bags: '/images/bags.jpg',
+  menfashion: '/images/men-fashion.jpg',
 };
 
 const categoryIds = [
@@ -31,6 +33,8 @@ const categoryIds = [
   'makeup',
   'clothes',
   'electronics',
+  'bags',
+  'menfashion',
   'general',
 ];
 
@@ -43,6 +47,8 @@ const categoryLabels: Record<string, string> = {
   clothes: 'Clothes',
   electronics: 'Electronics',
   general: 'General',
+  bags: 'Bags',
+  menfashion: 'Men Fashion',
 };
 
 export default function CategoryNav({ activeCategory, onCategoryChange }: CategoryNavProps) {

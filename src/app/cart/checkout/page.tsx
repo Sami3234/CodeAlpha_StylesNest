@@ -2,7 +2,10 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useLoginModal } from '@/context/LoginModalContext';
+import { useSavedCustomerDetails } from '@/hooks/useSavedCustomerDetails';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -13,6 +16,8 @@ import { useOrders } from '@/context/OrderContext';
 import { getProductTitle } from '@/utils/getProductText';
 import { removeAbandonedOrderOnSubmit } from '@/utils/abandonedOrders';
 import { readCheckoutProductIds, clearCheckoutProductIds } from '@/lib/checkout-selection';
+import { formatPrice } from '@/utils/formatPrice';
+import '@/components/product-page.css';
 
 function sanitizeCustomerField(raw: string, maxLen: number): string {
   return raw.replace(/\s+/g, ' ').trim().slice(0, maxLen);
@@ -20,6 +25,9 @@ function sanitizeCustomerField(raw: string, maxLen: number): string {
 
 function CheckoutPageInner() {
   const router = useRouter();
+  const pathname = usePathname();
+  const { status: authStatus } = useSession();
+  const { openLogin } = useLoginModal();
   const { lines, hydrated, removeLinesFromCart } = useCart();
   const { products, loading: productsLoading } = useProducts();
   const { addOrder } = useOrders();
@@ -34,6 +42,8 @@ function CheckoutPageInner() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useSavedCustomerDetails(setFormData, authStatus === 'authenticated');
 
   useEffect(() => {
     setCheckoutIds(readCheckoutProductIds() ?? []);
@@ -80,6 +90,11 @@ function CheckoutPageInner() {
     e.preventDefault();
     setError(null);
 
+    if (authStatus !== 'authenticated') {
+      openLogin(pathname || '/cart/checkout');
+      return;
+    }
+
     const fullName = sanitizeCustomerField(formData.fullName, 120);
     const phone = sanitizeCustomerField(formData.mobile, 32);
     const city = sanitizeCustomerField(formData.city, 80);
@@ -110,7 +125,7 @@ function CheckoutPageInner() {
         price: product.currentPrice,
       }));
 
-      const ok = await addOrder({
+      const placed = await addOrder({
         customer: fullName,
         phone,
         city,
@@ -120,7 +135,7 @@ function CheckoutPageInner() {
         status: 'pending',
       });
 
-      if (!ok) {
+      if (!placed) {
         setError('Order could not be saved. Please try again.');
         return;
       }
@@ -161,7 +176,7 @@ function CheckoutPageInner() {
           </h1>
           <p className="mt-1 text-sm text-slate-600">
             You are buying <strong>{checkoutRows.length}</strong> product line(s). Total{' '}
-            <strong className="text-[#667eea]">{subtotal.toFixed(2)} PKR</strong>.
+            <strong className="text-[#667eea]">{formatPrice(subtotal)} PKR</strong>.
           </p>
         </div>
         <Link
@@ -199,10 +214,10 @@ function CheckoutPageInner() {
                     {getProductTitle(product)}
                   </Link>
                   <p className="mt-2 text-sm text-slate-600">
-                    Qty <strong>{line.quantity}</strong> × {product.currentPrice.toFixed(2)} PKR
+                    Qty <strong>{line.quantity}</strong> × {formatPrice(product.currentPrice)} PKR
                   </p>
                   <p className="mt-1 text-base font-bold text-[#c44569]">
-                    Line total: {(product.currentPrice * line.quantity).toFixed(2)} PKR
+                    Line total: {formatPrice(product.currentPrice * line.quantity)} PKR
                   </p>
                 </div>
               </li>
@@ -216,6 +231,21 @@ function CheckoutPageInner() {
             <p className="mt-1 text-xs text-slate-500">
               Same details we use to confirm COD / delivery across Pakistan.
             </p>
+
+            {authStatus !== 'authenticated' ? (
+              <div className="order-login-banner mt-4">
+                <p>
+                  <strong>Sign in required</strong> to place this order.
+                </p>
+                <button
+                  type="button"
+                  className="order-login-banner__btn"
+                  onClick={() => openLogin(pathname || '/cart/checkout')}
+                >
+                  Sign in / Register
+                </button>
+              </div>
+            ) : null}
 
             <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
               <div>
@@ -277,7 +307,7 @@ function CheckoutPageInner() {
               <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
                 <div className="flex justify-between font-semibold text-slate-800">
                   <span>Order total</span>
-                  <span className="text-[#667eea]">{subtotal.toFixed(2)} PKR</span>
+                  <span className="text-[#667eea]">{formatPrice(subtotal)} PKR</span>
                 </div>
               </div>
 

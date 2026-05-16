@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,14 +41,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to update sold counts:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update sold counts',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to update sold counts', status: 500, cause: error });
   }
 }
 

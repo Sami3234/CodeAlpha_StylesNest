@@ -7,6 +7,7 @@ import { useProducts } from '@/context/ProductContext';
 import { getProductTitle } from '@/utils/getProductText';
 import type { Product } from '@/data/products';
 import { MAX_TRENDING_PRODUCTS } from '@/lib/trending-products';
+import { formatPrice } from '@/utils/formatPrice';
 
 const MAX_FALLBACK_ITEMS = MAX_TRENDING_PRODUCTS;
 
@@ -34,7 +35,7 @@ function StripCard({ product }: { product: Product }) {
     <Link
       href={`/product/${product.id}`}
       className="home-products-strip__card"
-      aria-label={`${title}, ${product.currentPrice.toFixed(0)} PKR`}
+      aria-label={`${title}, ${formatPrice(product.currentPrice)} PKR`}
     >
       <div className="home-products-strip__media">
         {product.discount > 0 ? (
@@ -60,10 +61,10 @@ function StripCard({ product }: { product: Product }) {
         </h3>
         <div className="home-products-strip__prices">
           <span className="home-products-strip__price">
-            {product.currentPrice.toFixed(0)} <span className="home-products-strip__currency">PKR</span>
+            {formatPrice(product.currentPrice)} <span className="home-products-strip__currency">PKR</span>
           </span>
           {product.originalPrice > product.currentPrice ? (
-            <span className="home-products-strip__old">{product.originalPrice.toFixed(0)}</span>
+            <span className="home-products-strip__old">{formatPrice(product.originalPrice)}</span>
           ) : null}
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Product } from '@/data/products';
 import { MAX_TRENDING_PRODUCTS } from '@/lib/trending-products';
 import { getProductTitle } from '@/utils/getProductText';
+import { formatPrice } from '@/utils/formatPrice';
 
 interface TrendingProductsPickerProps {
   isOpen: boolean;
@@ -310,7 +311,7 @@ export default function TrendingProductsPicker({
                       </p>
                     </div>
                     <span style={{ fontSize: '13px', fontWeight: '700', color: '#c44569', flexShrink: 0 }}>
-                      {product.currentPrice.toFixed(0)} PKR
+                      {formatPrice(product.currentPrice)} PKR
                     </span>
                   </label>
                 </li>

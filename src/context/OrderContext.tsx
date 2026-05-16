@@ -6,6 +6,7 @@ export interface OrderProduct {
   name: string;
   quantity: number;
   price: number;
+  paymentMethod?: string;
 }
 
 export interface Order {
@@ -24,7 +25,7 @@ export interface Order {
 interface OrderContextType {
   orders: Order[];
   /** Persists order via API. Returns true if the write succeeded. */
-  addOrder: (order: Omit<Order, 'id' | 'date' | 'time'>) => Promise<boolean>;
+  addOrder: (order: Omit<Order, 'id' | 'date' | 'time'>) => Promise<Order | null>;
   updateOrder: (id: string, orderData: Partial<Omit<Order, 'id'>>) => void;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   deleteOrder: (id: string) => void;
@@ -110,7 +111,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
    * - Otherwise: Create new order
    * - Updated order moves to top of list
    */
-  const addOrder = async (orderData: Omit<Order, 'id' | 'date' | 'time'>): Promise<boolean> => {
+  const addOrder = async (orderData: Omit<Order, 'id' | 'date' | 'time'>): Promise<Order | null> => {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000); // 1 hour ago
     
@@ -159,13 +160,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           // Remove old order and add updated order at the top
           const filteredOrders = orders.filter((_, index) => index !== existingOrderIndex);
           setOrders([data.order, ...filteredOrders]);
-          return true;
+          return data.order as Order;
         }
         console.error('Failed to merge order:', await response.text().catch(() => ''));
-        return false;
+        return null;
       } catch (error) {
         console.error('Error updating existing order:', error);
-        return false;
+        return null;
       }
     } else {
       // Create new order
@@ -187,13 +188,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           setOrders([data.order, ...orders]);
-          return true;
+          return data.order as Order;
         }
         console.error('Failed to add order:', await response.text().catch(() => ''));
-        return false;
+        return null;
       } catch (error) {
         console.error('Error adding order:', error);
-        return false;
+        return null;
       }
     }
   };

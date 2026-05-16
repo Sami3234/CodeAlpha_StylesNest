@@ -1,0 +1,173 @@
+.admin-pm-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 12px 20px 48px;
+}
+
+.admin-pm-page h1 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.admin-pm-page .admin-pm-subtitle {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-pm-actions {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.admin-pm-btn-add {
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 2px solid #4f46e5;
+  background: #fff;
+  color: #4338ca;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-pm-btn-save {
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: none;
+  background: #1e293b;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-pm-btn-save:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.admin-pm-card {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+}
+
+.admin-pm-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-pm-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.admin-pm-remove {
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.admin-pm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.admin-pm-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+
+.admin-pm-input,
+.admin-pm-select,
+.admin-pm-textarea {
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  background: #fff;
+  border: 2px solid #94a3b8;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.admin-pm-input::placeholder,
+.admin-pm-textarea::placeholder {
+  color: #64748b;
+}
+
+.admin-pm-input:focus,
+.admin-pm-select:focus,
+.admin-pm-textarea:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.admin-pm-select {
+  cursor: pointer;
+}
+
+.admin-pm-select option {
+  color: #0f172a;
+  background: #fff;
+}
+
+.admin-pm-instructions {
+  margin-top: 14px;
+}
+
+.admin-pm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-pm-alert-success {
+  background: #dcfce7;
+  color: #14532d;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.admin-pm-alert-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.admin-pm-loading {
+  padding: 40px;
+  text-align: center;
+  color: #475569;
+  font-weight: 500;
+}

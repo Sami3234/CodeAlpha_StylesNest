@@ -1,37 +1,23 @@
 import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { ensureProductSchema } from '@/lib/ensure-product-schema';
+import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * API endpoint to update database schema
- * Adds pricing_tiers column to existing products table
+ * API endpoint to update database schema (products columns).
  */
 export async function GET() {
   try {
-    console.log('Adding pricing_tiers column...');
-    
-    // Add pricing_tiers column if it doesn't exist
-    await sql`
-      ALTER TABLE products 
-      ADD COLUMN IF NOT EXISTS pricing_tiers JSONB DEFAULT '[]'
-    `;
+    await ensureProductSchema();
 
-    console.log('Schema updated successfully!');
     return NextResponse.json({ 
       success: true, 
-      message: 'Schema updated successfully - pricing_tiers column added' 
+      message: 'Product schema is up to date (pricing_tiers, clothes_options, status)' 
     });
   } catch (error) {
     console.error('Failed to update schema:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to update schema',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to update schema', status: 500, cause: error });
   }
 }
 

@@ -3,6 +3,9 @@
 // Categories: cosmetics, electronics, watches, jewelry, clothes, ...
 // ========================================
 
+import type { ClothesOptions } from '@/lib/clothes-options';
+import type { ProductMeta } from '@/lib/product-meta';
+
 export interface PricingTier {
   quantity: number;
   price: number;
@@ -24,6 +27,10 @@ export interface Product {
   features?: { en: string[]; ar: string[] };
   pricingTiers?: PricingTier[];
   status?: 'active' | 'inactive';
+  /** Set when category is clothes */
+  clothesOptions?: ClothesOptions;
+  /** SKU, stock, SEO, brand, etc. */
+  productMeta?: ProductMeta;
 }
 
 // Import cleaning function
@@ -48,6 +55,7 @@ interface OldProductFormat {
   category?: string;
   pricingTiers?: PricingTier[];
   status?: 'active' | 'inactive';
+  clothesOptions?: ClothesOptions;
 }
 
 // Helper function to migrate old product format
@@ -86,6 +94,7 @@ function migrateProductData(oldProduct: OldProductFormat): Product {
       category: oldProduct.category || 'other',
       pricingTiers: oldProduct.pricingTiers,
       status: oldProduct.status || 'active',
+      clothesOptions: oldProduct.clothesOptions,
     };
   }
 
@@ -125,6 +134,7 @@ function migrateProductData(oldProduct: OldProductFormat): Product {
     category: oldProduct.category || 'other',
     pricingTiers: oldProduct.pricingTiers,
     status: oldProduct.status || 'active',
+    clothesOptions: oldProduct.clothesOptions,
   };
 }
 
@@ -760,6 +770,8 @@ export const categories = [
   { id: 'makeup', name: 'Makeup' },
   { id: 'clothes', name: 'Clothes' },
   { id: 'electronics', name: 'Electronics' },
+  { id: 'bags', name: 'Bags' },
+  { id: 'menfashion', name: 'Men Fashion' },
   { id: 'general', name: 'General' },
 ];
 

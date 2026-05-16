@@ -3,7 +3,11 @@
 import { useState, use, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import { useLoginModal } from '@/context/LoginModalContext';
+import { useSavedCustomerDetails } from '@/hooks/useSavedCustomerDetails';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppFab from '@/components/WhatsAppFab';
@@ -14,6 +18,22 @@ import { useOrders } from '@/context/OrderContext';
 import { saveAbandonedOrder, removeAbandonedOrderOnSubmit, AbandonedOrder } from '@/utils/abandonedOrders';
 import { getProductTitle, getProductDescription, getProductFeatures } from '@/utils/getProductText';
 import { getSoldCount } from '@/utils/getSoldCount';
+import { formatPrice } from '@/utils/formatPrice';
+import ClothesStitchBadge, {
+  ClothesGenderNearPrice,
+  ClothesSizeSelector,
+  ClothesSizesLine,
+} from '@/components/ClothesImageBadges';
+import ProductMetaDisplay from '@/components/ProductMetaDisplay';
+import { clothesOrderProductNameWithSize, isClothesCategory, isClothesSizeRequired } from '@/lib/clothes-options';
+import OrderPaymentMethods from '@/components/OrderPaymentMethods';
+import {
+  buildOrderWhatsAppMessage,
+  buildWhatsAppLink,
+  formatPaymentMethodForOrder,
+  type PaymentMethod,
+} from '@/lib/payment-methods';
+import '@/components/product-page.css';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -22,6 +42,9 @@ interface ProductPageProps {
 export default function ProductPage({ params }: ProductPageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
+  const { status: authStatus } = useSession();
+  const { openLogin } = useLoginModal();
   const { products, loading } = useProducts();
   const { addOrder, orders } = useOrders();
   // Handle both integer IDs (from initial data) and decimal IDs (from new products)
@@ -73,7 +96,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         mobile: '',
         quantity: '1',
         city: '',
-        address: ''
+        address: '',
+        selectedSize: '',
       };
     }
     try {
@@ -97,11 +121,20 @@ export default function ProductPage({ params }: ProductPageProps) {
       mobile: '',
       quantity: '1',
       city: '',
-      address: ''
+      address: '',
+      selectedSize: '',
     };
   });
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [orderRestored, setOrderRestored] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [selectedPaymentId, setSelectedPaymentId] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [storeWhatsApp, setStoreWhatsApp] = useState('');
+  const [whatsappConfirmUrl, setWhatsappConfirmUrl] = useState('');
+  const [lastOrderId, setLastOrderId] = useState('');
+  useSavedCustomerDetails(setFormData, authStatus === 'authenticated');
+
   const hasSubmittedRef = useRef(false); // Track if form was submitted
   const formDataRef = useRef(formData); // Keep ref for cleanup handlers
   const savedDetailsRef = useRef<{ fullName?: string; mobile?: string; city?: string; address?: string; quantity?: string } | null>(null);
@@ -187,6 +220,28 @@ export default function ProductPage({ params }: ProductPageProps) {
       };
     }
   }, [formData]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/payment-methods', { cache: 'no-store' });
+        const data = await res.json();
+        if (cancelled || !data.success) return;
+        const methods = (data.methods ?? []) as PaymentMethod[];
+        setPaymentMethods(methods);
+        setStoreWhatsApp(data.storeWhatsApp ?? '');
+        if (methods.length) {
+          setSelectedPaymentId(methods[0].id);
+        }
+      } catch {
+        // Payment methods are optional on the form
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Get all available images (before early returns)
   // Filter out empty strings and undefined values
@@ -384,12 +439,51 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (authStatus !== 'authenticated') {
+      const returnTo = pathname || `/product/${id}`;
+      openLogin(returnTo);
+      return;
+    }
     
     // Validate form
     if (!formData.fullName || !formData.mobile || !formData.city || !formData.address) {
       alert('Please fill all required fields');
       return;
     }
+
+    const selectedPayment = paymentMethods.find((m) => m.id === selectedPaymentId);
+    if (paymentMethods.length && !selectedPayment) {
+      setPaymentError('Please select a payment method');
+      return;
+    }
+    setPaymentError('');
+
+    const isClothes = isClothesCategory(product.category) && product.clothesOptions;
+    const clothesOpts = product.clothesOptions;
+    const selectedSize = formData.selectedSize?.trim() ?? '';
+
+    if (isClothes && isClothesSizeRequired(clothesOpts?.stitch) && !selectedSize) {
+      alert('Please select a size (required for stitched items)');
+      return;
+    }
+    if (
+      isClothes &&
+      clothesOpts &&
+      selectedSize &&
+      !clothesOpts.sizes.includes(selectedSize)
+    ) {
+      alert('Please select a valid size');
+      return;
+    }
+
+    const orderProductName = isClothes
+      ? clothesOrderProductNameWithSize(
+          getProductTitle(product),
+          clothesOpts,
+          selectedSize || undefined
+        )
+      : getProductTitle(product);
 
     // Mark as submitted to prevent saving as abandoned
     hasSubmittedRef.current = true;
@@ -452,7 +546,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       city: formData.city,
       address: formData.address,
       product: {
-        name: getProductTitle(product),
+        name: orderProductName,
         image: product.image,
         quantity: quantity,
         price: product.currentPrice,
@@ -462,25 +556,46 @@ export default function ProductPage({ params }: ProductPageProps) {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
+    const paymentLabel = selectedPayment
+      ? formatPaymentMethodForOrder(selectedPayment)
+      : 'Cash on Delivery';
+
     // Add order to context / API
-    const placed = await addOrder({
+    const placedOrder = await addOrder({
       customer: formData.fullName,
       phone: formData.mobile,
       city: formData.city,
       address: formData.address,
       products: [{
-        name: getProductTitle(product),
+        name: orderProductName,
         quantity: quantity,
         price: product.currentPrice,
+        paymentMethod: paymentLabel,
       }],
       total: totalPrice,
       status: 'pending',
     });
 
-    if (!placed) {
+    if (!placedOrder) {
       alert('Could not place order. Please try again or contact support.');
       return;
     }
+
+    setLastOrderId(placedOrder.id);
+    const waPhone = storeWhatsApp.replace(/\D/g, '') || formData.mobile.replace(/\D/g, '');
+    const waMessage = buildOrderWhatsAppMessage({
+      orderId: placedOrder.id,
+      customerName: formData.fullName,
+      customerWhatsApp: formData.mobile,
+      productName: orderProductName,
+      quantity,
+      total: totalPrice,
+      city: formData.city,
+      address: formData.address,
+      paymentLabel,
+      size: selectedSize || undefined,
+    });
+    setWhatsappConfirmUrl(buildWhatsAppLink(waPhone, waMessage));
 
     // Save to recent orders (keep last 5 orders) in sessionStorage
     try {
@@ -531,12 +646,12 @@ export default function ProductPage({ params }: ProductPageProps) {
   const quantityOptions = product.pricingTiers && product.pricingTiers.length > 0
     ? product.pricingTiers.map(tier => ({
         value: tier.quantity.toString(),
-        label: `${tier.quantity} ${tier.quantity === 1 ? 'Piece' : 'Pieces'} - ${tier.price.toFixed(2)} PKR${tier.discount ? ` (${tier.discount}% OFF)` : ''}`
+        label: `${tier.quantity} ${tier.quantity === 1 ? 'Piece' : 'Pieces'} - ${formatPrice(tier.price)} PKR${tier.discount ? ` (${tier.discount}% OFF)` : ''}`
       }))
     : [
-        { value: '1', label: `1 Piece - ${product.currentPrice.toFixed(2)} PKR` },
-        { value: '2', label: `2 Pieces - ${(product.currentPrice * 2).toFixed(2)} PKR` },
-        { value: '3', label: `3 Pieces - ${(product.currentPrice * 3).toFixed(2)} PKR` },
+        { value: '1', label: `1 Piece - ${formatPrice(product.currentPrice)} PKR` },
+        { value: '2', label: `2 Pieces - ${formatPrice(product.currentPrice * 2)} PKR` },
+        { value: '3', label: `3 Pieces - ${formatPrice(product.currentPrice * 3)} PKR` },
       ];
   
   console.log('Generated quantityOptions:', quantityOptions);
@@ -546,15 +661,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       <Header />
       
       <main className="flex-1 min-w-0" style={{ paddingTop: 'calc(var(--site-header-h, 90px) + 20px)', paddingBottom: '50px' }}>
-        {/* Centered Container */}
-        <div
-          style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
-            paddingLeft: 'clamp(12px, 4vw, 30px)',
-            paddingRight: 'clamp(12px, 4vw, 30px)'
-          }}
-        >
+        <div className="product-page-main">
           {/* Order Restored Notification */}
           {orderRestored && (
             <motion.div
@@ -606,22 +713,38 @@ export default function ProductPage({ params }: ProductPageProps) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            style={{ marginBottom: '30px' }}
+            className="product-top-badges"
           >
-            <span style={{ 
-              display: 'inline-block',
-              background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
-              color: '#fff',
-              fontSize: '14px',
-              fontWeight: '600',
-              padding: '6px 16px',
-              borderRadius: '20px',
-              boxShadow: '0px 4px 12px rgba(56, 161, 105, 0.3)'
-            }}>
-              ✓ Free Delivery
-            </span>
+            {product.freeDelivery ? (
+              <span style={{ 
+                display: 'inline-block',
+                background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
+                color: '#fff',
+                fontSize: '14px',
+                fontWeight: '600',
+                padding: '6px 16px',
+                borderRadius: '20px',
+                boxShadow: '0px 4px 12px rgba(56, 161, 105, 0.3)'
+              }}>
+                ✓ Free Delivery
+              </span>
+            ) : null}
+            {product.productMeta?.stockQuantity != null ? (
+              <span
+                className={`product-stock-badge${
+                  product.productMeta.stockQuantity <= 0
+                    ? ' product-stock-badge--out'
+                    : product.productMeta.stockQuantity <= 5
+                      ? ' product-stock-badge--low'
+                      : ''
+                }`}
+              >
+                {product.productMeta.stockQuantity <= 0
+                  ? 'Out of stock'
+                  : `Total stock: ${product.productMeta.stockQuantity}`}
+              </span>
+            ) : null}
           </motion.div>
-
           {/* Order Confirmation Success */}
           {orderSubmitted && (
             <motion.div 
@@ -700,9 +823,27 @@ export default function ProductPage({ params }: ProductPageProps) {
                   }}
                 >
                   {isArabic 
-                    ? 'شكراً لك! سنتواصل معك قريباً للتوصيل خلال 1-2 يوم عمل.'
-                    : 'Thank you! We will contact you for delivery within 1-2 working days.'}
+                    ? 'شكراً لك! سنتواصل معك قريباً للتوصيل خلال 2-4 أيام عمل.'
+                    : 'Thank you! We will contact you for delivery within 2-4 working days.'}
                 </motion.p>
+
+                <div className="order-success-whatsapp">
+                  <h3>Confirm on WhatsApp</h3>
+                  <p>
+                    Order submit karne ke baad bara-e-meherbani WhatsApp par confirm kar dein taake hum
+                    aap ka order jaldi process kar saken.
+                    {lastOrderId ? ` (Order ID: ${lastOrderId})` : ''}
+                  </p>
+                  {whatsappConfirmUrl ? (
+                    <a href={whatsappConfirmUrl} target="_blank" rel="noopener noreferrer">
+                      WhatsApp par confirm karein
+                    </a>
+                  ) : (
+                    <p style={{ fontSize: 13, color: '#718096', margin: 0 }}>
+                      Admin panel se store WhatsApp number set karein, phir yahan direct link show hogi.
+                    </p>
+                  )}
+                </div>
 
                 {/* Order Summary - Modern */}
                 <motion.div 
@@ -745,7 +886,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text',
                       }}>
-                        {(product.currentPrice * parseInt(formData.quantity || '1')).toFixed(2)} PKR
+                        {formatPrice(product.currentPrice * parseInt(formData.quantity || '1'))} PKR
                       </span>
                     </div>
                   </div>
@@ -959,7 +1100,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                             {order.product.name}
                           </p>
                           <p style={{ fontSize: '13px', color: '#4a5568', fontWeight: '500' }}>
-                            {isArabic ? 'الكمية:' : 'Qty:'} {order.product.quantity} • {order.product.price.toFixed(2)} PKR
+                            {isArabic ? 'الكمية:' : 'Qty:'} {order.product.quantity} • {formatPrice(order.product.price)} PKR
                           </p>
                         </div>
 
@@ -978,7 +1119,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text',
                           }}>
-                            {order.total.toFixed(2)} PKR
+                            {formatPrice(order.total)} PKR
                           </p>
                           <p style={{ fontSize: '12px', color: '#718096', fontWeight: '500', marginTop: '4px' }}>
                             {order.time}
@@ -1112,7 +1253,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                               fontSize: '18px',
                               fontWeight: '700',
                             }}>
-                              {recommendedProduct.currentPrice.toFixed(2)} PKR
+                              {formatPrice(recommendedProduct.currentPrice)} PKR
                             </span>
                             <span style={{
                               color: '#a0aec0',
@@ -1120,7 +1261,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                               textDecoration: 'line-through',
                               fontWeight: '500'
                             }}>
-                              {recommendedProduct.originalPrice.toFixed(2)} PKR
+                              {formatPrice(recommendedProduct.originalPrice)} PKR
                             </span>
                           </div>
                         </div>
@@ -1134,7 +1275,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
           {/* Main Content Grid */}
           {!orderSubmitted && (
-          <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '30px' }}>
+          <div className="product-page-grid">
             
             {/* Left Column - Product Images & Info */}
             <motion.div 
@@ -1285,6 +1426,8 @@ export default function ProductPage({ params }: ProductPageProps) {
                   </>
                 )}
 
+                <ClothesStitchBadge product={product} animated />
+
                 {product.freeDelivery && (
                   <motion.span 
                     initial={{ scale: 0 }}
@@ -1385,40 +1528,44 @@ export default function ProductPage({ params }: ProductPageProps) {
                 </div>
               )}
 
-              {/* Price & Sold Count - PKR */}
+              {/* Price, sizes, gender, sold */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.5 }}
-                className="flex items-center justify-between" 
-                style={{ marginTop: '24px', paddingTop: '24px', borderTop: '2px solid rgba(102, 126, 234, 0.1)' }}
+                className="product-price-block"
               >
-                <div className="flex items-baseline" style={{ gap: '12px' }}>
-                  <span style={{ 
-                    background: 'linear-gradient(135deg, #e53e3e 0%, #fc8181 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    fontSize: '32px', 
-                    fontWeight: '700' 
-                  }}>
-                    {product.currentPrice.toFixed(2)} PKR
-                  </span>
-                  <span style={{ color: '#a0aec0', fontSize: '16px', textDecoration: 'line-through', fontWeight: '500' }}>
-                    {product.originalPrice.toFixed(2)} PKR
-                  </span>
+                <ClothesSizesLine product={product} />
+                <div className="product-price-row" style={{ marginTop: isClothesCategory(product.category) ? 10 : 0 }}>
+                  <div className="product-price-left">
+                    <div className="flex items-baseline" style={{ gap: '12px', flexWrap: 'wrap' }}>
+                      <span style={{ 
+                        background: 'linear-gradient(135deg, #e53e3e 0%, #fc8181 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        fontSize: '32px', 
+                        fontWeight: '700' 
+                      }}>
+                        {formatPrice(product.currentPrice)} PKR
+                      </span>
+                      <span style={{ color: '#a0aec0', fontSize: '16px', textDecoration: 'line-through', fontWeight: '500' }}>
+                        {formatPrice(product.originalPrice)} PKR
+                      </span>
+                    </div>
+                  </div>
+                  <div className="product-price-right">
+                    <ClothesGenderNearPrice product={product} />
+                    <span className="product-sold-badge">🔥 {actualSoldCount} Sold</span>
+                  </div>
                 </div>
-                <span style={{ 
-                  color: '#667eea', 
-                  fontWeight: '600', 
-                  fontSize: '14px',
-                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                  padding: '6px 12px',
-                  borderRadius: '12px'
-                }}>
-                  🔥 {actualSoldCount} Sold
-                </span>
               </motion.div>
+
+              <div className="product-details-card">
+                <h3 className="product-details-card__title">Product details</h3>
+                <ProductMetaDisplay product={product} variant="full" hideTitle />
+              </div>
+
             </motion.div>
 
             {/* Right Column - Order Form */}
@@ -1426,13 +1573,7 @@ export default function ProductPage({ params }: ProductPageProps) {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              style={{
-                background: 'linear-gradient(145deg, #ffffff 0%, #f7fafc 100%)',
-                borderRadius: '24px',
-                padding: '32px',
-                boxShadow: '0px 20px 60px rgba(102, 126, 234, 0.15), 0px 10px 25px rgba(79, 172, 254, 0.1)',
-                border: '2px solid rgba(102, 126, 234, 0.1)',
-              }}
+              className="product-order-card"
             >
               <motion.h2 
                 initial={{ opacity: 0, y: -10 }}
@@ -1450,21 +1591,36 @@ export default function ProductPage({ params }: ProductPageProps) {
               >
                 Order Now
               </motion.h2>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                style={{ 
-                  color: '#4a5568', 
-                  fontSize: isArabic ? '16px' : '15px', 
-                  marginBottom: '28px',
-                  fontWeight: '500'
-                }}
-              >
-                Kindly fill the form & we will deliver within 1-2 working days.
-              </motion.p>
+              <p className="order-form-intro">
+                Kindly fill the form &amp; we will deliver within 2-4 working days.
+              </p>
 
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {authStatus === 'authenticated' ? (
+                <p className="order-form-intro" style={{ marginBottom: 12, fontSize: 13, color: '#64748b' }}>
+                  Delivery details are filled from your{' '}
+                  <Link href="/profile" style={{ color: '#ff6b35', fontWeight: 600 }}>
+                    profile
+                  </Link>
+                  . Update them anytime there.
+                </p>
+              ) : null}
+
+              {authStatus !== 'authenticated' ? (
+                <div className="order-login-banner">
+                  <p>
+                    <strong>Sign in required</strong> — create an account or sign in to place your order.
+                  </p>
+                  <button
+                    type="button"
+                    className="order-login-banner__btn"
+                    onClick={() => openLogin(pathname || `/product/${id}`)}
+                  >
+                    Sign in / Register
+                  </button>
+                </div>
+              ) : null}
+
+              <form onSubmit={handleSubmit} className="order-form-compact">
                 {/* Full Name */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -1509,20 +1665,14 @@ export default function ProductPage({ params }: ProductPageProps) {
                   />
                 </motion.div>
 
-                {/* Mobile */}
+                {/* WhatsApp Number */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
                 >
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: isArabic ? '17px' : '15px', 
-                    fontWeight: '600', 
-                    color: '#2d3748', 
-                    marginBottom: '8px' 
-                  }}>
-                    Mobile<span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span>
+                  <label className="order-form-label">
+                    WhatsApp Number<span className="order-form-required">*</span>
                   </label>
                   <input
                     type="tel"
@@ -1530,6 +1680,8 @@ export default function ProductPage({ params }: ProductPageProps) {
                     value={formData.mobile}
                     onChange={handleInputChange}
                     placeholder="0300 1234567"
+                    inputMode="tel"
+                    autoComplete="tel"
                     required
                     style={{
                       width: '100%',
@@ -1553,20 +1705,28 @@ export default function ProductPage({ params }: ProductPageProps) {
                   />
                 </motion.div>
 
+                {isClothesCategory(product.category) && product.clothesOptions ? (
+                  <ClothesSizeSelector
+                    product={product}
+                    value={formData.selectedSize}
+                    onChange={(size) => {
+                      setFormData((prev: typeof formData) => {
+                        const updated = { ...prev, selectedSize: size };
+                        formDataRef.current = updated;
+                        return updated;
+                      });
+                    }}
+                  />
+                ) : null}
+
                 {/* Quantity */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.7 }}
                 >
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: isArabic ? '17px' : '15px', 
-                    fontWeight: '600', 
-                    color: '#2d3748', 
-                    marginBottom: '8px' 
-                  }}>
-                    Quantity<span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span>
+                  <label className="order-form-label">
+                    Quantity<span className="order-form-required">*</span>
                   </label>
                   <select
                     name="quantity"
@@ -1674,7 +1834,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                     onChange={handleInputChange}
                     placeholder="Building No, Street name, Area"
                     required
-                    rows={4}
+                    rows={3}
                     style={{
                       width: '100%',
                       padding: '14px 18px',
@@ -1698,6 +1858,18 @@ export default function ProductPage({ params }: ProductPageProps) {
                     }}
                   />
                 </motion.div>
+
+                <div className="order-payment-block--compact">
+                  <OrderPaymentMethods
+                    methods={paymentMethods}
+                    selectedId={selectedPaymentId || paymentMethods[0]?.id || ''}
+                    onSelect={(id) => {
+                      setSelectedPaymentId(id);
+                      setPaymentError('');
+                    }}
+                    error={paymentError}
+                  />
+                </div>
 
                 {/* Submit Button */}
                 <motion.button

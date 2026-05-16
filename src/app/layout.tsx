@@ -4,6 +4,8 @@ import "./globals.css";
 import { ProductProvider } from "@/context/ProductContext";
 import { OrderProvider } from "@/context/OrderContext";
 import { CartProvider } from "@/context/CartContext";
+import AuthProvider from "@/components/providers/AuthProvider";
+import { LoginModalProvider } from "@/context/LoginModalContext";
 
 const poppins = Poppins({
   weight: ['400', '500', '600', '700'],
@@ -42,14 +44,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${poppins.variable} ${brandMark.variable} font-sans antialiased bg-[#f5f5f5]`} suppressHydrationWarning>
-        <ProductProvider>
-          <CartProvider>
-            <OrderProvider>
-              {children}
-            </OrderProvider>
-          </CartProvider>
-        </ProductProvider>
+      <body
+        className={`${poppins.variable} ${brandMark.variable} font-sans antialiased bg-[#f5f5f5]`}
+        style={{ backgroundColor: '#f5f5f5', color: '#171717' }}
+        suppressHydrationWarning
+      >
+        <AuthProvider>
+          <LoginModalProvider>
+            <ProductProvider>
+              <CartProvider>
+                <OrderProvider>
+                  {children}
+                </OrderProvider>
+              </CartProvider>
+            </ProductProvider>
+          </LoginModalProvider>
+        </AuthProvider>
       </body>
     </html>
   );
