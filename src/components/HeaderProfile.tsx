@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -92,20 +91,13 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
             width: compact ? 40 : 36,
             height: compact ? 40 : 36,
             borderRadius: '50%',
-            overflow: 'hidden',
-            position: 'relative',
             flexShrink: 0,
-            background: '#e2e8f0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          {session.user.image ? (
-            <Image src={session.user.image} alt="" fill sizes="40px" style={{ objectFit: 'cover' }} unoptimized />
-          ) : (
-            <IoPersonCircleOutline size={22} aria-hidden />
-          )}
+          <IoPersonCircleOutline size={compact ? 20 : 22} aria-hidden />
         </span>
         {!compact ? (
           <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -117,78 +109,32 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
   );
 }
 
+/** Sign out only — profile / sign-in live on the mobile navbar bar. */
 export function HeaderProfileMobile({ onNavigate }: { onNavigate?: () => void }) {
   const { data: session, status } = useSession();
-  const pathname = usePathname();
-  const { openLogin } = useLoginModal();
 
-  if (status === 'loading') return null;
-
-  if (!session?.user) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          onNavigate?.();
-          openLogin(pathname || '/');
-        }}
-        style={{
-          width: '100%',
-          padding: '12px 20px',
-          fontSize: '15px',
-          fontWeight: 600,
-          color: '#4a5568',
-          background: 'rgba(255, 107, 53, 0.1)',
-          border: '2px solid rgba(255, 107, 53, 0.35)',
-          borderRadius: '12px',
-          cursor: 'pointer',
-        }}
-      >
-        Sign in / Register
-      </button>
-    );
-  }
+  if (status !== 'authenticated' || !session?.user) return null;
 
   return (
-    <motion.div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <Link href="/profile" onClick={onNavigate} style={{ width: '100%' }}>
-        <button
-          type="button"
-          style={{
-            width: '100%',
-            padding: '12px 20px',
-            fontSize: '15px',
-            fontWeight: 600,
-            color: '#fff',
-            background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)',
-            border: 'none',
-            borderRadius: '12px',
-            cursor: 'pointer',
-          }}
-        >
-          My profile
-        </button>
-      </Link>
-      <button
-        type="button"
-        onClick={() => {
-          onNavigate?.();
-          void signOut({ callbackUrl: '/' });
-        }}
-        style={{
-          width: '100%',
-          padding: '10px 20px',
-          fontSize: '14px',
-          fontWeight: 500,
-          color: '#718096',
-          background: 'transparent',
-          border: '1px solid #e2e8f0',
-          borderRadius: '12px',
-          cursor: 'pointer',
-        }}
-      >
-        Sign out
-      </button>
-    </motion.div>
+    <button
+      type="button"
+      onClick={() => {
+        onNavigate?.();
+        void signOut({ callbackUrl: '/' });
+      }}
+      style={{
+        width: '100%',
+        padding: '10px 20px',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: '#718096',
+        background: 'transparent',
+        border: '1px solid #e2e8f0',
+        borderRadius: '12px',
+        cursor: 'pointer',
+      }}
+    >
+      Sign out
+    </button>
   );
 }

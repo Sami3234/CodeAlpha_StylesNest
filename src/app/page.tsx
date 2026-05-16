@@ -7,6 +7,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppFab from '@/components/WhatsAppFab';
 import HomeProductStrip from '@/components/HomeProductStrip';
+import CosmeticsProductCarousel from '@/components/CosmeticsProductCarousel';
+import ElectronicsProductCarousel from '@/components/ElectronicsProductCarousel';
 import './home-page.css';
 
 export default function Home() {
@@ -1267,89 +1269,7 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Image Grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(200px, 40vw, 250px), 1fr))',
-              gap: 'clamp(15px, 3vw, 30px)',
-              marginBottom: 'clamp(30px, 5vw, 40px)'
-            }}
-            className="cosmetics-grid"
-          >
-            {(() => {
-              const validImages = cosmeticsImages.filter(img => img && img.trim() !== '');
-              const displayItems = validImages.length === 0 
-                ? Array.from({ length: 5 }).map((_, index) => ({ image: '', index }))
-                : (() => {
-                    const items = validImages.map((image, index) => ({ image, index }));
-                    // Fill remaining slots with empty cards up to max 5
-                    while (items.length < 5) {
-                      items.push({ image: '', index: items.length });
-                    }
-                    return items;
-                  })();
-              
-              return displayItems.map(({ image, index }) => (
-                <div
-                  key={index}
-                  className="landing-strip-card landing-strip-card--cosmetics"
-                  style={{
-                    position: 'relative',
-                    borderRadius: '15px',
-                    overflow: 'hidden',
-                    boxShadow: image ? '0 15px 40px rgba(0,0,0,0.3)' : '0 8px 20px rgba(0,0,0,0.1)',
-                    transition: 'transform 0.3s ease',
-                    backgroundColor: image ? 'transparent' : '#f5f5f5',
-                    border: image ? 'none' : '2px dashed #ddd',
-                    minHeight: '300px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (image) {
-                      e.currentTarget.style.transform = 'translateY(-10px) scale(1.02)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (image) {
-                      e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                    }
-                  }}
-                >
-                  {image && image.trim() !== '' ? (
-                    <Image
-                      src={image}
-                      alt={`Cosmetics ${index + 1}`}
-                      width={400}
-                      height={300}
-                      style={{
-                        width: '100%',
-                        height: '300px',
-                        objectFit: 'cover',
-                        display: 'block'
-                      }}
-                    />
-                  ) : (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#999',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}>
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.3, marginBottom: '8px' }}>
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                      <p style={{ margin: 0 }}>Empty</p>
-                    </div>
-                  )}
-                </div>
-              ));
-            })()}
-          </div>
+          <CosmeticsProductCarousel images={cosmeticsImages} />
 
           {/* CTA Button */}
           <div style={{ textAlign: 'center' }}>
@@ -1509,91 +1429,44 @@ export default function Home() {
           </div>
 
           {/* Right Side - Flip Card with clothes images */}
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              perspective: '1000px'
-            }}
-          >
+          <div className="clothes-flip-scene">
             <div
+              className="clothes-flip-card"
               onClick={handleClothesFlip}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleClothesFlip();
+                }
+              }}
               style={{
-                position: 'relative',
-                width: '100%',
-                height: '500px',
-                cursor: 'pointer',
-                transformStyle: 'preserve-3d',
-                transition: 'transform 0.6s',
-                transform: clothesFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                transform: clothesFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
               }}
             >
               {/* Front of Card */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backfaceVisibility: 'hidden',
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-                  transform: 'rotateY(0deg)'
-                }}
-              >
+              <div className="clothes-flip-card__front">
                 {clothesImages.length > 0 && clothesImages[clothesImageIndex] && clothesImages[clothesImageIndex].trim() !== '' && (
-                  <Image
-                    src={clothesImages[clothesImageIndex]}
-                    alt="Clothes collection"
-                    width={600}
-                    height={500}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block'
-                    }}
-                  />
+                  <div className="clothes-image-wrap">
+                    <Image
+                      src={clothesImages[clothesImageIndex]}
+                      alt="Clothes collection"
+                      width={600}
+                      height={500}
+                      sizes="(max-width: 767px) 100vw, 50vw"
+                      className="clothes-flip-image"
+                      style={{ width: '100%', height: 'auto' }}
+                    />
+                  </div>
                 )}
-                {/* Overlay with click hint */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '0',
-                    left: '0',
-                    right: '0',
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
-                    padding: '20px',
-                    color: '#fff',
-                    textAlign: 'center'
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>
-                    Click to see more →
-                  </p>
+                <div className="clothes-flip-card__hint">
+                  <p>Click to see more →</p>
                 </div>
               </div>
 
               {/* Back of Card */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backfaceVisibility: 'hidden',
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-                  transform: 'rotateY(180deg)',
-                  backgroundColor: '#1a1a2e',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                  padding: '40px',
-                  color: '#fff'
-                }}
-              >
+              <div className="clothes-flip-card__back">
                 <div
                   style={{
                     fontSize: '48px',
@@ -1626,14 +1499,7 @@ export default function Home() {
             </div>
 
             {/* Image Indicators */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '10px',
-                marginTop: '20px'
-              }}
-            >
+            <div className="clothes-flip-dots">
               {clothesImages.map((_, index) => (
                 <div
                   key={index}
@@ -1728,95 +1594,7 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Image Showcase */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 'clamp(15px, 3vw, 30px)',
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              marginBottom: 'clamp(30px, 5vw, 50px)'
-            }}
-            className="electronics-showcase"
-          >
-            {(() => {
-              const validImages = jewelleryImages.filter(img => img && img.trim() !== '');
-              const displayItems = validImages.length === 0 
-                ? Array.from({ length: 4 }).map((_, index) => ({ image: '', index }))
-                : (() => {
-                    const items = validImages.map((image, index) => ({ image, index }));
-                    // Fill remaining slots with empty cards up to max 4
-                    while (items.length < 4) {
-                      items.push({ image: '', index: items.length });
-                    }
-                    return items;
-                  })();
-              
-              return displayItems.map(({ image, index }) => (
-                <div
-                  key={index}
-                  className="landing-strip-card landing-strip-card--electronics"
-                  style={{
-                    position: 'relative',
-                    borderRadius: '20px',
-                    overflow: 'hidden',
-                    boxShadow: image ? '0 20px 60px rgba(0, 0, 0, 0.15)' : '0 8px 20px rgba(0,0,0,0.1)',
-                    transition: 'transform 0.3s ease',
-                    flex: '1',
-                    minWidth: 'clamp(280px, 80vw, 300px)',
-                    maxWidth: '450px',
-                    width: '100%',
-                    backgroundColor: image ? 'transparent' : '#f5f5f5',
-                    border: image ? 'none' : '2px dashed #ddd',
-                    minHeight: '400px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (image) {
-                      e.currentTarget.style.transform = 'translateY(-15px) scale(1.03)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (image) {
-                      e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                    }
-                  }}
-                >
-                  {image && image.trim() !== '' ? (
-                    <Image
-                      src={image}
-                      alt={`Electronics ${index + 1}`}
-                      width={450}
-                      height={400}
-                      style={{
-                        width: '100%',
-                        height: '400px',
-                        objectFit: 'cover',
-                        display: 'block'
-                      }}
-                    />
-                  ) : (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#999',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}>
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.3, marginBottom: '8px' }}>
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                      <p style={{ margin: 0 }}>Empty</p>
-                    </div>
-                  )}
-                </div>
-              ));
-            })()}
-          </div>
+          <ElectronicsProductCarousel images={jewelleryImages} />
 
           {/* CTA Button */}
           <div style={{ textAlign: 'center' }}>
@@ -2178,6 +1956,7 @@ export default function Home() {
 
               {/* Main Image */}
               <div
+                className={`general-store-image-wrap${generalStoreImage ? '' : ' general-store-image-wrap--empty'}`}
                 style={{
                   position: 'relative',
                   borderRadius: '15px',
@@ -2188,10 +1967,6 @@ export default function Home() {
                   transition: 'transform 0.3s ease',
                   backgroundColor: generalStoreImage ? 'transparent' : '#f5f5f5',
                   border: generalStoreImage ? 'none' : '2px dashed #ddd',
-                  minHeight: '400px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
                 }}
                 onMouseEnter={(e) => {
                   if (generalStoreImage) {
@@ -2210,12 +1985,12 @@ export default function Home() {
                     alt="General category products"
                     width={600}
                     height={400}
+                    sizes="(max-width: 767px) 100vw, 50vw"
+                    className="general-store-image"
                     style={{
                       width: '100%',
                       height: 'auto',
-                      objectFit: 'cover',
-                      display: 'block',
-                      transition: 'transform 0.5s ease'
+                      transition: 'transform 0.5s ease',
                     }}
                   />
                 ) : (

@@ -378,19 +378,77 @@ export default function Header() {
             </motion.nav>
           )}
 
-          {/* Mobile Menu Toggle - Hidden in Admin Panel */}
+          {/* Mobile: profile + cart on bar; hamburger for nav links */}
           {!isAdminPanel && (
-            <button 
-              type="button"
-              className="md:hidden flex flex-col p-2"
-              style={{ gap: '4px', zIndex: 10 }}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
+            <div
+              className="flex md:hidden items-center shrink-0"
+              style={{ gap: '8px', zIndex: 10 }}
             >
-              <span className={`bg-gray-600 block ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`} style={{ width: '20px', height: '2px', transition: 'all 0.2s' }}></span>
-              <span className={`bg-gray-600 block ${mobileMenuOpen ? 'opacity-0' : ''}`} style={{ width: '20px', height: '2px', transition: 'all 0.2s' }}></span>
-              <span className={`bg-gray-600 block ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} style={{ width: '20px', height: '2px', transition: 'all 0.2s' }}></span>
-            </button>
+              <HeaderProfile compact />
+
+              <Link
+                href="/cart"
+                aria-label={`Shopping cart${cartHydrated && totalQuantity > 0 ? `, ${totalQuantity} items` : ''}`}
+                style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <motion.span
+                  whileTap={{ scale: 0.92 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    border: isActive('/cart') ? 'none' : '2px solid rgba(255, 107, 53, 0.45)',
+                    background: isActive('/cart')
+                      ? 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
+                      : 'rgba(255, 255, 255, 0.95)',
+                    boxShadow: isActive('/cart')
+                      ? '0px 8px 22px rgba(255, 107, 53, 0.45)'
+                      : '0px 4px 12px rgba(0,0,0,0.08)',
+                    color: isActive('/cart') ? '#fff' : '#4a5568',
+                  }}
+                >
+                  <IoBagOutline size={20} aria-hidden />
+                  {cartHydrated && totalQuantity > 0 ? (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        minWidth: '18px',
+                        height: '18px',
+                        padding: '0 4px',
+                        borderRadius: '999px',
+                        background: '#e53e3e',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {totalQuantity > 99 ? '99+' : totalQuantity}
+                    </span>
+                  ) : null}
+                </motion.span>
+              </Link>
+
+              <button
+                type="button"
+                className="flex flex-col p-2"
+                style={{ gap: '4px' }}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                <span className={`bg-gray-600 block ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`} style={{ width: '20px', height: '2px', transition: 'all 0.2s' }} />
+                <span className={`bg-gray-600 block ${mobileMenuOpen ? 'opacity-0' : ''}`} style={{ width: '20px', height: '2px', transition: 'all 0.2s' }} />
+                <span className={`bg-gray-600 block ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} style={{ width: '20px', height: '2px', transition: 'all 0.2s' }} />
+              </button>
+            </div>
           )}
         </div>
 
@@ -486,56 +544,6 @@ export default function Header() {
             </Link>
 
             <HeaderProfileMobile onNavigate={() => setMobileMenuOpen(false)} />
-
-            <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                style={{
-                  width: '100%',
-                  padding: '12px 20px',
-                  fontSize: '15px',
-                  fontWeight: isActive('/cart') ? '600' : '500',
-                  color: isActive('/cart') ? '#ffffff' : '#4a5568',
-                  background: isActive('/cart')
-                    ? 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
-                    : 'rgba(255, 107, 53, 0.1)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  boxShadow: isActive('/cart')
-                    ? '0px 6px 20px rgba(255, 107, 53, 0.4), 0px 3px 10px rgba(247, 147, 30, 0.3)'
-                    : 'none'
-                }}
-              >
-                <IoBagOutline size={20} aria-hidden />
-                Cart
-                {cartHydrated && totalQuantity > 0 ? (
-                  <span
-                    style={{
-                      marginLeft: 'auto',
-                      minWidth: '24px',
-                      height: '22px',
-                      padding: '0 6px',
-                      borderRadius: '999px',
-                      background: '#e53e3e',
-                      color: '#fff',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {totalQuantity > 99 ? '99+' : totalQuantity}
-                  </span>
-                ) : null}
-              </motion.button>
-            </Link>
           </motion.div>
         )}
       </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -199,18 +198,7 @@ export default function ProfilePage() {
               <div className="profile-sidebar__card">
                 <div className="profile-sidebar__avatar-wrap">
                   <div className="profile-avatar">
-                    {session.user.image ? (
-                      <Image
-                        src={session.user.image}
-                        alt=""
-                        fill
-                        sizes="(max-width: 768px) 96px, 112px"
-                        style={{ objectFit: 'cover' }}
-                        unoptimized
-                      />
-                    ) : (
-                      <IoPersonCircleOutline size={52} color="#94a3b8" />
-                    )}
+                    <IoPersonCircleOutline size={52} color="#94a3b8" aria-hidden />
                   </div>
                 </div>
                 <h2 className="profile-sidebar__name">{displayName}</h2>

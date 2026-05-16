@@ -28,7 +28,7 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
   const [oauth, setOauth] = useState<{ google?: boolean; apple?: boolean }>({});
 
   const captchaFilled = captchaAnswer.trim().length > 0;
-  const actionsLocked = loading || !captchaFilled;
+  const emailSubmitLocked = loading || !captchaFilled;
 
   const refreshCaptcha = useCallback(() => {
     setCaptcha(createMathCaptcha());
@@ -136,7 +136,6 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
 
   const oauthSignIn = (provider: 'google' | 'apple') => {
     setError('');
-    if (!requireCaptcha()) return;
     void signIn(provider, { callbackUrl });
   };
 
@@ -170,6 +169,38 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
           : 'Create your account with a strong password to shop safely.'}
       </p>
 
+      {(oauth.google || oauth.apple) && (
+        <div className="login-oauth login-oauth--top">
+          {oauth.google ? (
+            <button
+              type="button"
+              className="login-oauth__btn"
+              onClick={() => oauthSignIn('google')}
+              disabled={loading}
+            >
+              <span className="login-oauth__icon" aria-hidden>
+                <GoogleIcon size={20} />
+              </span>
+              Continue with Google
+            </button>
+          ) : null}
+          {oauth.apple ? (
+            <button
+              type="button"
+              className="login-oauth__btn login-oauth__btn--apple"
+              onClick={() => oauthSignIn('apple')}
+              disabled={loading}
+            >
+              Continue with Apple
+            </button>
+          ) : null}
+        </div>
+      )}
+
+      <div className="login-divider">
+        <span>or use email</span>
+      </div>
+
       {error ? <p className="login-error">{error}</p> : null}
 
       {mode === 'signin' ? (
@@ -191,7 +222,7 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
 
           {captchaBlock}
 
-          <button type="submit" className="login-submit" disabled={actionsLocked}>
+          <button type="submit" className="login-submit" disabled={emailSubmitLocked}>
             {loading ? 'Please wait…' : 'Sign in with email'}
           </button>
         </form>
@@ -229,43 +260,10 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
 
           {captchaBlock}
 
-          <button type="submit" className="login-submit" disabled={actionsLocked}>
+          <button type="submit" className="login-submit" disabled={emailSubmitLocked}>
             {loading ? 'Please wait…' : 'Create account'}
           </button>
         </form>
-      )}
-
-      {(oauth.google || oauth.apple) && (
-        <>
-          <div className="login-divider">
-            <span>or</span>
-          </div>
-          <div className="login-oauth">
-            {oauth.google ? (
-              <button
-                type="button"
-                className="login-oauth__btn"
-                onClick={() => oauthSignIn('google')}
-                disabled={actionsLocked}
-              >
-                <span className="login-oauth__icon" aria-hidden>
-                  <GoogleIcon size={20} />
-                </span>
-                Continue with Google
-              </button>
-            ) : null}
-            {oauth.apple ? (
-              <button
-                type="button"
-                className="login-oauth__btn login-oauth__btn--apple"
-                onClick={() => oauthSignIn('apple')}
-                disabled={actionsLocked}
-              >
-                Continue with Apple
-              </button>
-            ) : null}
-          </div>
-        </>
       )}
 
       <p className="login-switch">

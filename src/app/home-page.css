@@ -247,6 +247,88 @@
   }
 }
 
+/* Clothes section — flip card */
+.clothes-flip-scene {
+  position: relative;
+  z-index: 1;
+  perspective: 1000px;
+}
+
+.clothes-flip-card {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
+}
+
+.clothes-flip-card__front,
+.clothes-flip-card__back {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.clothes-flip-card__front {
+  transform: rotateY(0deg);
+}
+
+.clothes-flip-card__back {
+  transform: rotateY(180deg);
+  background-color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 40px;
+  color: #fff;
+}
+
+.clothes-image-wrap {
+  width: 100%;
+  height: 100%;
+  line-height: 0;
+}
+
+.clothes-flip-image,
+.clothes-image-wrap img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.clothes-flip-card__hint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  padding: 20px;
+  color: #fff;
+  text-align: center;
+  z-index: 2;
+}
+
+.clothes-flip-card__hint p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.clothes-flip-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 /* Garments carousel dots: below deck on desktop, inside padded area on mobile */
 .garments-carousel-dots {
   bottom: -36px;
@@ -301,8 +383,72 @@
     height: 480px !important;
   }
 
-  .cosmetics-grid {
+  .cosmetics-grid,
+  .cosmetics-grid--carousel {
+    display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+    gap: clamp(15px, 3vw, 30px) !important;
+    overflow: visible !important;
+    margin-inline: 0 !important;
+    margin-bottom: clamp(30px, 5vw, 40px) !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .cosmetics-grid--carousel > .landing-strip-card {
+    flex: unset !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 300px !important;
+    scroll-snap-align: unset;
+  }
+
+  .cosmetics-grid--carousel > .landing-strip-card--cosmetics:hover {
+    transform: translateY(-10px) scale(1.02);
+  }
+
+  .cosmetics-grid--carousel .landing-strip-card--cosmetics img {
+    height: 300px !important;
+    min-height: 300px !important;
+    border-radius: 15px;
+  }
+
+  .electronics-showcase,
+  .electronics-showcase--carousel {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: clamp(15px, 3vw, 30px) !important;
+    overflow: visible !important;
+    margin-inline: 0 !important;
+    margin-bottom: clamp(30px, 5vw, 50px) !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    justify-content: center !important;
+  }
+
+  .electronics-showcase--carousel > .landing-strip-card {
+    flex: unset !important;
+    width: auto !important;
+    min-width: clamp(280px, 80vw, 300px) !important;
+    max-width: 450px !important;
+    min-height: 400px !important;
+    scroll-snap-align: unset;
+  }
+
+  .electronics-showcase--carousel > .landing-strip-card--electronics:hover {
+    transform: translateY(-15px) scale(1.03);
+  }
+
+  .electronics-showcase--carousel .landing-strip-card--electronics img {
+    height: 400px !important;
+    max-height: none !important;
+    min-height: 400px !important;
+    border-radius: 20px;
   }
 
   .general-store-grid {
@@ -311,6 +457,34 @@
 
   .promo-left {
     clip-path: polygon(0 0, 85% 0, 100% 100%, 0 100%) !important;
+  }
+
+  .general-store-image-wrap:not(.general-store-image-wrap--empty) {
+    min-height: 0;
+    display: block;
+  }
+
+  .general-store-image-wrap--empty {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .general-store-image-wrap > span {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+  }
+
+  .general-store-image,
+  .general-store-image-wrap img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    position: relative !important;
   }
 
   .garments-carousel-dots {
@@ -336,6 +510,80 @@
   .electronics-section,
   .general-store-section {
     padding: 40px 15px !important;
+  }
+
+  .promo-right {
+    min-height: 0 !important;
+    padding: 20px 16px !important;
+  }
+
+  .general-store-image-wrap:not(.general-store-image-wrap--empty) {
+    min-height: 0 !important;
+    display: block !important;
+    margin-bottom: 16px !important;
+    line-height: 0;
+  }
+
+  .general-store-image-wrap > span {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    aspect-ratio: unset !important;
+  }
+
+  .general-store-image,
+  .general-store-image-wrap img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    object-fit: contain !important;
+    display: block !important;
+    position: relative !important;
+    inset: unset !important;
+  }
+
+  /* Clothes flip: natural image height — no top/bottom gaps on mobile */
+  .clothes-flip-card {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .clothes-flip-card__front {
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    inset: unset !important;
+  }
+
+  .clothes-flip-card__back {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .clothes-image-wrap {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .clothes-image-wrap > span {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    aspect-ratio: unset !important;
+  }
+
+  .clothes-flip-image,
+  .clothes-image-wrap img {
+    width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+    position: relative !important;
+    inset: unset !important;
   }
 
   /* Garments stack: reserve vertical space for 3D offsets so cards are not clipped / overlapping next section */
@@ -418,18 +666,20 @@
     padding-bottom: clamp(52px, 14vw, 96px) !important;
   }
 
-  /* Premium cosmetics + electronics: horizontal strip + polished mobile chrome */
-  .cosmetics-grid {
+  /* Premium cosmetics: horizontal auto-scroll strip on mobile */
+  .cosmetics-grid,
+  .cosmetics-grid--carousel {
     display: flex !important;
     flex-wrap: nowrap !important;
     grid-template-columns: none !important;
     gap: 16px !important;
     overflow-x: auto !important;
     overflow-y: visible !important;
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: none;
     scroll-padding-inline: 16px;
     -webkit-overflow-scrolling: touch;
-    direction: rtl;
+    direction: ltr;
+    scrollbar-width: none;
     margin-inline: -12px !important;
     padding: 14px 16px 18px;
     border-radius: 20px;
@@ -442,25 +692,15 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.9),
       0 8px 24px rgba(26, 26, 46, 0.06);
-    scrollbar-width: thin;
-    scrollbar-color: rgba(26, 26, 46, 0.28) transparent;
   }
 
-  .cosmetics-grid::-webkit-scrollbar {
-    height: 6px;
+  .cosmetics-grid::-webkit-scrollbar,
+  .cosmetics-grid--carousel::-webkit-scrollbar {
+    display: none;
   }
 
-  .cosmetics-grid::-webkit-scrollbar-thumb {
-    background: rgba(26, 26, 46, 0.22);
-    border-radius: 999px;
-  }
-
-  .cosmetics-grid::-webkit-scrollbar-track {
-    background: rgba(26, 26, 46, 0.06);
-    border-radius: 999px;
-  }
-
-  .cosmetics-grid > .landing-strip-card {
+  .cosmetics-grid > .landing-strip-card,
+  .cosmetics-grid--carousel > .landing-strip-card {
     direction: ltr;
     flex: 0 0 min(232px, 76vw) !important;
     width: min(232px, 76vw) !important;
@@ -476,15 +716,51 @@
     outline-offset: -1px;
   }
 
-  .cosmetics-grid .landing-strip-card--cosmetics img {
+  .cosmetics-grid .landing-strip-card--cosmetics img,
+  .cosmetics-grid--carousel .landing-strip-card--cosmetics img {
     height: 204px !important;
     min-height: 180px !important;
     width: 100% !important;
     object-fit: cover !important;
-    border-radius: 14px 14px 0 0;
+    border-radius: 14px;
   }
 
-  .electronics-showcase {
+  .cosmetics-grid--carousel {
+    margin-bottom: 28px !important;
+  }
+
+  .cosmetics-grid--carousel > .landing-strip-card--cosmetics {
+    box-shadow: 0 14px 32px rgba(26, 26, 46, 0.12), 0 2px 8px rgba(26, 26, 46, 0.06);
+    background: #fff;
+    transition: transform 0.3s ease;
+  }
+
+  .cosmetics-grid__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    width: 100%;
+    color: #999;
+    font-size: 14px;
+    font-weight: 500;
+    background: #f5f5f5;
+    border: 2px dashed #ddd;
+  }
+
+  .cosmetics-grid__empty svg {
+    opacity: 0.3;
+    margin-bottom: 8px;
+  }
+
+  .cosmetics-grid__empty p {
+    margin: 0;
+  }
+
+  /* Electronics: auto-scroll right→left on mobile */
+  .electronics-showcase,
+  .electronics-showcase--carousel {
     display: flex !important;
     flex-wrap: nowrap !important;
     justify-content: flex-start !important;
@@ -492,10 +768,10 @@
     gap: 16px !important;
     overflow-x: auto !important;
     overflow-y: visible !important;
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: none;
     scroll-padding-inline: 16px;
     -webkit-overflow-scrolling: touch;
-    direction: rtl;
+    direction: ltr;
     margin-inline: -12px !important;
     padding: 14px 16px 18px;
     border-radius: 20px;
@@ -508,25 +784,20 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.85),
       0 8px 26px rgba(26, 26, 46, 0.07);
-    scrollbar-width: thin;
-    scrollbar-color: rgba(26, 26, 46, 0.28) transparent;
+    scrollbar-width: none;
   }
 
-  .electronics-showcase::-webkit-scrollbar {
-    height: 6px;
+  .electronics-showcase::-webkit-scrollbar,
+  .electronics-showcase--carousel::-webkit-scrollbar {
+    display: none;
   }
 
-  .electronics-showcase::-webkit-scrollbar-thumb {
-    background: rgba(26, 26, 46, 0.22);
-    border-radius: 999px;
+  .electronics-showcase--carousel {
+    margin-bottom: 28px !important;
   }
 
-  .electronics-showcase::-webkit-scrollbar-track {
-    background: rgba(26, 26, 46, 0.06);
-    border-radius: 999px;
-  }
-
-  .electronics-showcase > .landing-strip-card {
+  .electronics-showcase > .landing-strip-card,
+  .electronics-showcase--carousel > .landing-strip-card {
     direction: ltr;
     flex: 0 0 min(216px, 74vw) !important;
     flex-grow: 0 !important;
@@ -543,12 +814,42 @@
     outline-offset: -1px;
   }
 
-  .electronics-showcase .landing-strip-card--electronics img {
+  .electronics-showcase .landing-strip-card--electronics img,
+  .electronics-showcase--carousel .landing-strip-card--electronics img {
     height: 212px !important;
     max-height: 228px !important;
     width: 100% !important;
     object-fit: cover !important;
-    border-radius: 16px 16px 0 0;
+    border-radius: 16px;
+  }
+
+  .electronics-showcase--carousel > .landing-strip-card--electronics {
+    transition: transform 0.3s ease;
+    background: #fff;
+  }
+
+  .electronics-showcase__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    width: 100%;
+    color: #999;
+    font-size: 14px;
+    font-weight: 500;
+    background: #f5f5f5;
+    border: 2px dashed #ddd;
+    border-radius: 18px;
+  }
+
+  .electronics-showcase__empty svg {
+    opacity: 0.3;
+    margin-bottom: 8px;
+  }
+
+  .electronics-showcase__empty p {
+    margin: 0;
   }
 }
 

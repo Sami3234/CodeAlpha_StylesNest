@@ -29,7 +29,7 @@ export default function MathCaptchaField({ captcha, value, onChange, onRefresh, 
           disabled={disabled}
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/[^\d-]/g, ''))}
-          placeholder="Answer"
+          placeholder="Ans"
           className="login-captcha__input"
           aria-label={`Answer: ${captcha.label}`}
         />
