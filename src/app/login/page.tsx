@@ -13,8 +13,14 @@ function LoginRedirect() {
   useEffect(() => {
     const raw = searchParams.get('callbackUrl') || '/';
     const safe = raw.startsWith('/') && !raw.startsWith('/admin') ? raw : '/';
+    const authError = searchParams.get('error');
     openLogin(safe);
-    router.replace(safe === '/login' ? '/' : safe);
+    const target = safe === '/login' ? '/' : safe;
+    const next =
+      authError && authError.length < 64
+        ? `${target}?error=${encodeURIComponent(authError)}`
+        : target;
+    router.replace(next);
   }, [searchParams, openLogin, router]);
 
   return null;

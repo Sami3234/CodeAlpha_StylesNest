@@ -8,6 +8,7 @@ type PageSeoInput = {
   keywords?: string[];
   image?: string | null;
   noIndex?: boolean;
+  type?: 'website' | 'article';
 };
 
 export function buildPageMetadata({
@@ -17,6 +18,7 @@ export function buildPageMetadata({
   keywords = [],
   image,
   noIndex = false,
+  type = 'website',
 }: PageSeoInput): Metadata {
   const url = absoluteUrl(path);
   const ogImage = image ? absoluteUrl(image) : absoluteUrl(siteConfig.defaultOgImagePath);
@@ -27,27 +29,37 @@ export function buildPageMetadata({
     description: truncate(description, 160),
     keywords: [...siteConfig.keywords, ...keywords],
     metadataBase: new URL(getSiteUrl()),
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+    },
     robots: noIndex
-      ? { index: false, follow: false }
+      ? { index: false, follow: false, googleBot: { index: false, follow: false } }
       : {
           index: true,
           follow: true,
           googleBot: {
             index: true,
             follow: true,
+            'max-video-preview': -1,
             'max-image-preview': 'large',
             'max-snippet': -1,
           },
         },
     openGraph: {
-      type: 'website',
-      locale: 'en_PK',
+      type,
+      locale: siteConfig.locale.replace('_', '-'),
       url,
       siteName: siteConfig.name,
       title: fullTitle,
       description: truncate(description, 200),
-      images: [{ url: ogImage, width: 1200, height: 630, alt: fullTitle }],
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: fullTitle,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
@@ -55,6 +67,7 @@ export function buildPageMetadata({
       description: truncate(description, 200),
       images: [ogImage],
     },
+    category: 'shopping',
   };
 }
 
@@ -72,4 +85,13 @@ export const rootMetadata: Metadata = {
   authors: [{ name: siteConfig.name, url: getSiteUrl() }],
   creator: siteConfig.name,
   publisher: siteConfig.name,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  other: {
+    'geo.region': siteConfig.region,
+    'geo.placename': siteConfig.country,
+  },
 };

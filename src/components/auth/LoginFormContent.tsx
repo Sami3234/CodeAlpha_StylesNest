@@ -1,13 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { signIn, getProviders } from 'next-auth/react';
 import PasswordStrengthList from '@/components/auth/PasswordStrengthList';
 import MathCaptchaField from '@/components/auth/MathCaptchaField';
 import GoogleIcon from '@/components/auth/GoogleIcon';
 import { createMathCaptcha, isMathCaptchaCorrect, type MathCaptcha } from '@/lib/math-captcha';
+import {
+  APPLE_UNAVAILABLE_MESSAGE,
+  GOOGLE_UNAVAILABLE_MESSAGE,
+  messageFromAuthErrorCode,
+} from '@/lib/oauth-client-errors';
 import { passwordsMatch, validatePasswordStrength } from '@/lib/password-policy';
-import { clientMessageFromApi } from '@/lib/safe-errors';
+import { clientMessageFromApi, GENERIC_CLIENT_ERROR } from '@/lib/safe-errors';
 
 type Props = {
   callbackUrl: string;
@@ -16,6 +22,7 @@ type Props = {
 };
 
 export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Props) {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,10 +32,12 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [oauth, setOauth] = useState<{ google?: boolean; apple?: boolean }>({});
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
 
   const captchaFilled = captchaAnswer.trim().length > 0;
-  const emailSubmitLocked = loading || !captchaFilled;
+  const emailSubmitLocked = loading || oauthLoading || !captchaFilled;
+  const oauthBusy = loading || oauthLoading;
 
   const refreshCaptcha = useCallback(() => {
     setCaptcha(createMathCaptcha());
@@ -36,14 +45,20 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
   }, []);
 
   useEffect(() => {
-    getProviders().then((p) => {
-      if (!p) return;
-      setOauth({
-        google: Boolean(p.google),
-        apple: Boolean(p.apple),
+    getProviders()
+      .then((p) => {
+        if (p?.apple) setAppleAvailable(true);
+      })
+      .catch(() => {
+        /* ignore — Apple button stays hidden */
       });
-    });
   }, []);
+
+  useEffect(() => {
+    const authError = searchParams.get('error');
+    const msg = messageFromAuthErrorCode(authError);
+    if (msg) setError(msg);
+  }, [searchParams]);
 
   const switchMode = (next: 'signin' | 'register') => {
     setMode(next);
@@ -76,11 +91,19 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
         callbackUrl,
       });
       if (res?.error) {
-        setError('Invalid email or password');
+        setError(messageFromAuthErrorCode(res.error) ?? 'Invalid email or password');
         refreshCaptcha();
         return;
       }
-      onSuccess();
+      if (res?.ok) {
+        onSuccess();
+      } else {
+        setError(GENERIC_CLIENT_ERROR);
+        refreshCaptcha();
+      }
+    } catch {
+      setError(GENERIC_CLIENT_ERROR);
+      refreshCaptcha();
     } finally {
       setLoading(false);
     }
@@ -129,14 +152,29 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
         return;
       }
       onSuccess();
+    } catch {
+      setError(GENERIC_CLIENT_ERROR);
+      refreshCaptcha();
     } finally {
       setLoading(false);
     }
   };
 
-  const oauthSignIn = (provider: 'google' | 'apple') => {
+  const oauthSignIn = async (provider: 'google' | 'apple') => {
     setError('');
-    void signIn(provider, { callbackUrl });
+    setOauthLoading(true);
+    try {
+      const providers = await getProviders();
+      if (!providers?.[provider]) {
+        setError(provider === 'google' ? GOOGLE_UNAVAILABLE_MESSAGE : APPLE_UNAVAILABLE_MESSAGE);
+        return;
+      }
+      await signIn(provider, { callbackUrl });
+    } catch {
+      setError(GENERIC_CLIENT_ERROR);
+    } finally {
+      setOauthLoading(false);
+    }
   };
 
   const onCaptchaChange = (value: string) => {
@@ -169,33 +207,30 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
           : 'Create your account with a strong password to shop safely.'}
       </p>
 
-      {(oauth.google || oauth.apple) && (
-        <div className="login-oauth login-oauth--top">
-          {oauth.google ? (
-            <button
-              type="button"
-              className="login-oauth__btn"
-              onClick={() => oauthSignIn('google')}
-              disabled={loading}
-            >
-              <span className="login-oauth__icon" aria-hidden>
-                <GoogleIcon size={20} />
-              </span>
-              Continue with Google
-            </button>
-          ) : null}
-          {oauth.apple ? (
-            <button
-              type="button"
-              className="login-oauth__btn login-oauth__btn--apple"
-              onClick={() => oauthSignIn('apple')}
-              disabled={loading}
-            >
-              Continue with Apple
-            </button>
-          ) : null}
-        </div>
-      )}
+      <div className="login-oauth login-oauth--top">
+        <button
+          type="button"
+          className="login-oauth__btn"
+          onClick={() => void oauthSignIn('google')}
+          disabled={oauthBusy}
+          aria-busy={oauthLoading}
+        >
+          <span className="login-oauth__icon" aria-hidden>
+            <GoogleIcon size={20} />
+          </span>
+          {oauthLoading ? 'Connecting…' : 'Continue with Google'}
+        </button>
+        {appleAvailable ? (
+          <button
+            type="button"
+            className="login-oauth__btn login-oauth__btn--apple"
+            onClick={() => void oauthSignIn('apple')}
+            disabled={oauthBusy}
+          >
+            Continue with Apple
+          </button>
+        ) : null}
+      </div>
 
       <div className="login-divider">
         <span>or use email</span>

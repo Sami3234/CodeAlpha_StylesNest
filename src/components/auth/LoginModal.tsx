@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { Suspense, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useLoginModal } from '@/context/LoginModalContext';
@@ -48,7 +48,9 @@ export default function LoginModal() {
         aria-labelledby="login-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <LoginFormContent callbackUrl={callbackUrl} onSuccess={handleSuccess} onClose={closeLogin} />
+        <Suspense fallback={<p className="login-card__sub">Loading sign-in…</p>}>
+          <LoginFormContent callbackUrl={callbackUrl} onSuccess={handleSuccess} onClose={closeLogin} />
+        </Suspense>
       </div>
     </div>
   );

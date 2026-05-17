@@ -1,10 +1,11 @@
-/** Central SEO / site identity */
+/** Central SEO / site identity — used by metadata, sitemap, and JSON-LD */
 
 export const siteConfig = {
   name: 'StylesNest',
+  legalName: 'StylesNest',
   title: 'StylesNest — Online Shopping in Pakistan | Free Delivery',
   description:
-    'Shop cosmetics, electronics, clothes, jewelry, watches, bags and daily essentials at StylesNest. Great prices and free delivery across Pakistan with cash on delivery.',
+    'Shop cosmetics, electronics, clothes, jewelry, watches, bags and daily essentials at StylesNest. Authentic products, great prices, and free delivery across Pakistan with cash on delivery.',
   locale: 'en_PK',
   language: 'en',
   country: 'Pakistan',
@@ -25,11 +26,13 @@ export const siteConfig = {
     'men fashion Pakistan',
     'general store online',
   ],
+  twitterHandle: '@stylesnest',
   contactEmail: 'info@stylesnest.com',
   defaultOgImagePath: '/images/general.webp',
 } as const;
 
 export const shopCategories = [
+  { slug: 'all', label: 'All Products' },
   { slug: 'cosmetics', label: 'Cosmetics' },
   { slug: 'jewelry', label: 'Jewelry' },
   { slug: 'watches', label: 'Watches' },
@@ -41,6 +44,7 @@ export const shopCategories = [
   { slug: 'general', label: 'General Store' },
 ] as const;
 
+/** Public site URL — set NEXT_PUBLIC_SITE_URL in production (e.g. https://stylesnest.com) */
 export function getSiteUrl(): string {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
