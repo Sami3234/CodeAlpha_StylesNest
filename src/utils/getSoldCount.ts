@@ -3,7 +3,7 @@
  * Matches product titles (both English and Arabic) with order product names
  */
 
-import { Order } from '@/context/OrderContext';
+import type { Order } from '@/types/order';
 import { Product } from '@/data/products';
 import { getProductTitle } from './getProductText';
 

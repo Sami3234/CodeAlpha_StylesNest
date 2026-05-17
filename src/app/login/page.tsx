@@ -12,7 +12,8 @@ function LoginRedirect() {
 
   useEffect(() => {
     const raw = searchParams.get('callbackUrl') || '/';
-    const safe = raw.startsWith('/') && !raw.startsWith('/admin') ? raw : '/';
+    const safe =
+      raw.startsWith('/') && !raw.startsWith('/admin') && !raw.startsWith('/khanadmin') ? raw : '/';
     const authError = searchParams.get('error');
     openLogin(safe);
     const target = safe === '/login' ? '/' : safe;

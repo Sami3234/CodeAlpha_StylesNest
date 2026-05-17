@@ -43,7 +43,7 @@ const orderStatusItems = [
 const menuItems = [
   {
     id: 'dashboard',
-    href: '/admin',
+    href: '/khanadmin',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -55,7 +55,7 @@ const menuItems = [
   },
   {
     id: 'products',
-    href: '/admin/products',
+    href: '/khanadmin/products',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
@@ -104,11 +104,11 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
   const activeStatus = searchParams.get('status');
   
   // Derive state from URL params
-  const shouldCategoriesBeOpen = activeCategory && pathname === '/admin/products';
+  const shouldCategoriesBeOpen = activeCategory && pathname === '/khanadmin/products';
   const shouldOrdersBeOpen =
-    (activeStatus && pathname === '/admin/orders') || pathname === '/admin/cart-orders';
+    (activeStatus && pathname === '/khanadmin/orders') || pathname === '/khanadmin/cart-orders';
   const shouldLandingBeOpen =
-    pathname === '/admin/landing-images' || pathname.startsWith('/admin/landing/');
+    pathname === '/khanadmin/landing-images' || pathname.startsWith('/khanadmin/landing/');
 
   const [categoriesOpen, setCategoriesOpen] = useState(shouldCategoriesBeOpen);
   const [ordersOpen, setOrdersOpen] = useState(shouldOrdersBeOpen);
@@ -284,7 +284,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             {/* Categories Dropdown */}
             <li>
               {(() => {
-                const hasCategoryActive = activeCategory && pathname === '/admin/products';
+                const hasCategoryActive = activeCategory && pathname === '/khanadmin/products';
                 return (
                   <button
                     onClick={() => setCategoriesOpen(!categoriesOpen)}
@@ -360,11 +360,11 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
               >
                 {categoryItems.map((cat) => {
                   const IconComponent = cat.icon;
-                  const isActiveCategory = activeCategory === cat.id && pathname === '/admin/products';
+                  const isActiveCategory = activeCategory === cat.id && pathname === '/khanadmin/products';
                   return (
                     <Link
                       key={cat.id}
-                      href={`/admin/products?category=${cat.id}`}
+                      href={`/khanadmin/products?category=${cat.id}`}
                       onClick={isMobile ? onClose : undefined}
                       style={{
                         display: 'flex',
@@ -406,7 +406,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             <li>
               {(() => {
                 const isOrdersSection =
-                  pathname === '/admin/orders' || pathname === '/admin/cart-orders';
+                  pathname === '/khanadmin/orders' || pathname === '/khanadmin/cart-orders';
                 return (
                   <button
                     onClick={() => setOrdersOpen(!ordersOpen)}
@@ -479,7 +479,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
               >
                 {/* All Orders */}
                 <Link
-                  href="/admin/orders"
+                  href="/khanadmin/orders"
                   onClick={isMobile ? onClose : undefined}
                   style={{
                     display: 'flex',
@@ -487,78 +487,78 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                     gap: '12px',
                     padding: '12px 20px 12px 52px',
                     color:
-                      pathname === '/admin/orders' && !activeStatus ? '#3498db' : 'rgba(255,255,255,0.6)',
+                      pathname === '/khanadmin/orders' && !activeStatus ? '#3498db' : 'rgba(255,255,255,0.6)',
                     textDecoration: 'none',
                     fontSize: '14px',
-                    fontWeight: pathname === '/admin/orders' && !activeStatus ? '600' : '400',
+                    fontWeight: pathname === '/khanadmin/orders' && !activeStatus ? '600' : '400',
                     transition: 'all 0.3s ease',
                     backgroundColor:
-                      pathname === '/admin/orders' && !activeStatus ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
+                      pathname === '/khanadmin/orders' && !activeStatus ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
                     borderLeft:
-                      pathname === '/admin/orders' && !activeStatus ? '4px solid #3498db' : '4px solid transparent',
-                    borderRadius: pathname === '/admin/orders' && !activeStatus ? '0 8px 8px 0' : '0',
+                      pathname === '/khanadmin/orders' && !activeStatus ? '4px solid #3498db' : '4px solid transparent',
+                    borderRadius: pathname === '/khanadmin/orders' && !activeStatus ? '0 8px 8px 0' : '0',
                     marginRight: '8px',
                   }}
                   onMouseEnter={(e) => {
-                    if (pathname !== '/admin/orders' || activeStatus) {
+                    if (pathname !== '/khanadmin/orders' || activeStatus) {
                       e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (pathname !== '/admin/orders' || activeStatus) {
+                    if (pathname !== '/khanadmin/orders' || activeStatus) {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
                     }
                   }}
                 >
-                  <BiBox size={16} style={{ color: pathname === '/admin/orders' && !activeStatus ? '#3498db' : 'inherit' }} />
+                  <BiBox size={16} style={{ color: pathname === '/khanadmin/orders' && !activeStatus ? '#3498db' : 'inherit' }} />
                   <span>All</span>
                 </Link>
 
                 <Link
-                  href="/admin/cart-orders"
+                  href="/khanadmin/cart-orders"
                   onClick={isMobile ? onClose : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
                     padding: '12px 20px 12px 52px',
-                    color: pathname === '/admin/cart-orders' ? '#3498db' : 'rgba(255,255,255,0.6)',
+                    color: pathname === '/khanadmin/cart-orders' ? '#3498db' : 'rgba(255,255,255,0.6)',
                     textDecoration: 'none',
                     fontSize: '14px',
-                    fontWeight: pathname === '/admin/cart-orders' ? '600' : '400',
+                    fontWeight: pathname === '/khanadmin/cart-orders' ? '600' : '400',
                     transition: 'all 0.3s ease',
                     backgroundColor:
-                      pathname === '/admin/cart-orders' ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
-                    borderLeft: pathname === '/admin/cart-orders' ? '4px solid #3498db' : '4px solid transparent',
-                    borderRadius: pathname === '/admin/cart-orders' ? '0 8px 8px 0' : '0',
+                      pathname === '/khanadmin/cart-orders' ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
+                    borderLeft: pathname === '/khanadmin/cart-orders' ? '4px solid #3498db' : '4px solid transparent',
+                    borderRadius: pathname === '/khanadmin/cart-orders' ? '0 8px 8px 0' : '0',
                     marginRight: '8px',
                   }}
                   onMouseEnter={(e) => {
-                    if (pathname !== '/admin/cart-orders') {
+                    if (pathname !== '/khanadmin/cart-orders') {
                       e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (pathname !== '/admin/cart-orders') {
+                    if (pathname !== '/khanadmin/cart-orders') {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
                     }
                   }}
                 >
-                  <BiShoppingBag size={16} style={{ color: pathname === '/admin/cart-orders' ? '#3498db' : 'inherit' }} />
+                  <BiShoppingBag size={16} style={{ color: pathname === '/khanadmin/cart-orders' ? '#3498db' : 'inherit' }} />
                   <span>Multi-item (cart)</span>
                 </Link>
                 
                 {orderStatusItems.map((status) => {
                   const IconComponent = status.icon;
-                  const isActiveStatus = activeStatus === status.id && pathname === '/admin/orders';
+                  const isActiveStatus = activeStatus === status.id && pathname === '/khanadmin/orders';
                   return (
                     <Link
                       key={status.id}
-                      href={`/admin/orders?status=${status.id}`}
+                      href={`/khanadmin/orders?status=${status.id}`}
                       onClick={isMobile ? onClose : undefined}
                       style={{
                         display: 'flex',
@@ -599,40 +599,40 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             {/* Unsubmitted Orders */}
             <li>
               <Link
-                href="/admin/unsubmitted"
+                href="/khanadmin/unsubmitted"
                 onClick={isMobile ? onClose : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '14px',
                   padding: '16px 20px',
-                  color: pathname === '/admin/unsubmitted' ? '#fff' : 'rgba(255,255,255,0.7)',
-                  backgroundColor: pathname === '/admin/unsubmitted' 
+                  color: pathname === '/khanadmin/unsubmitted' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  backgroundColor: pathname === '/khanadmin/unsubmitted' 
                     ? 'linear-gradient(90deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.05) 100%)'
                     : 'transparent',
                   border: 'none',
-                  borderLeft: pathname === '/admin/unsubmitted' ? '4px solid #FF9800' : '4px solid transparent',
-                  borderRadius: pathname === '/admin/unsubmitted' ? '0 12px 12px 0' : '0',
+                  borderLeft: pathname === '/khanadmin/unsubmitted' ? '4px solid #FF9800' : '4px solid transparent',
+                  borderRadius: pathname === '/khanadmin/unsubmitted' ? '0 12px 12px 0' : '0',
                   textDecoration: 'none',
                   fontSize: '15px',
-                  fontWeight: pathname === '/admin/unsubmitted' ? '600' : '400',
+                  fontWeight: pathname === '/khanadmin/unsubmitted' ? '600' : '400',
                   transition: 'all 0.3s ease',
                   marginRight: '8px',
                 }}
                 onMouseEnter={(e) => {
-                  if (pathname !== '/admin/unsubmitted') {
+                  if (pathname !== '/khanadmin/unsubmitted') {
                     e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (pathname !== '/admin/unsubmitted') {
+                  if (pathname !== '/khanadmin/unsubmitted') {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: pathname === '/admin/unsubmitted' ? 1 : 0.7 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: pathname === '/khanadmin/unsubmitted' ? 1 : 0.7 }}>
                   <path d="M9 11l3 3L22 4" />
                   <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                 </svg>
@@ -723,7 +723,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                 }}
               >
                 <Link
-                  href="/admin/landing-images"
+                  href="/khanadmin/landing-images"
                   onClick={isMobile ? onClose : undefined}
                   style={{
                     display: 'flex',
@@ -731,32 +731,32 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                     gap: '12px',
                     padding: '12px 20px 12px 52px',
                     color:
-                      pathname === '/admin/landing-images'
+                      pathname === '/khanadmin/landing-images'
                         ? '#3498db'
                         : 'rgba(255,255,255,0.6)',
                     textDecoration: 'none',
                     fontSize: '14px',
-                    fontWeight: pathname === '/admin/landing-images' ? '600' : '400',
+                    fontWeight: pathname === '/khanadmin/landing-images' ? '600' : '400',
                     transition: 'all 0.3s ease',
                     backgroundColor:
-                      pathname === '/admin/landing-images'
+                      pathname === '/khanadmin/landing-images'
                         ? 'rgba(52, 152, 219, 0.15)'
                         : 'transparent',
                     borderLeft:
-                      pathname === '/admin/landing-images'
+                      pathname === '/khanadmin/landing-images'
                         ? '4px solid #3498db'
                         : '4px solid transparent',
-                    borderRadius: pathname === '/admin/landing-images' ? '0 8px 8px 0' : '0',
+                    borderRadius: pathname === '/khanadmin/landing-images' ? '0 8px 8px 0' : '0',
                     marginRight: '8px',
                   }}
                   onMouseEnter={(e) => {
-                    if (pathname !== '/admin/landing-images') {
+                    if (pathname !== '/khanadmin/landing-images') {
                       e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (pathname !== '/admin/landing-images') {
+                    if (pathname !== '/khanadmin/landing-images') {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
                     }
@@ -771,7 +771,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                 </Link>
 
                 <Link
-                  href="/admin/landing/top-bar"
+                  href="/khanadmin/landing/top-bar"
                   onClick={isMobile ? onClose : undefined}
                   style={{
                     display: 'flex',
@@ -779,32 +779,32 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                     gap: '12px',
                     padding: '12px 20px 12px 52px',
                     color:
-                      pathname === '/admin/landing/top-bar'
+                      pathname === '/khanadmin/landing/top-bar'
                         ? '#3498db'
                         : 'rgba(255,255,255,0.6)',
                     textDecoration: 'none',
                     fontSize: '14px',
-                    fontWeight: pathname === '/admin/landing/top-bar' ? '600' : '400',
+                    fontWeight: pathname === '/khanadmin/landing/top-bar' ? '600' : '400',
                     transition: 'all 0.3s ease',
                     backgroundColor:
-                      pathname === '/admin/landing/top-bar'
+                      pathname === '/khanadmin/landing/top-bar'
                         ? 'rgba(52, 152, 219, 0.15)'
                         : 'transparent',
                     borderLeft:
-                      pathname === '/admin/landing/top-bar'
+                      pathname === '/khanadmin/landing/top-bar'
                         ? '4px solid #3498db'
                         : '4px solid transparent',
-                    borderRadius: pathname === '/admin/landing/top-bar' ? '0 8px 8px 0' : '0',
+                    borderRadius: pathname === '/khanadmin/landing/top-bar' ? '0 8px 8px 0' : '0',
                     marginRight: '8px',
                   }}
                   onMouseEnter={(e) => {
-                    if (pathname !== '/admin/landing/top-bar') {
+                    if (pathname !== '/khanadmin/landing/top-bar') {
                       e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (pathname !== '/admin/landing/top-bar') {
+                    if (pathname !== '/khanadmin/landing/top-bar') {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
                     }
@@ -817,7 +817,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                 </Link>
 
                 <Link
-                  href="/admin/landing/footer"
+                  href="/khanadmin/landing/footer"
                   onClick={isMobile ? onClose : undefined}
                   style={{
                     display: 'flex',
@@ -825,32 +825,32 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                     gap: '12px',
                     padding: '12px 20px 12px 52px',
                     color:
-                      pathname === '/admin/landing/footer'
+                      pathname === '/khanadmin/landing/footer'
                         ? '#3498db'
                         : 'rgba(255,255,255,0.6)',
                     textDecoration: 'none',
                     fontSize: '14px',
-                    fontWeight: pathname === '/admin/landing/footer' ? '600' : '400',
+                    fontWeight: pathname === '/khanadmin/landing/footer' ? '600' : '400',
                     transition: 'all 0.3s ease',
                     backgroundColor:
-                      pathname === '/admin/landing/footer'
+                      pathname === '/khanadmin/landing/footer'
                         ? 'rgba(52, 152, 219, 0.15)'
                         : 'transparent',
                     borderLeft:
-                      pathname === '/admin/landing/footer'
+                      pathname === '/khanadmin/landing/footer'
                         ? '4px solid #3498db'
                         : '4px solid transparent',
-                    borderRadius: pathname === '/admin/landing/footer' ? '0 8px 8px 0' : '0',
+                    borderRadius: pathname === '/khanadmin/landing/footer' ? '0 8px 8px 0' : '0',
                     marginRight: '8px',
                   }}
                   onMouseEnter={(e) => {
-                    if (pathname !== '/admin/landing/footer') {
+                    if (pathname !== '/khanadmin/landing/footer') {
                       e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (pathname !== '/admin/landing/footer') {
+                    if (pathname !== '/khanadmin/landing/footer') {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
                     }
@@ -867,31 +867,31 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             {/* Shop customers (login) */}
             <li>
               <Link
-                href="/admin/users"
+                href="/khanadmin/users"
                 onClick={isMobile ? onClose : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '14px',
                   padding: '16px 20px',
-                  color: pathname === '/admin/users' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  color: pathname === '/khanadmin/users' ? '#fff' : 'rgba(255,255,255,0.7)',
                   textDecoration: 'none',
-                  backgroundColor: pathname === '/admin/users'
+                  backgroundColor: pathname === '/khanadmin/users'
                     ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
                     : 'transparent',
-                  borderLeft: pathname === '/admin/users' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/admin/users' ? '0 12px 12px 0' : '0',
+                  borderLeft: pathname === '/khanadmin/users' ? '4px solid #3498db' : '4px solid transparent',
+                  borderRadius: pathname === '/khanadmin/users' ? '0 12px 12px 0' : '0',
                   transition: 'all 0.3s ease',
                   marginRight: '8px',
                 }}
                 onMouseEnter={(e) => {
-                  if (pathname !== '/admin/users') {
+                  if (pathname !== '/khanadmin/users') {
                     e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (pathname !== '/admin/users') {
+                  if (pathname !== '/khanadmin/users') {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
@@ -899,8 +899,8 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
               >
                 <span
                   style={{
-                    opacity: pathname === '/admin/users' ? 1 : 0.7,
-                    color: pathname === '/admin/users' ? '#3498db' : 'inherit',
+                    opacity: pathname === '/khanadmin/users' ? 1 : 0.7,
+                    color: pathname === '/khanadmin/users' ? '#3498db' : 'inherit',
                   }}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -912,7 +912,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                 <span
                   style={{
                     fontSize: '15px',
-                    fontWeight: pathname === '/admin/users' ? '600' : '400',
+                    fontWeight: pathname === '/khanadmin/users' ? '600' : '400',
                     letterSpacing: '0.3px',
                   }}
                 >
@@ -924,39 +924,39 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             {/* Payment methods */}
             <li>
               <Link
-                href="/admin/payment-methods"
+                href="/khanadmin/payment-methods"
                 onClick={isMobile ? onClose : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '14px',
                   padding: '16px 20px',
-                  color: pathname === '/admin/payment-methods' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  color: pathname === '/khanadmin/payment-methods' ? '#fff' : 'rgba(255,255,255,0.7)',
                   textDecoration: 'none',
-                  backgroundColor: pathname === '/admin/payment-methods'
+                  backgroundColor: pathname === '/khanadmin/payment-methods'
                     ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
                     : 'transparent',
-                  borderLeft: pathname === '/admin/payment-methods' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/admin/payment-methods' ? '0 12px 12px 0' : '0',
+                  borderLeft: pathname === '/khanadmin/payment-methods' ? '4px solid #3498db' : '4px solid transparent',
+                  borderRadius: pathname === '/khanadmin/payment-methods' ? '0 12px 12px 0' : '0',
                   transition: 'all 0.3s ease',
                   marginRight: '8px',
                 }}
                 onMouseEnter={(e) => {
-                  if (pathname !== '/admin/payment-methods') {
+                  if (pathname !== '/khanadmin/payment-methods') {
                     e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (pathname !== '/admin/payment-methods') {
+                  if (pathname !== '/khanadmin/payment-methods') {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
                 }}
               >
                 <span style={{
-                  opacity: pathname === '/admin/payment-methods' ? 1 : 0.7,
-                  color: pathname === '/admin/payment-methods' ? '#3498db' : 'inherit',
+                  opacity: pathname === '/khanadmin/payment-methods' ? 1 : 0.7,
+                  color: pathname === '/khanadmin/payment-methods' ? '#3498db' : 'inherit',
                 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="2" y="5" width="20" height="14" rx="2" />
@@ -965,7 +965,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                 </span>
                 <span style={{
                   fontSize: '15px',
-                  fontWeight: pathname === '/admin/payment-methods' ? '600' : '400',
+                  fontWeight: pathname === '/khanadmin/payment-methods' ? '600' : '400',
                   letterSpacing: '0.3px',
                 }}>
                   Payment methods
@@ -976,40 +976,40 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             {/* Profile - End */}
             <li>
               <Link
-                href="/admin/profile"
+                href="/khanadmin/profile"
                 onClick={isMobile ? onClose : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '14px',
                   padding: '16px 20px',
-                  color: pathname === '/admin/profile' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  color: pathname === '/khanadmin/profile' ? '#fff' : 'rgba(255,255,255,0.7)',
                   textDecoration: 'none',
-                  backgroundColor: pathname === '/admin/profile' 
+                  backgroundColor: pathname === '/khanadmin/profile' 
                     ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
                     : 'transparent',
-                  borderLeft: pathname === '/admin/profile' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/admin/profile' ? '0 12px 12px 0' : '0',
+                  borderLeft: pathname === '/khanadmin/profile' ? '4px solid #3498db' : '4px solid transparent',
+                  borderRadius: pathname === '/khanadmin/profile' ? '0 12px 12px 0' : '0',
                   transition: 'all 0.3s ease',
                   marginRight: '8px',
                   position: 'relative',
                 }}
                 onMouseEnter={(e) => {
-                  if (pathname !== '/admin/profile') {
+                  if (pathname !== '/khanadmin/profile') {
                     e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (pathname !== '/admin/profile') {
+                  if (pathname !== '/khanadmin/profile') {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
                 }}
               >
                 <span style={{ 
-                  opacity: pathname === '/admin/profile' ? 1 : 0.7,
-                  color: pathname === '/admin/profile' ? '#3498db' : 'inherit',
+                  opacity: pathname === '/khanadmin/profile' ? 1 : 0.7,
+                  color: pathname === '/khanadmin/profile' ? '#3498db' : 'inherit',
                   transition: 'all 0.3s ease'
                 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1019,7 +1019,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                 </span>
                 <span style={{ 
                   fontSize: '15px', 
-                  fontWeight: pathname === '/admin/profile' ? '600' : '400',
+                  fontWeight: pathname === '/khanadmin/profile' ? '600' : '400',
                   letterSpacing: '0.3px'
                 }}>
                   Profile
@@ -1042,7 +1042,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             onClick={async () => {
               try {
                 await fetch('/api/admin/logout', { method: 'POST' });
-                router.push('/admin/login');
+                router.push('/khanadmin/login');
                 router.refresh();
               } catch (error) {
                 console.error('Logout error:', error);

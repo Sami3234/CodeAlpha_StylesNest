@@ -4,6 +4,7 @@
 // ========================================
 
 import type { ClothesOptions } from '@/lib/clothes-options';
+import type { ShoesOptions } from '@/lib/shoes-options';
 import type { ProductMeta } from '@/lib/product-meta';
 
 export interface PricingTier {
@@ -29,6 +30,8 @@ export interface Product {
   status?: 'active' | 'inactive';
   /** Set when category is clothes */
   clothesOptions?: ClothesOptions;
+  /** Set when category is shoes */
+  shoesOptions?: ShoesOptions;
   /** SKU, stock, SEO, brand, etc. */
   productMeta?: ProductMeta;
 }
@@ -769,6 +772,7 @@ export const categories = [
   { id: 'watches', name: 'Watches' },
   { id: 'makeup', name: 'Makeup' },
   { id: 'clothes', name: 'Clothes' },
+  { id: 'shoes', name: 'Shoes' },
   { id: 'electronics', name: 'Electronics' },
   { id: 'bags', name: 'Bags' },
   { id: 'menfashion', name: 'Men Fashion' },

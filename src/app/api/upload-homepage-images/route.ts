@@ -5,11 +5,15 @@ import path from 'path';
 import { configureCloudinary } from '@/lib/cloudinary-config';
 import { homepageBulkFolder, sanitizePathSegment } from '@/lib/cloudinary-folders';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 configureCloudinary();
 
 export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const { imageName } = await request.json();
     
     if (!imageName) {

@@ -18,9 +18,13 @@ import {
   IoLockClosedOutline,
   IoLogOutOutline,
   IoPersonCircleOutline,
+  IoReceiptOutline,
   IoStorefrontOutline,
 } from 'react-icons/io5';
+import ProfileOrdersPanel from '@/components/profile/ProfileOrdersPanel';
 import './profile.css';
+
+type ProfileTab = 'details' | 'orders';
 
 type ProfileForm = {
   fullName: string;
@@ -49,6 +53,8 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<ProfileTab>('details');
+  const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
 
   const isEmailAccount = session?.user?.authProvider === 'credentials';
 
@@ -112,6 +118,7 @@ export default function ProfilePage() {
 
       await update({ name: form.fullName });
       setMessage({ type: 'ok', text: 'Your delivery details were saved.' });
+      setOrdersRefreshKey((k) => k + 1);
     } catch {
       setMessage({ type: 'err', text: 'Save failed' });
     } finally {
@@ -190,7 +197,11 @@ export default function ProfilePage() {
               Back to shop
             </Link>
             <h1 className="profile-page__title">My account</h1>
-            <p className="profile-page__subtitle">Manage delivery details and account security</p>
+            <p className="profile-page__subtitle">
+              {activeTab === 'orders'
+                ? 'Track your orders and delivery status'
+                : 'Manage delivery details and account security'}
+            </p>
           </header>
 
           <div className="profile-layout">
@@ -206,6 +217,22 @@ export default function ProfilePage() {
                 <span className="profile-badge">{method}</span>
 
                 <nav className="profile-sidebar__nav" aria-label="Account shortcuts">
+                  <button
+                    type="button"
+                    className={`profile-sidebar__link${activeTab === 'orders' ? ' profile-sidebar__link--active' : ''}`}
+                    onClick={() => setActiveTab('orders')}
+                  >
+                    <IoReceiptOutline size={20} aria-hidden />
+                    My orders
+                  </button>
+                  <button
+                    type="button"
+                    className={`profile-sidebar__link${activeTab === 'details' ? ' profile-sidebar__link--active' : ''}`}
+                    onClick={() => setActiveTab('details')}
+                  >
+                    <IoLocationOutline size={20} aria-hidden />
+                    Delivery details
+                  </button>
                   <Link href="/shop" className="profile-sidebar__link">
                     <IoStorefrontOutline size={20} aria-hidden />
                     Continue shopping
@@ -223,6 +250,10 @@ export default function ProfilePage() {
             </aside>
 
             <div className="profile-main">
+              {activeTab === 'orders' ? (
+                <ProfileOrdersPanel refreshKey={ordersRefreshKey} />
+              ) : (
+                <>
               {message ? (
                 <p className={`profile-msg profile-msg--${message.type === 'ok' ? 'ok' : 'err'}`} role="status">
                   {message.text}
@@ -366,6 +397,13 @@ export default function ProfilePage() {
               ) : null}
 
               <div className="profile-mobile-actions" aria-label="Quick actions">
+                <button
+                  type="button"
+                  className="profile-btn profile-btn--secondary"
+                  onClick={() => setActiveTab('orders')}
+                >
+                  My orders
+                </button>
                 <Link href="/shop" className="profile-btn profile-btn--secondary">
                   Continue shopping
                 </Link>
@@ -377,6 +415,8 @@ export default function ProfilePage() {
                   Sign out
                 </button>
               </div>
+                </>
+              )}
             </div>
           </div>
         </div>

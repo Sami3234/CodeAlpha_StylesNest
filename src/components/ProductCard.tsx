@@ -9,8 +9,11 @@ import { getProductTitle } from '@/utils/getProductText';
 import { IoBagAddOutline } from 'react-icons/io5';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
-import ClothesStitchBadge, { ClothesMetaRow } from '@/components/ClothesImageBadges';
+import AddToCartOptionsModal from '@/components/AddToCartOptionsModal';
+import ClothesStitchBadge, { ClothesMetaRow, ShoesGenderBadge } from '@/components/ClothesImageBadges';
 import { ProductShortSummary } from '@/components/ProductMetaDisplay';
+import { productNeedsCartOptions } from '@/lib/cart-line-options';
+import { isOutOfStock, validateStockForAdd } from '@/lib/product-stock';
 
 interface ProductCardProps {
   product: Product;
@@ -20,8 +23,12 @@ interface ProductCardProps {
 export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [optionsModalOpen, setOptionsModalOpen] = useState(false);
   const { addToCart, lines } = useCart();
-  const inCart = lines.some((l) => l.productId === product.id);
+  const needsOptions = productNeedsCartOptions(product);
+  const outOfStock = isOutOfStock(product);
+  const inCart = !needsOptions && lines.some((l) => l.productId === product.id);
+  const addDisabled = outOfStock || inCart;
 
   return (
     <motion.div
@@ -121,6 +128,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             </div>
 
             <ClothesStitchBadge product={product} />
+            <ShoesGenderBadge product={product} />
 
             {product.freeDelivery && (
               <motion.span
@@ -236,16 +244,27 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           </Link>
           <motion.button
             type="button"
-            disabled={inCart}
+            disabled={addDisabled}
             aria-label={
-              inCart
-                ? `${getProductTitle(product) || 'Product'} is already in your cart`
-                : `Add ${getProductTitle(product) || 'product'} to cart`
+              outOfStock
+                ? `${getProductTitle(product)} is out of stock`
+                : inCart
+                  ? `${getProductTitle(product) || 'Product'} is already in your cart`
+                  : `Add ${getProductTitle(product) || 'product'} to cart`
             }
-            aria-disabled={inCart}
+            aria-disabled={addDisabled}
             onClick={() => {
-              if (inCart) return;
-              addToCart(product.id, 1);
+              if (addDisabled) return;
+              if (needsOptions) {
+                setOptionsModalOpen(true);
+                return;
+              }
+              const check = validateStockForAdd(product, lines, 1);
+              if (!check.ok) {
+                alert(check.error);
+                return;
+              }
+              addToCart(product.id, check.quantity);
             }}
             style={{
               flexShrink: 0,
@@ -253,7 +272,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               height: '48px',
               borderRadius: '14px',
               border: 'none',
-              cursor: inCart ? 'not-allowed' : 'pointer',
+              cursor: addDisabled ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -271,6 +290,20 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           </motion.button>
         </div>
       </motion.article>
+
+      <AddToCartOptionsModal
+        product={product}
+        open={optionsModalOpen}
+        onClose={() => setOptionsModalOpen(false)}
+        onConfirm={(options, quantity) => {
+          const check = validateStockForAdd(product, lines, quantity, options);
+          if (!check.ok) {
+            alert(check.error);
+            return;
+          }
+          addToCart(product.id, check.quantity, options);
+        }}
+      />
     </motion.div>
   );
 }

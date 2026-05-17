@@ -1,13 +1,9 @@
 import { Playfair_Display, Poppins } from "next/font/google";
 import "./globals.css";
-import { ProductProvider } from "@/context/ProductContext";
-import { OrderProvider } from "@/context/OrderContext";
-import { CartProvider } from "@/context/CartContext";
-import AuthProvider from "@/components/providers/AuthProvider";
-import { LoginModalProvider } from "@/context/LoginModalContext";
 import JsonLd from "@/components/seo/JsonLd";
 import { rootMetadata } from "@/lib/seo/metadata";
 import { onlineStoreJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld-builders";
+import AppProviders from "@/components/providers/AppProviders";
 
 export { rootMetadata as metadata };
 
@@ -48,17 +44,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <JsonLd data={[organizationJsonLd(), websiteJsonLd(), onlineStoreJsonLd()]} />
-        <AuthProvider>
-          <LoginModalProvider>
-            <ProductProvider>
-              <CartProvider>
-                <OrderProvider>
-                  {children}
-                </OrderProvider>
-              </CartProvider>
-            </ProductProvider>
-          </LoginModalProvider>
-        </AuthProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

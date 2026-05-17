@@ -6,7 +6,12 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     name: siteConfig.name,
     url: getSiteUrl(),
-    logo: absoluteUrl(siteConfig.defaultOgImagePath),
+    logo: {
+      '@type': 'ImageObject',
+      url: absoluteUrl(siteConfig.logoPath),
+      width: 512,
+      height: 512,
+    },
     email: siteConfig.contactEmail,
     areaServed: {
       '@type': 'Country',

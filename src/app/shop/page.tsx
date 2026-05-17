@@ -10,6 +10,7 @@ import ProductGrid from '@/components/ProductGrid';
 import Footer from '@/components/Footer';
 import WhatsAppFab from '@/components/WhatsAppFab';
 import { useProducts } from '@/context/ProductContext';
+import ConnectionProblem from '@/components/network/ConnectionProblem';
 import { getProductDescription, getProductTitle } from '@/utils/getProductText';
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
@@ -34,8 +35,9 @@ function ShopPageContent() {
   }, [searchParams]);
 
   // Get only active products from context
-  const { getActiveProducts } = useProducts();
+  const { getActiveProducts, loading, fetchError, reloadProducts } = useProducts();
   const activeProducts = getActiveProducts();
+  const showConnectionIssue = !loading && fetchError !== null && activeProducts.length === 0;
 
   // Filter products based on category and search query
   const filteredProducts = useMemo(() => {
@@ -93,7 +95,15 @@ function ShopPageContent() {
       <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
 
       <main className="flex-1 min-w-0">
-        <ProductGrid products={filteredProducts} />
+        {showConnectionIssue ? (
+          <ConnectionProblem
+            kind={fetchError ?? 'network'}
+            onRetry={() => void reloadProducts()}
+            retryLabel="Reload products"
+          />
+        ) : (
+          <ProductGrid products={filteredProducts} />
+        )}
       </main>
 
       <Footer />

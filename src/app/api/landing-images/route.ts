@@ -4,6 +4,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { configureCloudinary } from '@/lib/cloudinary-config';
 import { landingImageFolder, sanitizePathSegment } from '@/lib/cloudinary-folders';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 configureCloudinary();
 
@@ -45,9 +46,9 @@ export async function GET(request: NextRequest) {
       { success: true, images: validImages },
       {
         headers: {
-          'Cache-Control': 'no-store, must-revalidate',
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
         },
-      }
+      },
     );
   } catch (error) {
     console.error('Error fetching landing images:', error);
@@ -73,9 +74,12 @@ const SECTION_LIMITS: Record<string, number> = {
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB for other sections
 const MAX_BANNER_SIZE = 5 * 1024 * 1024; // 5MB for hero banner
 
-// POST - Upload and save landing image
+// POST - Upload and save landing image (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const section = formData.get('section') as string;
@@ -204,9 +208,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update landing image
+// PUT - Update landing image (admin only)
 export async function PUT(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const body = await request.json();
     const { id, section, imageType, displayOrder, isActive } = body;
 
@@ -272,9 +279,12 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete landing image
+// DELETE - Delete landing image (admin only)
 export async function DELETE(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

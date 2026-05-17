@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,9 @@ interface ProcessedProduct {
  */
 export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const body = await request.json();
     const { orders } = body;
 

@@ -19,6 +19,7 @@ const categoryImages: Record<string, string> = {
   watches: '/images/watches.jpg',
   makeup: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop',
   clothes: '/images/clothes.jpg',
+  shoes: '/images/shoes.jpg',
   electronics:
     'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=200&h=200&fit=crop',
   general: '/images/general.webp',
@@ -33,6 +34,7 @@ const categoryIds = [
   'watches',
   'makeup',
   'clothes',
+  'shoes',
   'electronics',
   'bags',
   'menfashion',
@@ -46,6 +48,7 @@ const categoryLabels: Record<string, string> = {
   watches: 'Watches',
   makeup: 'Makeup',
   clothes: 'Clothes',
+  shoes: 'Shoes',
   electronics: 'Electronics',
   general: 'General',
   bags: 'Bags',

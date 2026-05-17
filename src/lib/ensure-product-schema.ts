@@ -1,10 +1,8 @@
 import { sql } from '@/lib/db';
 
-/**
- * Ensures optional product columns exist (safe for existing Neon DBs).
- * Called before product reads/writes so API does not fail on missing columns.
- */
-export async function ensureProductSchema(): Promise<void> {
+let schemaReady: Promise<void> | null = null;
+
+async function runProductSchemaMigrations(): Promise<void> {
   await sql`
     ALTER TABLE products
     ADD COLUMN IF NOT EXISTS pricing_tiers JSONB DEFAULT '[]'
@@ -15,6 +13,10 @@ export async function ensureProductSchema(): Promise<void> {
   `;
   await sql`
     ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS shoes_options JSONB DEFAULT NULL
+  `;
+  await sql`
+    ALTER TABLE products
     ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'
   `;
   await sql`
@@ -22,10 +24,23 @@ export async function ensureProductSchema(): Promise<void> {
     ADD COLUMN IF NOT EXISTS product_meta JSONB DEFAULT '{}'
   `;
 
-  /** Legacy rows: empty/null status should behave as active on the storefront */
   await sql`
     UPDATE products
     SET status = 'active'
     WHERE status IS NULL OR TRIM(status) = ''
   `;
+}
+
+/**
+ * Ensures optional product columns exist (safe for existing Neon DBs).
+ * Runs once per server process — not on every API request.
+ */
+export function ensureProductSchema(): Promise<void> {
+  if (!schemaReady) {
+    schemaReady = runProductSchemaMigrations().catch((err) => {
+      schemaReady = null;
+      throw err;
+    });
+  }
+  return schemaReady;
 }

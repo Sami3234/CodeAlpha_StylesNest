@@ -4,12 +4,15 @@ import { ensureProductSchema } from '@/lib/ensure-product-schema';
 import { mapProductRow } from '@/lib/product-mapper';
 import { categoryShowsGender, validateCategoryOptions } from '@/lib/category-form-fields';
 import { isClothesCategory, parseClothesOptions } from '@/lib/clothes-options';
+import { isShoesCategory, parseShoesOptions } from '@/lib/shoes-options';
 import { normalizeProductMetaForSave, parseProductMeta } from '@/lib/product-meta';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { hasValidAdminSession, requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
 function serializeClothesOptions(category: string, clothesOptions: unknown) {
+  if (isShoesCategory(category)) return null;
   if (!categoryShowsGender(category) && !isClothesCategory(category)) {
     return null;
   }
@@ -21,53 +24,71 @@ function serializeClothesOptions(category: string, clothesOptions: unknown) {
   return { value: JSON.stringify(parsed) };
 }
 
-// GET all products
-export async function GET() {
+function serializeShoesOptions(category: string, shoesOptions: unknown) {
+  if (!isShoesCategory(category)) return null;
+  const parsed = parseShoesOptions(shoesOptions);
+  const check = validateCategoryOptions(category, undefined, parsed);
+  if (!check.valid) {
+    return { error: check.error };
+  }
+  return { value: JSON.stringify(parsed) };
+}
+
+// GET products — storefront: active only; admin session: full catalog
+export async function GET(request: NextRequest) {
   try {
     await ensureProductSchema();
+    const includeInactive = await hasValidAdminSession(request);
 
-    const rows = await sql`
-      SELECT 
-        id,
-        title_en,
-        title_ar,
-        description_en,
-        description_ar,
-        current_price,
-        original_price,
-        discount,
-        image,
-        images,
-        free_delivery,
-        sold_count,
-        category,
-        features_en,
-        features_ar,
-        pricing_tiers,
-        clothes_options,
-        product_meta,
-        status,
-        created_at,
-        updated_at
-      FROM products
-      ORDER BY created_at DESC
-    `;
+    const rows = includeInactive
+      ? await sql`
+          SELECT
+            id, title_en, title_ar, description_en, description_ar,
+            current_price, original_price, discount, image, images,
+            free_delivery, sold_count, category, features_en, features_ar,
+            pricing_tiers, clothes_options, shoes_options, product_meta,
+            status, created_at, updated_at
+          FROM products
+          ORDER BY created_at DESC
+        `
+      : await sql`
+          SELECT
+            id, title_en, title_ar, description_en, description_ar,
+            current_price, original_price, discount, image, images,
+            free_delivery, sold_count, category, features_en, features_ar,
+            pricing_tiers, clothes_options, shoes_options, product_meta,
+            status, created_at, updated_at
+          FROM products
+          WHERE COALESCE(LOWER(TRIM(status)), 'active') != 'inactive'
+          ORDER BY created_at DESC
+        `;
 
     const products = rows.map((row) => mapProductRow(row as Record<string, unknown>));
 
-    return NextResponse.json({ products });
+    return NextResponse.json(
+      { products },
+      {
+        headers: {
+          'Cache-Control': includeInactive
+            ? 'private, no-store, max-age=0'
+            : 'public, s-maxage=30, stale-while-revalidate=120',
+        },
+      },
+    );
   } catch (error) {
     return apiErrorResponse({ message: 'Failed to fetch products', status: 500, cause: error });
   }
 }
 
-// POST - Create new product
+// POST - Create new product (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     await ensureProductSchema();
 
     const body = await request.json();
-    console.log('Received product data:', JSON.stringify(body, null, 2));
     
     const {
       title,
@@ -84,6 +105,7 @@ export async function POST(request: NextRequest) {
       pricingTiers,
       status,
       clothesOptions,
+      shoesOptions,
       productMeta,
     } = body;
 
@@ -112,6 +134,10 @@ export async function POST(request: NextRequest) {
     if (clothesSerialized && 'error' in clothesSerialized) {
       return NextResponse.json({ error: clothesSerialized.error }, { status: 400 });
     }
+    const shoesSerialized = serializeShoesOptions(category, shoesOptions);
+    if (shoesSerialized && 'error' in shoesSerialized) {
+      return NextResponse.json({ error: shoesSerialized.error }, { status: 400 });
+    }
 
     const metaJson = JSON.stringify(
       normalizeProductMetaForSave(parseProductMeta(productMeta) ?? {})
@@ -135,6 +161,7 @@ export async function POST(request: NextRequest) {
         features_ar,
         pricing_tiers,
         clothes_options,
+        shoes_options,
         product_meta,
         status
       )
@@ -155,6 +182,7 @@ export async function POST(request: NextRequest) {
         ${JSON.stringify(features?.ar || [])},
         ${JSON.stringify(pricingTiers || [])},
         ${clothesSerialized && 'value' in clothesSerialized ? clothesSerialized.value : null},
+        ${shoesSerialized && 'value' in shoesSerialized ? shoesSerialized.value : null},
         ${metaJson},
         ${status || 'active'}
       )
@@ -169,9 +197,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update product
+// PUT - Update product (admin only)
 export async function PUT(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     await ensureProductSchema();
 
     const body = await request.json();
@@ -191,12 +222,17 @@ export async function PUT(request: NextRequest) {
       pricingTiers,
       status,
       clothesOptions,
+      shoesOptions,
       productMeta,
     } = body;
 
     const clothesSerialized = serializeClothesOptions(category, clothesOptions);
     if (clothesSerialized && 'error' in clothesSerialized) {
       return NextResponse.json({ error: clothesSerialized.error }, { status: 400 });
+    }
+    const shoesSerialized = serializeShoesOptions(category, shoesOptions);
+    if (shoesSerialized && 'error' in shoesSerialized) {
+      return NextResponse.json({ error: shoesSerialized.error }, { status: 400 });
     }
 
     const metaJson = JSON.stringify(
@@ -222,6 +258,7 @@ export async function PUT(request: NextRequest) {
         features_ar = ${JSON.stringify(features?.ar || [])},
         pricing_tiers = ${JSON.stringify(pricingTiers || [])},
         clothes_options = ${clothesSerialized && 'value' in clothesSerialized ? clothesSerialized.value : null},
+        shoes_options = ${shoesSerialized && 'value' in shoesSerialized ? shoesSerialized.value : null},
         product_meta = ${metaJson},
         status = ${status || 'active'},
         updated_at = CURRENT_TIMESTAMP
@@ -248,9 +285,12 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete product
+// DELETE - Delete product (admin only)
 export async function DELETE(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

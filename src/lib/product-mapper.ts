@@ -1,5 +1,6 @@
 import type { Product } from '@/data/products';
 import { parseClothesOptions } from '@/lib/clothes-options';
+import { parseShoesOptions } from '@/lib/shoes-options';
 import { parseProductMeta } from '@/lib/product-meta';
 
 function normalizeProductStatus(raw: unknown): Product['status'] {
@@ -41,6 +42,7 @@ export function mapProductRow(row: Record<string, unknown>): Product {
     pricingTiers: (row.pricing_tiers as Product['pricingTiers']) || [],
     status: normalizeProductStatus(row.status),
     clothesOptions: parseClothesOptions(row.clothes_options),
+    shoesOptions: parseShoesOptions(row.shoes_options),
     productMeta: parseProductMeta(row.product_meta),
   };
 }

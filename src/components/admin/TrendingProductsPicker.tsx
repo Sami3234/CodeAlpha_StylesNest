@@ -6,6 +6,7 @@ import type { Product } from '@/data/products';
 import { MAX_TRENDING_PRODUCTS } from '@/lib/trending-products';
 import { getProductTitle } from '@/utils/getProductText';
 import { formatPrice } from '@/utils/formatPrice';
+import AdminLoading from '@/components/admin/AdminLoading';
 
 interface TrendingProductsPickerProps {
   isOpen: boolean;
@@ -234,7 +235,9 @@ export default function TrendingProductsPicker({
             >
               Clear all
             </button>
-            {loading ? <span style={{ color: '#94a3b8' }}>Loading…</span> : null}
+            {loading ? (
+              <AdminLoading message="Loading products" variant="compact" className="admin-loading--inline-toolbar" />
+            ) : null}
           </div>
         </div>
 

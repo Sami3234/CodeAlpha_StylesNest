@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import type { Product } from '@/data/products';
 import { categoryShowsGender } from '@/lib/category-form-fields';
+import { clothesColorsDisplayLabel, shoesColorsDisplayLabel } from '@/lib/cart-line-options';
 import {
   clothesGenderLabel,
   clothesSizesDisplayLabel,
@@ -10,6 +11,11 @@ import {
   isClothesCategory,
   isClothesSizeRequired,
 } from '@/lib/clothes-options';
+import {
+  isShoesCategory,
+  shoesGenderLabel,
+  shoesSizesDisplayLabel,
+} from '@/lib/shoes-options';
 
 const stitchBadgeStyle: React.CSSProperties = {
   position: 'absolute',
@@ -67,8 +73,89 @@ export default function ClothesStitchBadge({
   return <span style={style}>{clothesStitchLabel(stitch)}</span>;
 }
 
+/** Men / Women badge on shoe product image */
+export function ShoesGenderBadge({
+  product,
+  animated = false,
+}: {
+  product: Product;
+  animated?: boolean;
+}) {
+  if (!isShoesCategory(product.category) || !product.shoesOptions?.gender) {
+    return null;
+  }
+
+  const style: React.CSSProperties = {
+    ...stitchBadgeStyle,
+    background: 'linear-gradient(135deg, #3182ce 0%, #2b6cb0 50%, #63b3ed 100%)',
+    boxShadow: '0px 6px 20px rgba(49, 130, 206, 0.55)',
+  };
+
+  const label = shoesGenderLabel(product.shoesOptions.gender);
+  if (animated) {
+    return (
+      <motion.span
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+        style={style}
+      >
+        {label}
+      </motion.span>
+    );
+  }
+  return <span style={style}>{label}</span>;
+}
+
+/** Available colors — display only */
+export function ClothesColorsLine({ product }: { product: Product }) {
+  if (isShoesCategory(product.category) && product.shoesOptions) {
+    const display = shoesColorsDisplayLabel(product.shoesOptions);
+    if (!display) return null;
+    return (
+      <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#4a5568', textAlign: 'left' }}>
+        <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+        {display.value}
+      </p>
+    );
+  }
+
+  if (!isClothesCategory(product.category) || !product.clothesOptions) {
+    return null;
+  }
+
+  const display = clothesColorsDisplayLabel(product.clothesOptions);
+  if (!display) return null;
+
+  return (
+    <p
+      style={{
+        margin: 0,
+        fontSize: '13px',
+        fontWeight: 600,
+        color: '#4a5568',
+        textAlign: 'left',
+      }}
+    >
+      <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+      {display.value}
+    </p>
+  );
+}
+
 /** Available sizes — left aligned (display only) */
 export function ClothesSizesLine({ product }: { product: Product }) {
+  if (isShoesCategory(product.category) && product.shoesOptions) {
+    const display = shoesSizesDisplayLabel(product.shoesOptions);
+    if (!display) return null;
+    return (
+      <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#4a5568', textAlign: 'left' }}>
+        <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+        {display.value}
+      </p>
+    );
+  }
+
   if (!isClothesCategory(product.category) || !product.clothesOptions) {
     return null;
   }
@@ -94,6 +181,14 @@ export function ClothesSizesLine({ product }: { product: Product }) {
 
 /** Men / Women — right column badge */
 export function ClothesGenderNearPrice({ product }: { product: Product }) {
+  if (isShoesCategory(product.category) && product.shoesOptions?.gender) {
+    return (
+      <span className="clothes-gender-badge">
+        {shoesGenderLabel(product.shoesOptions.gender)}
+      </span>
+    );
+  }
+
   if (!categoryShowsGender(product.category) || !product.clothesOptions?.gender) {
     return null;
   }
@@ -107,7 +202,9 @@ export function ClothesGenderNearPrice({ product }: { product: Product }) {
 
 /** Sizes left, gender right — below title / near price */
 export function ClothesMetaRow({ product }: { product: Product }) {
-  if (!isClothesCategory(product.category) || !product.clothesOptions) {
+  const hasShoes = isShoesCategory(product.category) && product.shoesOptions;
+  const hasClothes = isClothesCategory(product.category) && product.clothesOptions;
+  if (!hasShoes && !hasClothes) {
     return null;
   }
 
@@ -127,6 +224,17 @@ export function ClothesMetaRow({ product }: { product: Product }) {
     >
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
         <ClothesSizesLine product={product} />
+        <div
+          style={{
+            marginTop:
+              (hasClothes && product.clothesOptions?.colors?.length) ||
+              (hasShoes && product.shoesOptions?.colors?.length)
+                ? 4
+                : 0,
+          }}
+        >
+          <ClothesColorsLine product={product} />
+        </div>
       </div>
       <ClothesGenderNearPrice product={product} />
     </motion.div>
@@ -143,12 +251,21 @@ export function ClothesSizeSelector({
   value: string;
   onChange: (size: string) => void;
 }) {
-  if (!isClothesCategory(product.category) || !product.clothesOptions?.sizes.length) {
-    return null;
-  }
+  const shoeSizes =
+    isShoesCategory(product.category) && product.shoesOptions?.sizes.length
+      ? product.shoesOptions.sizes
+      : null;
+  const clothesSizes =
+    isClothesCategory(product.category) && product.clothesOptions?.sizes.length
+      ? product.clothesOptions.sizes
+      : null;
 
-  const sizes = product.clothesOptions.sizes;
-  const isStitched = isClothesSizeRequired(product.clothesOptions.stitch);
+  const sizes = shoeSizes ?? clothesSizes;
+  if (!sizes?.length) return null;
+
+  const isStitched = product.clothesOptions
+    ? isClothesSizeRequired(product.clothesOptions.stitch)
+    : true;
 
   return (
     <motion.div
@@ -165,7 +282,7 @@ export function ClothesSizeSelector({
           marginBottom: '10px',
         }}
       >
-        Select Size
+        {shoeSizes ? 'Select Shoe Size' : 'Select Size'}
         {isStitched ? (
           <span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span>
         ) : (
@@ -174,7 +291,7 @@ export function ClothesSizeSelector({
           </span>
         )}
       </label>
-      <motion.div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+      <div className="flex flex-wrap gap-2.5">
         {sizes.map((size) => {
           const selected = value === size;
           return (
@@ -205,7 +322,62 @@ export function ClothesSizeSelector({
             </button>
           );
         })}
-      </motion.div>
+      </div>
     </motion.div>
+  );
+}
+
+/** Color picker in order form / add-to-cart modal */
+export function ClothesColorSelector({
+  product,
+  value,
+  onChange,
+}: {
+  product: Product;
+  value: string;
+  onChange: (color: string) => void;
+}) {
+  const colors = isShoesCategory(product.category)
+    ? (product.shoesOptions?.colors?.filter((c) => c.trim()) ?? [])
+    : (product.clothesOptions?.colors?.filter((c) => c.trim()) ?? []);
+
+  if ((!isClothesCategory(product.category) && !isShoesCategory(product.category)) || colors.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      <label
+        className="block text-[15px] font-semibold text-[#2d3748] mb-2.5"
+      >
+        Select Color
+        <span className="text-[#e53e3e] ml-1">*</span>
+      </label>
+      <div className="flex flex-wrap gap-2.5">
+        {colors.map((color) => {
+          const selected = value === color;
+          return (
+            <button
+              key={color}
+              type="button"
+              onClick={() => onChange(color)}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '10px',
+                border: `2px solid ${selected ? '#c44569' : 'rgba(196, 69, 105, 0.25)'}`,
+                background: selected ? '#c44569' : '#fff',
+                color: selected ? '#fff' : '#4a5568',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {color}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -10,7 +10,13 @@ import {
   isClothesCategory,
   type ClothesOptions,
 } from '@/lib/clothes-options';
-import { categoryShowsGender, validateCategoryOptions } from '@/lib/category-form-fields';
+import {
+  categoryShowsGender,
+  categoryShowsShoesPanel,
+  validateCategoryOptions,
+} from '@/lib/category-form-fields';
+import { isShoesCategory } from '@/lib/shoes-options';
+import { DEFAULT_SHOES_OPTIONS, type ShoesOptions } from '@/lib/shoes-options';
 import { adminProductT, type AdminProductTFunction, isValidProductImageUrl } from '@/lib/admin/product-form-shared';
 import ProductFormMetaFields from '@/components/admin/ProductFormMetaFields';
 import ProductFormCategoryPanel from '@/components/admin/ProductFormCategoryPanel';
@@ -112,6 +118,20 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
         }
   );
 
+  const [shoesOptions, setShoesOptions] = useState<ShoesOptions>(() =>
+    product?.shoesOptions
+      ? {
+          ...product.shoesOptions,
+          sizes: [...(product.shoesOptions.sizes ?? [])],
+          colors: [...(product.shoesOptions.colors ?? [])],
+        }
+      : {
+          ...DEFAULT_SHOES_OPTIONS,
+          sizes: [...DEFAULT_SHOES_OPTIONS.sizes],
+          colors: [],
+        }
+  );
+
   const [productMeta, setProductMeta] = useState<ProductMeta>(() => ({
     ...EMPTY_PRODUCT_META,
     ...product?.productMeta,
@@ -128,8 +148,27 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
     });
   };
 
-  const toggleColor = (color: string) => {
+  const toggleClothesColor = (color: string) => {
     setClothesOptions((prev) => {
+      const colors = prev.colors ?? [];
+      const has = colors.includes(color);
+      return {
+        ...prev,
+        colors: has ? colors.filter((c) => c !== color) : [...colors, color],
+      };
+    });
+  };
+
+  const toggleShoeSize = (size: string) => {
+    setShoesOptions((prev) => {
+      const has = prev.sizes.includes(size);
+      const sizes = has ? prev.sizes.filter((s) => s !== size) : [...prev.sizes, size];
+      return { ...prev, sizes };
+    });
+  };
+
+  const toggleShoeColor = (color: string) => {
+    setShoesOptions((prev) => {
       const colors = prev.colors ?? [];
       const has = colors.includes(color);
       return {
@@ -184,8 +223,16 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
       newFieldErrors.description = errorMsg;
     }
 
-    if (categoryShowsGender(formData.category) || isClothesCategory(formData.category)) {
-      const catCheck = validateCategoryOptions(formData.category, clothesOptions);
+    if (
+      categoryShowsGender(formData.category) ||
+      isClothesCategory(formData.category) ||
+      isShoesCategory(formData.category)
+    ) {
+      const catCheck = validateCategoryOptions(
+        formData.category,
+        clothesOptions,
+        shoesOptions,
+      );
       if (!catCheck.valid) {
         newErrors.push(catCheck.error || 'Complete category options');
         newFieldErrors.clothesOptions = catCheck.error || 'Required';
@@ -253,12 +300,20 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
           tags: parseTagsInput(tagsInput),
         }),
       };
-      if (categoryShowsGender(formData.category) || isClothesCategory(formData.category)) {
+      if (isShoesCategory(formData.category)) {
+        productData.shoesOptions = {
+          ...shoesOptions,
+          sizes: [...shoesOptions.sizes],
+          colors: shoesOptions.colors ?? [],
+        };
+        productData.clothesOptions = undefined;
+      } else if (categoryShowsGender(formData.category) || isClothesCategory(formData.category)) {
         productData.clothesOptions = {
           ...clothesOptions,
           sizes: (clothesOptions.sizes ?? []).map((s) => s.toUpperCase()),
           colors: clothesOptions.colors ?? [],
         };
+        productData.shoesOptions = undefined;
       }
       if (product) {
         productData.title = product.title;
@@ -286,7 +341,7 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
   return (
     <div className="product-form-root">
       <div className="product-form-back">
-        <Link href="/admin/products" className="product-form-back__link">
+        <Link href="/khanadmin/products" className="product-form-back__link">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
@@ -377,8 +432,12 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
                 category={formData.category}
                 clothesOptions={clothesOptions}
                 setClothesOptions={setClothesOptions}
+                shoesOptions={shoesOptions}
+                setShoesOptions={setShoesOptions}
                 toggleClothesSize={toggleClothesSize}
-                toggleColor={toggleColor}
+                toggleShoeSize={toggleShoeSize}
+                toggleClothesColor={toggleClothesColor}
+                toggleShoeColor={toggleShoeColor}
                 fieldError={fieldErrors.clothesOptions}
                 onClearError={() =>
                   setFieldErrors((prev) => ({ ...prev, clothesOptions: '' }))

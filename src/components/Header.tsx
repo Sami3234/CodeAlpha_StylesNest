@@ -19,7 +19,7 @@ function BrandMark() {
       <span className="inline-flex h-[48px] max-h-[48px] shrink-0 items-center justify-center leading-none sm:h-[56px] sm:max-h-[56px] md:h-[66px] md:max-h-[66px]">
         <Image
           src={LOGO_MARK}
-          alt=""
+          alt="StylesNest logo"
           width={508}
           height={390}
           className="block h-full w-auto max-h-full object-contain object-center"
@@ -48,7 +48,10 @@ function BrandMark() {
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const isAdminPanel = pathname?.startsWith('/admin') || false;
+  const isAdminPanel =
+    pathname?.startsWith('/khanadmin') ||
+    pathname?.startsWith('/admin') ||
+    false;
   const shellRef = useRef<HTMLElement>(null);
   const { totalQuantity, hydrated: cartHydrated } = useCart();
 

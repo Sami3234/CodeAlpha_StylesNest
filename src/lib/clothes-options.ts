@@ -77,14 +77,27 @@ export function clothesStitchLabel(stitch: ClothesStitch): string {
   return stitch === 'stitched' ? 'Stitched' : 'Unstitched';
 }
 
+export function clothesOrderProductNameWithOptions(
+  title: string,
+  options: ClothesOptions | undefined,
+  selectedSize?: string,
+  selectedColor?: string,
+): string {
+  if (!options) return title;
+  const detailParts: string[] = [clothesGenderLabel(options.gender)];
+  if (selectedSize?.trim()) detailParts.push(`Size ${selectedSize.trim()}`);
+  if (selectedColor?.trim()) detailParts.push(`Color ${selectedColor.trim()}`);
+  detailParts.push(clothesStitchLabel(options.stitch));
+  return `${title} — ${detailParts.join(', ')}`;
+}
+
+/** @deprecated Use clothesOrderProductNameWithOptions */
 export function clothesOrderProductNameWithSize(
   title: string,
   options: ClothesOptions | undefined,
-  selectedSize?: string
+  selectedSize?: string,
 ): string {
-  if (!options) return title;
-  const sizePart = selectedSize?.trim() ? `, Size ${selectedSize.trim()}` : '';
-  return `${title} — ${clothesGenderLabel(options.gender)}${sizePart}, ${clothesStitchLabel(options.stitch)}`;
+  return clothesOrderProductNameWithOptions(title, options, selectedSize);
 }
 
 export function validateClothesOptions(

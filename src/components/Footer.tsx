@@ -2,50 +2,13 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
 import { FOOTER_WORDMARK_GRADIENT } from '@/lib/brand-wordmark';
 import { FooterSocialLinks } from '@/components/FooterSocialLinks';
+import { useContactSettings } from '@/context/ContactSettingsContext';
 import { DEFAULT_FOOTER_SERVICES } from '@/lib/sanitize-contact-extras';
 
 export default function Footer() {
-  const [contactInfo, setContactInfo] = useState({
-    whatsapp: '923001234567',
-    phone: '+92 300 1234567',
-    email: 'info@stylesnest.com',
-    address: 'Vehari, Pakistan',
-    social_whatsapp: '',
-    social_facebook: '',
-    social_tiktok: '',
-    social_daraz: '',
-    social_shopify: '',
-    footer_services: [...DEFAULT_FOOTER_SERVICES] as string[],
-  });
-
-  useEffect(() => {
-    // Fetch contact settings asynchronously (non-blocking)
-    const controller = new AbortController();
-    
-    fetch('/api/contact-settings', { 
-      signal: controller.signal,
-      cache: 'no-store'
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.settings) {
-          setContactInfo((prev) => ({ ...prev, ...data.settings }));
-        }
-      })
-      .catch((err) => {
-        // Keep default values on error (already set in state)
-        if (err.name !== 'AbortError') {
-          // Silently fail - defaults are already set
-        }
-      });
-
-    return () => {
-      controller.abort(); // Cleanup on unmount
-    };
-  }, []);
+  const { settings: contactInfo } = useContactSettings();
 
   return (
     <footer 

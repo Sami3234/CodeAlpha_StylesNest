@@ -6,21 +6,51 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useLoginModal } from '@/context/LoginModalContext';
 import { useSavedCustomerDetails } from '@/hooks/useSavedCustomerDetails';
-import { useEffect, useMemo, useState, Suspense } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppFab from '@/components/WhatsAppFab';
+import OrderDeliveryForm, { type OrderDeliveryFormData } from '@/components/OrderDeliveryForm';
 import { useCart } from '@/context/CartContext';
 import { useProducts } from '@/context/ProductContext';
 import { useOrders } from '@/context/OrderContext';
 import { getProductTitle } from '@/utils/getProductText';
 import { removeAbandonedOrderOnSubmit } from '@/utils/abandonedOrders';
-import { readCheckoutProductIds, clearCheckoutProductIds } from '@/lib/checkout-selection';
+import {
+  buildOrderProductName,
+  formatCartLineOptionsSummary,
+  validateCartLineOptions,
+} from '@/lib/cart-line-options';
+import { readCheckoutLineKeys, clearCheckoutLineKeys } from '@/lib/checkout-selection';
+import { readCustomerDetailsFromSession, writeCustomerDetailsToSession } from '@/lib/customer-details-storage';
+import type { CartLine } from '@/context/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
+import {
+  buildOrderWhatsAppMessage,
+  buildWhatsAppLink,
+  formatPaymentMethodForOrder,
+  type PaymentMethod,
+} from '@/lib/payment-methods';
+import { getLineTotal, getUnitPrice } from '@/lib/product-pricing';
+import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
+import { saveOrderWhatsAppConfirm } from '@/lib/order-whatsapp-storage';
 import '@/components/product-page.css';
 
 function sanitizeCustomerField(raw: string, maxLen: number): string {
   return raw.replace(/\s+/g, ' ').trim().slice(0, maxLen);
+}
+
+function initialFormData(): OrderDeliveryFormData {
+  if (typeof window === 'undefined') {
+    return { fullName: '', mobile: '', city: '', address: '' };
+  }
+  const saved = readCustomerDetailsFromSession();
+  return {
+    fullName: saved?.fullName ?? '',
+    mobile: saved?.mobile ?? '',
+    city: saved?.city ?? '',
+    address: saved?.address ?? '',
+  };
 }
 
 function CheckoutPageInner() {
@@ -33,62 +63,90 @@ function CheckoutPageInner() {
   const { addOrder } = useOrders();
 
   const [bootstrapped, setBootstrapped] = useState(false);
-  const [checkoutIds, setCheckoutIds] = useState<number[]>([]);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    mobile: '',
-    city: '',
-    address: '',
-  });
+  const [checkoutKeys, setCheckoutKeys] = useState<string[]>([]);
+  const [formData, setFormData] = useState<OrderDeliveryFormData>(initialFormData);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [selectedPaymentId, setSelectedPaymentId] = useState('');
+  const [paymentError, setPaymentError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [storeWhatsApp, setStoreWhatsApp] = useState('');
 
   useSavedCustomerDetails(setFormData, authStatus === 'authenticated');
 
   useEffect(() => {
-    setCheckoutIds(readCheckoutProductIds() ?? []);
+    setCheckoutKeys(readCheckoutLineKeys() ?? []);
     setBootstrapped(true);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/payment-methods', { cache: 'no-store' });
+        const data = await res.json();
+        if (cancelled || !data.success) return;
+        const methods = (data.methods ?? []) as PaymentMethod[];
+        setPaymentMethods(methods);
+        setStoreWhatsApp(typeof data.storeWhatsApp === 'string' ? data.storeWhatsApp : '');
+        if (methods.length) setSelectedPaymentId(methods[0].id);
+      } catch {
+        /* optional */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const checkoutRows = useMemo(() => {
-    if (!checkoutIds || checkoutIds.length === 0) return [];
-    const idSet = new Set(checkoutIds);
+    if (!checkoutKeys || checkoutKeys.length === 0) return [];
+    const keySet = new Set(checkoutKeys);
     return lines
-      .filter((l) => idSet.has(l.productId))
+      .filter((l) => keySet.has(l.lineKey))
       .map((line) => ({
         line,
         product: products.find((p) => p.id === line.productId) ?? null,
       }))
       .filter((r) => r.product !== null) as {
-      line: { productId: number; quantity: number };
+      line: CartLine;
       product: NonNullable<(typeof products)[0]>;
     }[];
-  }, [lines, products, checkoutIds]);
+  }, [lines, products, checkoutKeys]);
 
   useEffect(() => {
     if (!bootstrapped || !hydrated) return;
-    if (checkoutIds.length === 0) {
+    if (checkoutKeys.length === 0) {
       router.replace('/cart');
     }
-  }, [bootstrapped, hydrated, checkoutIds.length, router]);
+  }, [bootstrapped, hydrated, checkoutKeys.length, router]);
 
   useEffect(() => {
     if (!bootstrapped || !hydrated || productsLoading) return;
-    if (checkoutIds.length === 0) return;
+    if (checkoutKeys.length === 0) return;
     if (checkoutRows.length === 0) {
-      clearCheckoutProductIds();
+      clearCheckoutLineKeys();
       router.replace('/cart');
     }
-  }, [bootstrapped, hydrated, productsLoading, checkoutIds.length, checkoutRows.length, router]);
+  }, [bootstrapped, hydrated, productsLoading, checkoutKeys.length, checkoutRows.length, router]);
 
   const subtotal = checkoutRows.reduce(
-    (s, { line, product }) => s + product.currentPrice * line.quantity,
+    (s, { line, product }) => s + getLineTotal(product, line.quantity),
     0,
+  );
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    },
+    [],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setPaymentError('');
 
     if (authStatus !== 'authenticated') {
       openLogin(pathname || '/cart/checkout');
@@ -106,7 +164,13 @@ function CheckoutPageInner() {
     }
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 10) {
-      setError('Enter a valid mobile number (at least 10 digits).');
+      setError('Enter a valid WhatsApp number (at least 10 digits).');
+      return;
+    }
+
+    const selectedPayment = paymentMethods.find((m) => m.id === selectedPaymentId);
+    if (paymentMethods.length && !selectedPayment) {
+      setPaymentError('Please select a payment method');
       return;
     }
 
@@ -115,17 +179,56 @@ function CheckoutPageInner() {
       return;
     }
 
+    for (const { line, product } of checkoutRows) {
+      if (isOutOfStock(product)) {
+        setError(`${getProductTitle(product)} is out of stock.`);
+        return;
+      }
+      const stockCheck = validateStockForQuantity(product, lines, line.quantity, {
+        selectedSize: line.selectedSize,
+        selectedColor: line.selectedColor,
+      });
+      if (!stockCheck.ok) {
+        setError(`${getProductTitle(product)}: ${stockCheck.error}`);
+        return;
+      }
+      const result = validateCartLineOptions(product, {
+        selectedSize: line.selectedSize,
+        selectedColor: line.selectedColor,
+      });
+      if (!result.valid) {
+        setError(`${getProductTitle(product)}: ${result.error ?? 'Please select size and color.'}`);
+        return;
+      }
+    }
+
+    const paymentLabel = selectedPayment
+      ? formatPaymentMethodForOrder(selectedPayment)
+      : 'Cash on Delivery';
+
     setSubmitting(true);
     try {
       await removeAbandonedOrderOnSubmit(phone, fullName);
 
-      const orderProducts = checkoutRows.map(({ line, product }) => ({
-        name: getProductTitle(product),
-        quantity: line.quantity,
-        price: product.currentPrice,
-      }));
+      const orderProducts = checkoutRows.map(({ line, product }) => {
+        const name = buildOrderProductName(getProductTitle(product), product, {
+          selectedSize: line.selectedSize,
+          selectedColor: line.selectedColor,
+        });
+        const lineTotal = getLineTotal(product, line.quantity);
+        return {
+          productId: product.id,
+          name,
+          quantity: line.quantity,
+          price: getUnitPrice(product, line.quantity),
+          lineTotal,
+          paymentMethod: paymentLabel,
+          selectedSize: line.selectedSize,
+          selectedColor: line.selectedColor,
+        };
+      });
 
-      const placed = await addOrder({
+      const { order: placed, error: orderError } = await addOrder({
         customer: fullName,
         phone,
         city,
@@ -136,19 +239,52 @@ function CheckoutPageInner() {
       });
 
       if (!placed) {
-        setError('Order could not be saved. Please try again.');
+        setError(orderError ?? 'Order could not be saved. Please try again.');
         return;
       }
 
-      removeLinesFromCart(checkoutRows.map((r) => r.line.productId));
-      clearCheckoutProductIds();
+      const waPhone = storeWhatsApp.replace(/\D/g, '') || digits;
+      const waMessage = buildOrderWhatsAppMessage({
+        orderId: placed.id,
+        customerName: fullName,
+        customerWhatsApp: phone,
+        items: orderProducts.map((p) => ({
+          name: p.name,
+          quantity: p.quantity,
+          lineTotal: p.lineTotal ?? 0,
+          size: p.selectedSize,
+          color: p.selectedColor,
+        })),
+        total: placed.total,
+        city,
+        address,
+        paymentLabel,
+      });
+      const confirmUrl = buildWhatsAppLink(waPhone, waMessage);
+      if (confirmUrl) {
+        saveOrderWhatsAppConfirm({
+          orderId: placed.id,
+          confirmUrl,
+          total: placed.total,
+        });
+      }
+
+      writeCustomerDetailsToSession({
+        fullName,
+        mobile: phone,
+        city,
+        address,
+      });
+
+      removeLinesFromCart(checkoutRows.map((r) => r.line.lineKey));
+      clearCheckoutLineKeys();
       router.push('/cart?placed=1');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!bootstrapped || !hydrated || productsLoading || checkoutIds.length === 0) {
+  if (!bootstrapped || !hydrated || productsLoading || checkoutKeys.length === 0) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <p className="text-slate-600">Loading checkout…</p>
@@ -191,140 +327,74 @@ function CheckoutPageInner() {
         <section className="lg:col-span-3">
           <h2 className="mb-4 text-lg font-bold text-slate-900">Order items</h2>
           <ul className="flex flex-col gap-4">
-            {checkoutRows.map(({ line, product }) => (
-              <li
-                key={line.productId}
-                className="flex flex-col gap-4 rounded-2xl border border-[rgba(102,126,234,0.2)] bg-white p-4 shadow-sm sm:flex-row sm:items-center"
-              >
-                <div className="relative mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:mx-0">
-                  <Image
-                    src={product.image}
-                    alt={getProductTitle(product)}
-                    fill
-                    className="object-cover"
-                    sizes="96px"
-                    unoptimized
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/product/${product.id}`}
-                    className="line-clamp-2 font-semibold text-slate-900 hover:text-[#667eea]"
-                  >
-                    {getProductTitle(product)}
-                  </Link>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Qty <strong>{line.quantity}</strong> × {formatPrice(product.currentPrice)} PKR
-                  </p>
-                  <p className="mt-1 text-base font-bold text-[#c44569]">
-                    Line total: {formatPrice(product.currentPrice * line.quantity)} PKR
-                  </p>
-                </div>
-              </li>
-            ))}
+            {checkoutRows.map(({ line, product }) => {
+              const optionsSummary = formatCartLineOptionsSummary(product, line);
+              return (
+                <li
+                  key={line.lineKey}
+                  className="flex flex-col gap-4 rounded-2xl border border-[rgba(102,126,234,0.2)] bg-white p-4 shadow-sm sm:flex-row sm:items-center"
+                >
+                  <div className="relative mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:mx-0">
+                    <Image
+                      src={product.image}
+                      alt={getProductTitle(product)}
+                      fill
+                      className="object-cover"
+                      sizes="96px"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/product/${product.id}`}
+                      className="line-clamp-2 font-semibold text-slate-900 hover:text-[#667eea]"
+                    >
+                      {getProductTitle(product)}
+                    </Link>
+                    <p className="mt-2 text-sm text-slate-600">
+                      Qty <strong>{line.quantity}</strong>
+                      {product.pricingTiers?.length
+                        ? ' · tier pricing applied'
+                        : ` × ${formatPrice(product.currentPrice)} PKR`}
+                    </p>
+                    {optionsSummary ? (
+                      <p className="mt-1 text-sm font-medium text-[#4338ca]">{optionsSummary}</p>
+                    ) : null}
+                    <p className="mt-1 text-base font-bold text-[#c44569]">
+                      Line total: {formatPrice(getLineTotal(product, line.quantity))} PKR
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
 
         <section className="lg:col-span-2">
-          <div className="rounded-2xl border border-[rgba(102,126,234,0.25)] bg-white p-6 shadow-lg">
-            <h2 className="text-lg font-bold text-slate-900">Delivery details</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Same details we use to confirm COD / delivery across Pakistan.
+          <OrderDeliveryForm
+            title="Order Now"
+            formData={formData}
+            onChange={handleInputChange}
+            onSubmit={handleSubmit}
+            authStatus={authStatus}
+            onLoginClick={() => openLogin(pathname || '/cart/checkout')}
+            paymentMethods={paymentMethods}
+            selectedPaymentId={selectedPaymentId}
+            onPaymentSelect={(id) => {
+              setSelectedPaymentId(id);
+              setPaymentError('');
+            }}
+            paymentError={paymentError}
+            submitLabel="SUBMIT ORDER"
+            submitting={submitting}
+            error={error}
+            orderTotal={subtotal}
+          >
+            <p className="mt-4 text-sm text-slate-600 leading-relaxed">
+              Order submit ke baad WhatsApp par confirm karne ka option milega — taake hum aap ka order
+              jaldi process kar saken.
             </p>
-
-            {authStatus !== 'authenticated' ? (
-              <div className="order-login-banner mt-4">
-                <p>
-                  <strong>Sign in required</strong> to place this order.
-                </p>
-                <button
-                  type="button"
-                  className="order-login-banner__btn"
-                  onClick={() => openLogin(pathname || '/cart/checkout')}
-                >
-                  Sign in / Register
-                </button>
-              </div>
-            ) : null}
-
-            <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="co-name" className="text-xs font-semibold text-slate-600">
-                  Full name *
-                </label>
-                <input
-                  id="co-name"
-                  autoComplete="name"
-                  required
-                  value={formData.fullName}
-                  onChange={(e) => setFormData((s) => ({ ...s, fullName: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#667eea]"
-                />
-              </div>
-              <div>
-                <label htmlFor="co-phone" className="text-xs font-semibold text-slate-600">
-                  Mobile *
-                </label>
-                <input
-                  id="co-phone"
-                  type="tel"
-                  autoComplete="tel"
-                  required
-                  value={formData.mobile}
-                  onChange={(e) => setFormData((s) => ({ ...s, mobile: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#667eea]"
-                />
-              </div>
-              <div>
-                <label htmlFor="co-city" className="text-xs font-semibold text-slate-600">
-                  City *
-                </label>
-                <input
-                  id="co-city"
-                  autoComplete="address-level2"
-                  required
-                  value={formData.city}
-                  onChange={(e) => setFormData((s) => ({ ...s, city: e.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#667eea]"
-                />
-              </div>
-              <div>
-                <label htmlFor="co-address" className="text-xs font-semibold text-slate-600">
-                  Full address *
-                </label>
-                <textarea
-                  id="co-address"
-                  autoComplete="street-address"
-                  required
-                  rows={4}
-                  value={formData.address}
-                  onChange={(e) => setFormData((s) => ({ ...s, address: e.target.value }))}
-                  className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#667eea]"
-                  placeholder="House / street, area, landmark"
-                />
-              </div>
-
-              <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
-                <div className="flex justify-between font-semibold text-slate-800">
-                  <span>Order total</span>
-                  <span className="text-[#667eea]">{formatPrice(subtotal)} PKR</span>
-                </div>
-              </div>
-
-              {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
-
-              <button
-                type="submit"
-                disabled={submitting || checkoutRows.length === 0}
-                className="w-full rounded-full py-3.5 text-sm font-bold text-white shadow-lg disabled:opacity-50"
-                style={{
-                  background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)',
-                }}
-              >
-                {submitting ? 'Placing order…' : 'Confirm & place order'}
-              </button>
-            </form>
-          </div>
+          </OrderDeliveryForm>
         </section>
       </div>
     </>

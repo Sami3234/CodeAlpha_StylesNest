@@ -1,14 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { ensureProductSchema } from '@/lib/ensure-product-schema';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Set all inactive products to active (admin recovery after schema fixes).
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   try {
     await ensureProductSchema();
 

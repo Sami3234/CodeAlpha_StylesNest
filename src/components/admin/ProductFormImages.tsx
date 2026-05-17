@@ -6,6 +6,7 @@ import ImageCropper from '@/components/ImageCropper';
 import { useToast } from '@/components/Toast';
 import type { AdminProductTFunction } from '@/lib/admin/product-form-shared';
 import { isValidProductImageUrl } from '@/lib/admin/product-form-shared';
+import { uploadFormDataWithProgress } from '@/lib/upload-with-progress';
 
 export const MAX_PRODUCT_IMAGES = 12;
 
@@ -32,18 +33,21 @@ function newImageId() {
 async function uploadProductImage(
   file: File,
   category: string,
-  productName: string
+  productName: string,
+  onProgress: (percent: number) => void,
 ): Promise<string> {
   const fd = new FormData();
   fd.append('file', file);
   fd.append('category', category);
   fd.append('productName', productName.trim() || 'product');
-  const res = await fetch('/api/upload', { method: 'POST', body: fd });
-  const data = await res.json();
-  if (!res.ok || !data.url) {
+  const data = (await uploadFormDataWithProgress('/api/upload', fd, onProgress)) as {
+    url?: string;
+    error?: string;
+  };
+  if (!data.url) {
     throw new Error(data.error || 'Upload failed');
   }
-  return data.url as string;
+  return data.url;
 }
 
 export default function ProductFormImages({
@@ -59,6 +63,8 @@ export default function ProductFormImages({
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [replaceId, setReplaceId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [cropperSession, setCropperSession] = useState(0);
   const [urlDraft, setUrlDraft] = useState('');
 
   const slotsLeft = MAX_PRODUCT_IMAGES - images.length;
@@ -116,8 +122,12 @@ export default function ProductFormImages({
 
   const handleCropComplete = async (croppedFile: File) => {
     setUploading(true);
+    setUploadProgress(0);
     try {
-      const url = await uploadProductImage(croppedFile, category, productTitle);
+      const url = await uploadProductImage(croppedFile, category, productTitle, (p) => {
+        setUploadProgress(p);
+      });
+      setUploadProgress(100);
 
       if (replaceId) {
         onChange(
@@ -139,8 +149,10 @@ export default function ProductFormImages({
       } else {
         closeCropper();
       }
-    } catch (e) {
+    } catch {
       showToast('Upload failed. Please try again.', 'error');
+      setUploadProgress(0);
+      setCropperSession((n) => n + 1);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -189,7 +201,7 @@ export default function ProductFormImages({
         <p className="pf-images__desc">
           {t('admin.form.productImagesDesc', {
             defaultValue:
-              'First image is the main photo on the shop. Crop each upload before saving. Up to 12 images.',
+              'Pick images → adjust crop → Apply crop. Upload runs automatically with a progress bar. Up to 12 images.',
           })}
         </p>
         <p className="pf-images__count">
@@ -287,7 +299,7 @@ export default function ProductFormImages({
               }}
             />
             <span className="pf-images__add-icon">+</span>
-            {t('admin.form.addImages', { defaultValue: 'Upload images (crop before save)' })}
+            {t('admin.form.addImages', { defaultValue: 'Add images (crop, then upload)' })}
           </label>
 
           <div className="pf-images__url-row">
@@ -317,18 +329,17 @@ export default function ProductFormImages({
         </p>
       )}
 
-      {uploading && !showCropper ? (
-        <p className="pf-images__uploading">{t('admin.form.uploading', { defaultValue: 'Uploading…' })}</p>
-      ) : null}
-
       {showCropper && cropFile ? (
         <ImageCropper
+          key={`${cropFile.name}-${cropFile.size}-${cropperSession}`}
           image={cropFile}
           aspectRatio={PRODUCT_CROP.aspectRatio}
           targetWidth={PRODUCT_CROP.width}
           targetHeight={PRODUCT_CROP.height}
           onCrop={handleCropComplete}
           onCancel={handleCropCancel}
+          uploading={uploading}
+          uploadProgress={uploadProgress}
         />
       ) : null}
     </div>

@@ -28,7 +28,9 @@ export const siteConfig = {
   ],
   twitterHandle: '@stylesnest',
   contactEmail: 'info@stylesnest.com',
-  defaultOgImagePath: '/images/general.webp',
+  /** Brand logo — favicon, Google tab, Organization JSON-LD */
+  logoPath: '/StylesNest_Nest.png',
+  defaultOgImagePath: '/StylesNest_Nest.png',
 } as const;
 
 export const shopCategories = [
@@ -38,6 +40,7 @@ export const shopCategories = [
   { slug: 'watches', label: 'Watches' },
   { slug: 'makeup', label: 'Makeup' },
   { slug: 'clothes', label: 'Clothes' },
+  { slug: 'shoes', label: 'Shoes' },
   { slug: 'electronics', label: 'Electronics' },
   { slug: 'bags', label: 'Bags' },
   { slug: 'menfashion', label: 'Men Fashion' },

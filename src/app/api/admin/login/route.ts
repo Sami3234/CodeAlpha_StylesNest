@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import crypto from 'crypto';
+import { apiErrorResponse } from '@/lib/safe-errors';
+import { createAdminSession, purgeExpiredAdminSessions } from '@/lib/admin-session';
+
+export const dynamic = 'force-dynamic';
 
 // Simple password hashing function using Node.js crypto
 function hashPassword(password: string): string {
@@ -69,8 +73,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a simple session token
-    const sessionToken = crypto.randomBytes(32).toString('hex');
+    await purgeExpiredAdminSessions();
+    const sessionToken = await createAdminSession(Number(admin.id));
 
     // Return success with session token
     const response = NextResponse.json({
@@ -92,10 +96,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'Failed to login' },
-      { status: 500 }
-    );
+    return apiErrorResponse({ message: 'Failed to login', status: 500, cause: error });
   }
 }

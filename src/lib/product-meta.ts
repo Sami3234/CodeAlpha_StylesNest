@@ -13,7 +13,6 @@ export interface ProductMeta {
 
 export const EMPTY_PRODUCT_META: ProductMeta = {
   sku: '',
-  stockQuantity: 0,
   shortSummary: '',
   tags: [],
   brand: '',
@@ -33,12 +32,14 @@ export function parseProductMeta(raw: unknown): ProductMeta | undefined {
     .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
     .map((t) => t.trim());
 
-  const stock =
-    typeof o.stockQuantity === 'number' && !Number.isNaN(o.stockQuantity)
-      ? Math.max(0, Math.floor(o.stockQuantity))
-      : typeof o.stockQuantity === 'string' && o.stockQuantity.trim() !== ''
-        ? Math.max(0, parseInt(o.stockQuantity, 10) || 0)
-        : 0;
+  let stockQuantity: number | undefined;
+  if ('stockQuantity' in o && o.stockQuantity != null && o.stockQuantity !== '') {
+    if (typeof o.stockQuantity === 'number' && !Number.isNaN(o.stockQuantity)) {
+      stockQuantity = Math.max(0, Math.floor(o.stockQuantity));
+    } else if (typeof o.stockQuantity === 'string' && o.stockQuantity.trim() !== '') {
+      stockQuantity = Math.max(0, parseInt(o.stockQuantity, 10) || 0);
+    }
+  }
 
   const weightGrams =
     typeof o.weightGrams === 'number' && o.weightGrams > 0 ? o.weightGrams : undefined;
@@ -47,7 +48,7 @@ export function parseProductMeta(raw: unknown): ProductMeta | undefined {
 
   return {
     sku: typeof o.sku === 'string' ? o.sku.trim() : '',
-    stockQuantity: stock,
+    stockQuantity,
     shortSummary: typeof o.shortSummary === 'string' ? o.shortSummary.trim() : '',
     tags,
     brand: typeof o.brand === 'string' ? o.brand.trim() : '',
@@ -73,7 +74,10 @@ export function tagsToInput(tags: string[] | undefined): string {
 export function normalizeProductMetaForSave(meta: ProductMeta): ProductMeta {
   return {
     sku: meta.sku?.trim() || undefined,
-    stockQuantity: Math.max(0, Math.floor(meta.stockQuantity ?? 0)),
+    stockQuantity:
+      meta.stockQuantity != null
+        ? Math.max(0, Math.floor(meta.stockQuantity))
+        : undefined,
     shortSummary: meta.shortSummary?.trim() || undefined,
     tags: meta.tags?.length ? meta.tags.map((t) => t.trim()).filter(Boolean) : undefined,
     brand: meta.brand?.trim() || undefined,

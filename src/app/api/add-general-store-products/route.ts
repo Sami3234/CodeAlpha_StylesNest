@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -787,7 +788,10 @@ const generalStoreProducts = [
   }
 ];
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   try {
     console.log('🚀 Starting to add general store products...\n');
     
@@ -870,7 +874,10 @@ export async function POST() {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   return NextResponse.json({
     message: 'POST to this endpoint to add general store products',
     totalProducts: generalStoreProducts.length,

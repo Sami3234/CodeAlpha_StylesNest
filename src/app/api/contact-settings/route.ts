@@ -100,21 +100,25 @@ export async function GET() {
       FROM contact_settings LIMIT 1
     `) as Row[];
 
+    const cacheHeaders = {
+      'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=600',
+    };
+
     if (result.length > 0) {
-      return NextResponse.json({
-        success: true,
-        settings: rowToSettings(result[0]),
-      });
+      return NextResponse.json(
+        { success: true, settings: rowToSettings(result[0]) },
+        { headers: cacheHeaders },
+      );
     }
 
-    return NextResponse.json({
-      success: true,
-      settings: rowToSettings(defaults),
-    });
+    return NextResponse.json(
+      { success: true, settings: rowToSettings(defaults) },
+      { headers: cacheHeaders },
+    );
   } catch {
-    return NextResponse.json({
-      success: true,
-      settings: rowToSettings(defaults),
-    });
+    return NextResponse.json(
+      { success: true, settings: rowToSettings(defaults) },
+      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
+    );
   }
 }

@@ -1,6 +1,12 @@
 import type { Metadata } from 'next';
 import { absoluteUrl, getSiteUrl, siteConfig, truncate } from '@/lib/seo/site';
 
+const brandIcon = {
+  url: siteConfig.logoPath,
+  type: 'image/png',
+  sizes: '512x512',
+} as const;
+
 type PageSeoInput = {
   title: string;
   description: string;
@@ -76,6 +82,7 @@ export const rootMetadata: Metadata = {
     title: siteConfig.title,
     description: siteConfig.description,
     path: '/',
+    image: siteConfig.logoPath,
   }),
   title: {
     default: siteConfig.title,
@@ -85,6 +92,11 @@ export const rootMetadata: Metadata = {
   authors: [{ name: siteConfig.name, url: getSiteUrl() }],
   creator: siteConfig.name,
   publisher: siteConfig.name,
+  icons: {
+    icon: [brandIcon, { url: siteConfig.logoPath, rel: 'shortcut icon' }],
+    apple: [brandIcon],
+    other: [{ rel: 'mask-icon', url: siteConfig.logoPath, color: '#1e293b' }],
+  },
   formatDetection: {
     email: false,
     address: false,
@@ -93,5 +105,6 @@ export const rootMetadata: Metadata = {
   other: {
     'geo.region': siteConfig.region,
     'geo.placename': siteConfig.country,
+    'msapplication-TileImage': absoluteUrl(siteConfig.logoPath),
   },
 };

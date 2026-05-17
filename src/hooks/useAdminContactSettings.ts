@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_FOOTER_SERVICES } from '@/lib/sanitize-contact-extras';
+import { clientFetch, NetworkError } from '@/lib/client-fetch';
+import type { FetchErrorKind } from '@/lib/is-network-error';
 
 /** Mirrors `/api/admin/contact-settings` payload */
 export interface AdminContactSettings {
@@ -42,13 +44,15 @@ export function useAdminContactSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fetchError, setFetchError] = useState<FetchErrorKind | null>(null);
   const [success, setSuccess] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    setFetchError(null);
     try {
-      const response = await fetch('/api/admin/contact-settings');
+      const response = await clientFetch('/api/admin/contact-settings');
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.settings) {
@@ -57,8 +61,12 @@ export function useAdminContactSettings() {
       } else {
         setError('Failed to load settings');
       }
-    } catch {
-      setError('Failed to load settings');
+    } catch (err) {
+      if (err instanceof NetworkError) {
+        setFetchError(err.kind);
+      } else {
+        setError('Failed to load settings');
+      }
     } finally {
       setLoading(false);
     }
@@ -73,7 +81,7 @@ export function useAdminContactSettings() {
     setError('');
     setSuccess('');
     try {
-      const response = await fetch('/api/admin/contact-settings', {
+      const response = await clientFetch('/api/admin/contact-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
@@ -85,8 +93,16 @@ export function useAdminContactSettings() {
       } else {
         setError(data.error || 'Save failed');
       }
-    } catch {
-      setError('Save failed');
+    } catch (err) {
+      if (err instanceof NetworkError) {
+        setError(
+          err.kind === 'offline'
+            ? 'You are offline. Reconnect to save settings.'
+            : 'Connection problem. Could not save — try again.',
+        );
+      } else {
+        setError('Save failed');
+      }
     } finally {
       setSaving(false);
     }
@@ -98,6 +114,7 @@ export function useAdminContactSettings() {
     loading,
     saving,
     error,
+    fetchError,
     success,
     save,
     reload: load,

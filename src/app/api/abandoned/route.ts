@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +16,12 @@ interface AbandonedOrderRow {
   created_at: string;
 }
 
-// GET all abandoned orders (optionally filtered by phone and name)
+// GET all abandoned orders (admin only)
 export async function GET(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const { searchParams } = new URL(request.url);
     const phone = searchParams.get('phone');
     const name = searchParams.get('name');
@@ -215,6 +219,9 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove abandoned order (when user submits)
 export async function DELETE(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const phone = searchParams.get('phone');

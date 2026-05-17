@@ -6,20 +6,13 @@ import {
   MAX_TRENDING_PRODUCTS,
   normalizeTrendingSelection,
 } from '@/lib/trending-products';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
-function requireAdmin(request: NextRequest) {
-  const sessionToken = request.cookies.get('admin_session');
-  if (!sessionToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return null;
-}
-
 export async function GET(request: NextRequest) {
-  const deny = requireAdmin(request);
-  if (deny) return deny;
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
 
   try {
     await ensureHomepageSettingsTable();
@@ -44,8 +37,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const deny = requireAdmin(request);
-  if (deny) return deny;
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
 
   try {
     const body = await request.json();

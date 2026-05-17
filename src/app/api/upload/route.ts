@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import { configureCloudinary } from '@/lib/cloudinary-config';
 import { productImageFolder, sanitizePathSegment } from '@/lib/cloudinary-folders';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 configureCloudinary();
 
 export async function POST(request: NextRequest) {
   try {
-    // Debug: Log what credentials are being used
-    console.log('🔐 Cloudinary upload (cloud from env)');
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
     
     const formData = await request.formData();
     const file = formData.get('file') as File;

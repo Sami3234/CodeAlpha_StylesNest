@@ -103,6 +103,7 @@ export const adminProductTranslations: Record<string, string> = {
   'categories.watches': 'Watches',
   'categories.makeup': 'Makeup',
   'categories.clothes': 'Clothes',
+  'categories.shoes': 'Shoes',
   'categories.electronics': 'Electronics',
   'categories.general': 'General',
   'categories.bags': 'Bags',

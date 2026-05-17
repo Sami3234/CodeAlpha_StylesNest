@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import Cropper, { Area, MediaSize } from 'react-easy-crop';
 
 interface ImageCropperProps {
@@ -10,9 +10,12 @@ interface ImageCropperProps {
   onCancel: () => void;
   targetWidth: number;
   targetHeight: number;
+  /** Parent is uploading — show progress UI */
+  uploading?: boolean;
+  /** 0–100 while uploading */
+  uploadProgress?: number;
 }
 
-/** Minimum zoom so the crop frame is filled (no empty gaps). */
 function getCoverZoom(mediaWidth: number, mediaHeight: number, aspect: number): number {
   const mediaAspect = mediaWidth / mediaHeight;
   if (mediaAspect > aspect) {
@@ -21,7 +24,6 @@ function getCoverZoom(mediaWidth: number, mediaHeight: number, aspect: number): 
   return aspect / mediaAspect;
 }
 
-/** Zoom so the entire image is visible inside the crop frame (less zoomed in). */
 function getFitZoom(mediaWidth: number, mediaHeight: number, aspect: number): number {
   const mediaAspect = mediaWidth / mediaHeight;
   if (mediaAspect > aspect) {
@@ -30,7 +32,21 @@ function getFitZoom(mediaWidth: number, mediaHeight: number, aspect: number): nu
   return mediaAspect / aspect;
 }
 
+/** Centered crop for current aspect — used so first click works without dragging. */
+function defaultCropArea(mediaW: number, mediaH: number, aspect: number): Area {
+  const mediaAspect = mediaW / mediaH;
+  if (mediaAspect > aspect) {
+    const height = mediaH;
+    const width = height * aspect;
+    return { x: (mediaW - width) / 2, y: 0, width, height };
+  }
+  const width = mediaW;
+  const height = width / aspect;
+  return { x: 0, y: (mediaH - height) / 2, width, height };
+}
+
 type FitMode = 'fit' | 'cover';
+type Phase = 'crop' | 'upload';
 
 export default function ImageCropper({
   image,
@@ -39,6 +55,8 @@ export default function ImageCropper({
   onCancel,
   targetWidth,
   targetHeight,
+  uploading = false,
+  uploadProgress = 0,
 }: ImageCropperProps) {
   const [imageSrc, setImageSrc] = useState('');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -47,16 +65,29 @@ export default function ImageCropper({
   const [maxZoom, setMaxZoom] = useState(6);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(
-    null
+    null,
   );
   const [isCropping, setIsCropping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fitMode, setFitMode] = useState<FitMode>('fit');
+  const [phase, setPhase] = useState<Phase>('crop');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   const aspectLabel = useMemo(
     () => `${targetWidth} × ${targetHeight}px`,
-    [targetWidth, targetHeight]
+    [targetWidth, targetHeight],
   );
+
+  const revokePreview = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreviewUrl(null);
+  }, []);
+
+  useEffect(() => () => revokePreview(), [revokePreview]);
 
   const applyZoomMode = useCallback(
     (media: MediaSize, mode: FitMode) => {
@@ -64,20 +95,24 @@ export default function ImageCropper({
       const fit = getFitZoom(media.naturalWidth, media.naturalHeight, aspectRatio);
 
       const nextZoom =
-        mode === 'fit'
-          ? Math.max(fit * 0.98, 0.05)
-          : Math.max(cover * 1.01, fit);
+        mode === 'fit' ? Math.max(fit * 0.98, 0.05) : Math.max(cover * 1.01, fit);
 
       setMinZoom(Math.max(fit * 0.4, 0.05));
       setMaxZoom(Math.max(cover * 3, 2, nextZoom + 1));
       setZoom(nextZoom);
       setCrop({ x: 0, y: 0 });
       setFitMode(mode);
+      setCroppedAreaPixels(
+        defaultCropArea(media.naturalWidth, media.naturalHeight, aspectRatio),
+      );
     },
-    [aspectRatio]
+    [aspectRatio],
   );
 
   useEffect(() => {
+    setPhase('crop');
+    revokePreview();
+
     const loadImage = async () => {
       try {
         let src = '';
@@ -102,6 +137,9 @@ export default function ImageCropper({
         const img = new Image();
         img.onload = () => {
           setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+          setCroppedAreaPixels(
+            defaultCropArea(img.naturalWidth, img.naturalHeight, aspectRatio),
+          );
         };
         img.onerror = () => setError('Failed to load image');
         img.src = src;
@@ -111,15 +149,15 @@ export default function ImageCropper({
       }
     };
 
-    loadImage();
-  }, [image]);
+    void loadImage();
+  }, [image, aspectRatio, revokePreview]);
 
   const onMediaLoaded = useCallback(
     (media: MediaSize) => {
       setImageDimensions({ width: media.naturalWidth, height: media.naturalHeight });
       applyZoomMode(media, 'fit');
     },
-    [applyZoomMode]
+    [applyZoomMode],
   );
 
   const onCropComplete = useCallback((_croppedArea: Area, pixels: Area) => {
@@ -135,7 +173,7 @@ export default function ImageCropper({
         width: imageDimensions.width,
         height: imageDimensions.height,
       },
-      'fit'
+      'fit',
     );
   };
 
@@ -148,7 +186,7 @@ export default function ImageCropper({
         width: imageDimensions.width,
         height: imageDimensions.height,
       },
-      'cover'
+      'cover',
     );
   };
 
@@ -160,8 +198,8 @@ export default function ImageCropper({
       img.src = url;
     });
 
-  const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
-    const imageEl = await createImage(imageSrc);
+  const getCroppedImg = async (src: string, pixelCrop: Area): Promise<Blob> => {
+    const imageEl = await createImage(src);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -196,15 +234,22 @@ export default function ImageCropper({
           }
           resolve(blob);
         },
-        'image/png',
-        1
+        'image/jpeg',
+        0.92,
       );
     });
   };
 
-  const handleCrop = async () => {
-    if (!croppedAreaPixels || !imageSrc) {
-      setError('Please wait for the image to load, then position your crop.');
+  const resolveCropPixels = (): Area | null => {
+    if (croppedAreaPixels) return croppedAreaPixels;
+    if (!imageDimensions) return null;
+    return defaultCropArea(imageDimensions.width, imageDimensions.height, aspectRatio);
+  };
+
+  const handleApplyCrop = async () => {
+    const pixels = resolveCropPixels();
+    if (!pixels || !imageSrc) {
+      setError('Image is still loading. Please wait a moment.');
       return;
     }
 
@@ -212,10 +257,18 @@ export default function ImageCropper({
     setError(null);
 
     try {
-      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
-      const file = new File([croppedImage], `cropped_${targetWidth}x${targetHeight}_${Date.now()}.png`, {
-        type: 'image/png',
-      });
+      const croppedImage = await getCroppedImg(imageSrc, pixels);
+      const file = new File(
+        [croppedImage],
+        `cropped_${targetWidth}x${targetHeight}_${Date.now()}.jpg`,
+        { type: 'image/jpeg' },
+      );
+
+      revokePreview();
+      const url = URL.createObjectURL(file);
+      previewUrlRef.current = url;
+      setPreviewUrl(url);
+      setPhase('upload');
       onCrop(file);
     } catch (cropError) {
       const errorMessage =
@@ -231,6 +284,9 @@ export default function ImageCropper({
 
   if (!imageSrc) return null;
 
+  const showUploadPhase = phase === 'upload' || uploading;
+  const progress = Math.min(100, Math.max(0, uploadProgress));
+
   return (
     <div
       className="image-cropper-backdrop"
@@ -240,80 +296,120 @@ export default function ImageCropper({
     >
       <div className="image-cropper-panel">
         <h3 id="image-cropper-title" className="image-cropper-title">
-          Custom crop — fixed output {aspectLabel}
+          {showUploadPhase ? 'Uploading image' : `Crop image — ${aspectLabel}`}
         </h3>
         <p className="image-cropper-subtitle">
-          Drag the image to choose the area · zoom only if needed · orange frame = exact size on site
+          {showUploadPhase
+            ? 'Please wait while your cropped photo is saved to the shop.'
+            : 'Adjust the frame, then apply crop. Upload starts automatically right after.'}
         </p>
 
-        <div
-          className="image-cropper-viewport"
-          style={{ aspectRatio: `${targetWidth} / ${targetHeight}` }}
-        >
-          <Cropper
-            image={imageSrc}
-            crop={crop}
-            zoom={zoom}
-            aspect={aspectRatio}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-            onMediaLoaded={onMediaLoaded}
-            objectFit="contain"
-            restrictPosition={false}
-            showGrid
-            zoomWithScroll
-            minZoom={minZoom}
-            maxZoom={maxZoom}
-            cropShape="rect"
-            style={{
-              containerStyle: {
-                width: '100%',
-                height: '100%',
-                borderRadius: '8px',
-              },
-              cropAreaStyle: {
-                border: '2px solid rgba(255, 140, 66, 0.95)',
-                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.55)',
-              },
-            }}
-          />
-        </div>
+        {showUploadPhase ? (
+          <div className="image-cropper-upload-phase">
+            {previewUrl ? (
+              <div
+                className="image-cropper-preview"
+                style={{ aspectRatio: `${targetWidth} / ${targetHeight}` }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewUrl} alt="Cropped preview" className="image-cropper-preview-img" />
+              </div>
+            ) : null}
+            <div className="image-cropper-progress-wrap">
+              <div
+                className="image-cropper-progress-bar"
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Upload progress"
+              >
+                <div
+                  className="image-cropper-progress-fill"
+                  style={{ width: `${uploading ? progress : 100}%` }}
+                />
+              </div>
+              <p className="image-cropper-progress-label">
+                {uploading
+                  ? progress > 0
+                    ? `Uploading… ${progress}%`
+                    : 'Starting upload…'
+                  : 'Upload complete'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              className="image-cropper-viewport"
+              style={{ aspectRatio: `${targetWidth} / ${targetHeight}` }}
+            >
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={aspectRatio}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                onMediaLoaded={onMediaLoaded}
+                objectFit="contain"
+                restrictPosition={false}
+                showGrid
+                zoomWithScroll
+                minZoom={minZoom}
+                maxZoom={maxZoom}
+                cropShape="rect"
+                style={{
+                  containerStyle: {
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '8px',
+                  },
+                  cropAreaStyle: {
+                    border: '2px solid rgba(255, 140, 66, 0.95)',
+                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.55)',
+                  },
+                }}
+              />
+            </div>
 
-        <div className="image-cropper-preset-row">
-          <button
-            type="button"
-            className={`image-cropper-preset-btn${fitMode === 'fit' ? ' is-active' : ''}`}
-            onClick={handleFitFull}
-          >
-            Full image
-          </button>
-          <button
-            type="button"
-            className={`image-cropper-preset-btn${fitMode === 'cover' ? ' is-active' : ''}`}
-            onClick={handleFillFrame}
-          >
-            Fill frame
-          </button>
-          <span className="image-cropper-preset-hint">Output size stays {aspectLabel}</span>
-        </div>
+            <div className="image-cropper-preset-row">
+              <button
+                type="button"
+                className={`image-cropper-preset-btn${fitMode === 'fit' ? ' is-active' : ''}`}
+                onClick={handleFitFull}
+              >
+                Full image
+              </button>
+              <button
+                type="button"
+                className={`image-cropper-preset-btn${fitMode === 'cover' ? ' is-active' : ''}`}
+                onClick={handleFillFrame}
+              >
+                Fill frame
+              </button>
+              <span className="image-cropper-preset-hint">Output size stays {aspectLabel}</span>
+            </div>
 
-        <div className="image-cropper-controls">
-          <label className="image-cropper-zoom-label" htmlFor="crop-zoom">
-            Zoom
-          </label>
-          <input
-            id="crop-zoom"
-            type="range"
-            value={zoom}
-            min={minZoom}
-            max={maxZoom}
-            step={0.01}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="image-cropper-zoom-slider"
-          />
-          <span className="image-cropper-zoom-value">{zoom.toFixed(2)}×</span>
-        </div>
+            <div className="image-cropper-controls">
+              <label className="image-cropper-zoom-label" htmlFor="crop-zoom">
+                Zoom
+              </label>
+              <input
+                id="crop-zoom"
+                type="range"
+                value={zoom}
+                min={minZoom}
+                max={maxZoom}
+                step={0.01}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="image-cropper-zoom-slider"
+              />
+              <span className="image-cropper-zoom-value">{zoom.toFixed(2)}×</span>
+            </div>
+          </>
+        )}
 
         {error ? (
           <div className="image-cropper-error" role="alert">
@@ -321,29 +417,32 @@ export default function ImageCropper({
           </div>
         ) : null}
 
-        <div className="image-cropper-hint">
-          <strong>How it works:</strong> The frame ratio is fixed ({aspectLabel}). You move and zoom the
-          photo underneath — only the part inside the frame is saved. Start with <em>Full image</em> so
-          nothing is over-zoomed; use <em>Fill frame</em> only if you want edge-to-edge coverage.
-          {imageDimensions ? (
-            <span className="image-cropper-hint-meta">
-              Your file: {imageDimensions.width}×{imageDimensions.height}px
-            </span>
-          ) : null}
-        </div>
+        {!showUploadPhase ? (
+          <div className="image-cropper-hint">
+            <strong>Step 1:</strong> Position your photo, then tap <em>Apply crop</em>. Upload runs
+            automatically in step 2 with a progress bar.
+          </div>
+        ) : null}
 
         <div className="image-cropper-actions">
-          <button type="button" className="image-cropper-cancel-btn" onClick={onCancel}>
-            Cancel
-          </button>
           <button
             type="button"
-            className="image-cropper-submit-btn"
-            onClick={handleCrop}
-            disabled={isCropping || !croppedAreaPixels}
+            className="image-cropper-cancel-btn"
+            onClick={onCancel}
+            disabled={uploading || isCropping}
           >
-            {isCropping ? 'Saving…' : 'Crop & upload'}
+            Cancel
           </button>
+          {!showUploadPhase ? (
+            <button
+              type="button"
+              className="image-cropper-submit-btn"
+              onClick={() => void handleApplyCrop()}
+              disabled={isCropping || !imageDimensions}
+            >
+              {isCropping ? 'Cropping…' : 'Apply crop'}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -380,6 +479,48 @@ export default function ImageCropper({
           color: #64748b;
           line-height: 1.45;
         }
+        .image-cropper-upload-phase {
+          margin-bottom: 16px;
+        }
+        .image-cropper-preview {
+          position: relative;
+          width: 100%;
+          max-width: 280px;
+          margin: 0 auto 20px;
+          border-radius: 10px;
+          overflow: hidden;
+          background: #0f172a;
+          border: 2px solid #e2e8f0;
+        }
+        .image-cropper-preview-img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        .image-cropper-progress-wrap {
+          max-width: 480px;
+          margin: 0 auto;
+        }
+        .image-cropper-progress-bar {
+          height: 10px;
+          border-radius: 999px;
+          background: #e2e8f0;
+          overflow: hidden;
+        }
+        .image-cropper-progress-fill {
+          height: 100%;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%);
+          transition: width 0.2s ease;
+        }
+        .image-cropper-progress-label {
+          margin: 10px 0 0;
+          text-align: center;
+          font-size: 14px;
+          font-weight: 600;
+          color: #334155;
+        }
         .image-cropper-viewport {
           position: relative;
           width: 100%;
@@ -405,14 +546,6 @@ export default function ImageCropper({
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          transition:
-            background 0.15s ease,
-            border-color 0.15s ease,
-            color 0.15s ease;
-        }
-        .image-cropper-preset-btn:hover {
-          border-color: #94a3b8;
-          background: #f1f5f9;
         }
         .image-cropper-preset-btn.is-active {
           border-color: #3498db;
@@ -438,9 +571,7 @@ export default function ImageCropper({
         .image-cropper-zoom-slider {
           flex: 1;
           min-width: 140px;
-          height: 6px;
           accent-color: #3498db;
-          cursor: pointer;
         }
         .image-cropper-zoom-value {
           font-size: 13px;
@@ -456,7 +587,6 @@ export default function ImageCropper({
           border-radius: 8px;
           margin-bottom: 14px;
           font-size: 13px;
-          line-height: 1.5;
         }
         .image-cropper-hint {
           background: #f0f7ff;
@@ -466,12 +596,6 @@ export default function ImageCropper({
           font-size: 13px;
           color: #475569;
           line-height: 1.55;
-        }
-        .image-cropper-hint-meta {
-          display: block;
-          margin-top: 6px;
-          font-size: 12px;
-          color: #64748b;
         }
         .image-cropper-actions {
           display: flex;
@@ -491,15 +615,13 @@ export default function ImageCropper({
           background: #e2e8f0;
           color: #334155;
         }
-        .image-cropper-cancel-btn:hover {
-          background: #cbd5e1;
+        .image-cropper-cancel-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .image-cropper-submit-btn {
           background: #3498db;
           color: #fff;
-        }
-        .image-cropper-submit-btn:hover:not(:disabled) {
-          background: #2980b9;
         }
         .image-cropper-submit-btn:disabled {
           opacity: 0.55;

@@ -137,7 +137,57 @@ export function buildWhatsAppLink(phoneDigits: string, message: string): string 
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
+export type OrderWhatsAppItem = {
+  name: string;
+  quantity: number;
+  lineTotal: number;
+  size?: string;
+  color?: string;
+};
+
 export function buildOrderWhatsAppMessage(params: {
+  orderId: string;
+  customerName: string;
+  customerWhatsApp: string;
+  items: OrderWhatsAppItem[];
+  total: number;
+  city: string;
+  address: string;
+  paymentLabel: string;
+}): string {
+  const itemLines = params.items.flatMap((item, index) => {
+    const prefix = params.items.length > 1 ? `${index + 1}. ` : '';
+    return [
+      `${prefix}${item.name}`,
+      item.size ? `   Size: ${item.size}` : '',
+      item.color ? `   Color: ${item.color}` : '',
+      `   Qty: ${item.quantity} — ${item.lineTotal} PKR`,
+    ].filter(Boolean);
+  });
+
+  const lines = [
+    'Assalam o Alaikum, I placed an order on StylesNest.',
+    '',
+    `Order ID: ${params.orderId}`,
+    `Name: ${params.customerName}`,
+    `WhatsApp: ${params.customerWhatsApp}`,
+    '',
+    params.items.length > 1 ? 'Items:' : 'Product:',
+    ...itemLines,
+    '',
+    `Total: ${params.total} PKR`,
+    `Payment: ${params.paymentLabel}`,
+    `City: ${params.city}`,
+    `Address: ${params.address}`,
+    '',
+    'Please confirm my order. Thank you!',
+  ].filter((line) => line !== '');
+
+  return lines.join('\n');
+}
+
+/** Single-product shortcut (product page). */
+export function buildSingleProductWhatsAppMessage(params: {
   orderId: string;
   customerName: string;
   customerWhatsApp: string;
@@ -148,22 +198,24 @@ export function buildOrderWhatsAppMessage(params: {
   address: string;
   paymentLabel: string;
   size?: string;
+  color?: string;
 }): string {
-  const lines = [
-    'Assalam o Alaikum, I placed an order on Styles Nest.',
-    '',
-    `Order ID: ${params.orderId}`,
-    `Name: ${params.customerName}`,
-    `WhatsApp: ${params.customerWhatsApp}`,
-    `Product: ${params.productName}`,
-    params.size ? `Size: ${params.size}` : '',
-    `Qty: ${params.quantity}`,
-    `Total: ${params.total} PKR`,
-    `Payment: ${params.paymentLabel}`,
-    `City: ${params.city}`,
-    `Address: ${params.address}`,
-    '',
-    'Please confirm my order. Thank you!',
-  ].filter(Boolean);
-  return lines.join('\n');
+  return buildOrderWhatsAppMessage({
+    orderId: params.orderId,
+    customerName: params.customerName,
+    customerWhatsApp: params.customerWhatsApp,
+    items: [
+      {
+        name: params.productName,
+        quantity: params.quantity,
+        lineTotal: params.total,
+        size: params.size,
+        color: params.color,
+      },
+    ],
+    total: params.total,
+    city: params.city,
+    address: params.address,
+    paymentLabel: params.paymentLabel,
+  });
 }

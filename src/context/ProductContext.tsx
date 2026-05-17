@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product } from '@/data/products';
 import { clientMessageFromApi, GENERIC_CLIENT_ERROR, sanitizeClientMessage } from '@/lib/safe-errors';
+import { clientFetch, NetworkError } from '@/lib/client-fetch';
+import type { FetchErrorKind } from '@/lib/is-network-error';
 
 interface ProductContextType {
   products: Product[];
@@ -13,6 +15,7 @@ interface ProductContextType {
   getActiveProducts: () => Product[];
   reloadProducts: () => Promise<void>;
   loading: boolean;
+  fetchError: FetchErrorKind | null;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -20,6 +23,7 @@ const ProductContext = createContext<ProductContextType | undefined>(undefined);
 export function ProductProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<FetchErrorKind | null>(null);
 
   // Fetch products from API on mount
   useEffect(() => {
@@ -28,24 +32,29 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   const fetchProducts = async () => {
     try {
-      let response = await fetch('/api/products', { cache: 'no-store' });
-
-      if (!response.ok) {
-        await fetch('/api/update-schema', { method: 'POST', cache: 'no-store' });
-        response = await fetch('/api/products', { cache: 'no-store' });
-      }
+      setFetchError(null);
+      const response = await clientFetch('/api/products', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
 
       if (response.ok) {
         const data = await response.json();
         setProducts(Array.isArray(data.products) ? data.products : []);
+        setFetchError(null);
       } else {
         const errBody = await response.json().catch(() => ({}));
         console.error('Failed to fetch products from API:', errBody);
-        setProducts([]);
+        setProducts((prev) => (prev.length > 0 ? prev : []));
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      setProducts([]);
+      if (error instanceof NetworkError) {
+        setFetchError(error.kind);
+        setProducts((prev) => prev);
+      } else {
+        setProducts((prev) => (prev.length > 0 ? prev : []));
+      }
     } finally {
       setLoading(false);
     }
@@ -92,13 +101,14 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       pricingTiers: productData.pricingTiers || [],
       status: productData.status || 'active',
       clothesOptions: productData.clothesOptions,
+      shoesOptions: productData.shoesOptions,
       productMeta: productData.productMeta,
     };
     
     console.log('🔄 ProductContext - Adding product with pricingTiers:', newProduct.pricingTiers);
     
     try {
-      const response = await fetch('/api/products', {
+      const response = await clientFetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newProduct),
@@ -145,7 +155,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   const updateProduct = async (updatedProduct: Product) => {
     try {
-      const response = await fetch('/api/products', {
+      const response = await clientFetch('/api/products', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedProduct),
@@ -166,7 +176,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   const deleteProduct = async (id: number) => {
     try {
-      const response = await fetch(`/api/products?id=${id}`, {
+      const response = await clientFetch(`/api/products?id=${id}`, {
         method: 'DELETE',
       });
 
@@ -206,6 +216,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       getActiveProducts,
       reloadProducts: fetchProducts,
       loading,
+      fetchError,
     }}>
       {children}
     </ProductContext.Provider>

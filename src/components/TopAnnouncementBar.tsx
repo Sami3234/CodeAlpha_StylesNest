@@ -5,18 +5,7 @@ import { useEffect, useState } from 'react';
 import { FaFacebookF, FaWhatsapp, FaShoppingBag } from 'react-icons/fa';
 import { SiShopify } from 'react-icons/si';
 import { topBarUrlCaption } from '@/lib/sanitize-contact-extras';
-
-type Settings = {
-  whatsapp: string;
-  announcement_text: string;
-  customer_care_url: string;
-  social_whatsapp: string;
-  social_facebook: string;
-  social_daraz: string;
-  social_shopify: string;
-  /** URLs only — orange bar only; captions derived automatically */
-  top_bar_links?: string[];
-};
+import { useContactSettings } from '@/context/ContactSettingsContext';
 
 function waLinkFromNumber(num: string): string {
   const digits = num.replace(/\D/g, '');
@@ -25,7 +14,7 @@ function waLinkFromNumber(num: string): string {
 }
 
 export default function TopAnnouncementBar() {
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const { settings: shared, loaded } = useContactSettings();
   /** Visible only when the page is at (or very near) scroll top; stays hidden while scrolled down */
   const [scrollCollapsed, setScrollCollapsed] = useState(false);
 
@@ -39,25 +28,9 @@ export default function TopAnnouncementBar() {
     return () => window.removeEventListener('scroll', apply);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/contact-settings');
-        const data = await res.json();
-        if (!cancelled && data.success && data.settings) {
-          setSettings(data.settings);
-        }
-      } catch {
-        if (!cancelled) setSettings(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  if (!loaded) return null;
 
-  if (!settings) return null;
+  const settings = shared;
 
   const announcement = (settings.announcement_text || '').trim();
   const careHref = (settings.customer_care_url || '').trim();

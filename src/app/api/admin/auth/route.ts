@@ -1,25 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiErrorResponse } from '@/lib/safe-errors';
+import { validateAdminSession } from '@/lib/admin-session';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const sessionToken = request.cookies.get('admin_session');
+    const token = request.cookies.get('admin_session')?.value;
+    const session = await validateAdminSession(token);
 
-    if (!sessionToken) {
-      return NextResponse.json(
-        { authenticated: false },
-        { status: 401 }
-      );
+    if (!session) {
+      return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    // In a production app, you would verify the session token against a database
-    // For now, we'll just check if the cookie exists
-    return NextResponse.json({
-      authenticated: true,
-    });
-  } catch (error) {
     return NextResponse.json(
-      { authenticated: false },
-      { status: 401 }
+      { authenticated: true, email: session.email },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, max-age=0',
+        },
+      },
     );
+  } catch (error) {
+    return apiErrorResponse({
+      message: 'Could not verify session',
+      status: 500,
+      cause: error,
+    });
   }
 }

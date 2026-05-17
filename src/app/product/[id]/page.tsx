@@ -14,21 +14,28 @@ import WhatsAppFab from '@/components/WhatsAppFab';
 import { cities, getCityName } from '@/data/products';
 import { notFound } from 'next/navigation';
 import { useProducts } from '@/context/ProductContext';
+import ConnectionProblem from '@/components/network/ConnectionProblem';
 import { useOrders } from '@/context/OrderContext';
 import { saveAbandonedOrder, removeAbandonedOrderOnSubmit, AbandonedOrder } from '@/utils/abandonedOrders';
 import { getProductTitle, getProductDescription, getProductFeatures } from '@/utils/getProductText';
-import { getSoldCount } from '@/utils/getSoldCount';
 import { formatPrice } from '@/utils/formatPrice';
 import ClothesStitchBadge, {
+  ClothesColorSelector,
+  ClothesColorsLine,
   ClothesGenderNearPrice,
   ClothesSizeSelector,
   ClothesSizesLine,
+  ShoesGenderBadge,
 } from '@/components/ClothesImageBadges';
 import ProductMetaDisplay from '@/components/ProductMetaDisplay';
-import { clothesOrderProductNameWithSize, isClothesCategory, isClothesSizeRequired } from '@/lib/clothes-options';
+import { clothesOrderProductNameWithOptions, isClothesCategory } from '@/lib/clothes-options';
+import { isShoesCategory, shoesOrderProductNameWithOptions } from '@/lib/shoes-options';
+import { validateCartLineOptions } from '@/lib/cart-line-options';
+import { getLineTotal, getUnitPrice } from '@/lib/product-pricing';
+import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
 import OrderPaymentMethods from '@/components/OrderPaymentMethods';
 import {
-  buildOrderWhatsAppMessage,
+  buildSingleProductWhatsAppMessage,
   buildWhatsAppLink,
   formatPaymentMethodForOrder,
   type PaymentMethod,
@@ -45,8 +52,8 @@ export default function ProductPage({ params }: ProductPageProps) {
   const pathname = usePathname();
   const { status: authStatus } = useSession();
   const { openLogin } = useLoginModal();
-  const { products, loading } = useProducts();
-  const { addOrder, orders } = useOrders();
+  const { products, loading, fetchError, reloadProducts } = useProducts();
+  const { addOrder } = useOrders();
   // Handle both integer IDs (from initial data) and decimal IDs (from new products)
   const product = products.find(p => {
     // Convert both to numbers and compare
@@ -98,6 +105,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         city: '',
         address: '',
         selectedSize: '',
+        selectedColor: '',
       };
     }
     try {
@@ -110,6 +118,8 @@ export default function ProductPage({ params }: ProductPageProps) {
           quantity: '1',
           city: '',
           address: '',
+          selectedSize: '',
+          selectedColor: '',
           ...savedDetails
         };
       }
@@ -123,6 +133,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       city: '',
       address: '',
       selectedSize: '',
+      selectedColor: '',
     };
   });
   const [orderSubmitted, setOrderSubmitted] = useState(false);
@@ -415,6 +426,24 @@ export default function ProductPage({ params }: ProductPageProps) {
     );
   }
 
+  if (!loading && fetchError && products.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(180deg, #f5f7fa 0%, #eef2f6 50%, #f5f7fa 100%)' }}>
+        <Header />
+        <main className="flex-1" style={{ paddingTop: 'var(--site-header-h, 90px)' }}>
+          <ConnectionProblem
+            kind={fetchError}
+            onRetry={() => void reloadProducts()}
+            retryLabel="Reload product"
+            homeHref="/shop"
+            homeLabel="Back to shop"
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // After loading, if product not found, show 404
   if (!product) {
     notFound();
@@ -460,40 +489,58 @@ export default function ProductPage({ params }: ProductPageProps) {
     setPaymentError('');
 
     const isClothes = isClothesCategory(product.category) && product.clothesOptions;
+    const isShoes = isShoesCategory(product.category) && product.shoesOptions;
     const clothesOpts = product.clothesOptions;
+    const shoesOpts = product.shoesOptions;
     const selectedSize = formData.selectedSize?.trim() ?? '';
+    const selectedColor = formData.selectedColor?.trim() ?? '';
 
-    if (isClothes && isClothesSizeRequired(clothesOpts?.stitch) && !selectedSize) {
-      alert('Please select a size (required for stitched items)');
-      return;
-    }
-    if (
-      isClothes &&
-      clothesOpts &&
-      selectedSize &&
-      !clothesOpts.sizes.includes(selectedSize)
-    ) {
-      alert('Please select a valid size');
-      return;
+    if (isClothes || isShoes) {
+      const optionsCheck = validateCartLineOptions(product, { selectedSize, selectedColor });
+      if (!optionsCheck.valid) {
+        alert(optionsCheck.error ?? 'Please select size and color.');
+        return;
+      }
     }
 
-    const orderProductName = isClothes
-      ? clothesOrderProductNameWithSize(
+    const orderProductName = isShoes
+      ? shoesOrderProductNameWithOptions(
           getProductTitle(product),
-          clothesOpts,
-          selectedSize || undefined
+          shoesOpts,
+          selectedSize || undefined,
+          selectedColor || undefined,
         )
-      : getProductTitle(product);
+      : isClothes
+        ? clothesOrderProductNameWithOptions(
+            getProductTitle(product),
+            clothesOpts,
+            selectedSize || undefined,
+            selectedColor || undefined,
+          )
+        : getProductTitle(product);
 
     // Mark as submitted to prevent saving as abandoned
     hasSubmittedRef.current = true;
 
-    const quantity = parseInt(formData.quantity);
-    
-    // Calculate price based on pricing tiers or default
-    const totalPrice = product.pricingTiers && product.pricingTiers.length > 0
-      ? (product.pricingTiers.find(t => t.quantity === quantity)?.price || product.currentPrice * quantity)
-      : product.currentPrice * quantity;
+    const quantity = parseInt(formData.quantity, 10);
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      alert('Please enter a valid quantity');
+      return;
+    }
+
+    if (isOutOfStock(product)) {
+      alert('This product is out of stock.');
+      return;
+    }
+
+    const stockCheck = validateStockForQuantity(product, [], quantity);
+    if (!stockCheck.ok) {
+      alert(stockCheck.error);
+      return;
+    }
+
+    const totalPrice = getLineTotal(product, quantity);
+    const unitPrice = getUnitPrice(product, quantity);
 
     // Remove abandoned order if exists (user successfully submitted)
     await removeAbandonedOrderOnSubmit(formData.mobile, formData.fullName);
@@ -561,39 +608,44 @@ export default function ProductPage({ params }: ProductPageProps) {
       : 'Cash on Delivery';
 
     // Add order to context / API
-    const placedOrder = await addOrder({
+    const { order: placedOrder, error: orderError } = await addOrder({
       customer: formData.fullName,
       phone: formData.mobile,
       city: formData.city,
       address: formData.address,
       products: [{
+        productId: product.id,
         name: orderProductName,
-        quantity: quantity,
-        price: product.currentPrice,
+        quantity,
+        price: unitPrice,
+        lineTotal: totalPrice,
         paymentMethod: paymentLabel,
+        selectedSize: selectedSize || undefined,
+        selectedColor: selectedColor || undefined,
       }],
       total: totalPrice,
       status: 'pending',
     });
 
     if (!placedOrder) {
-      alert('Could not place order. Please try again or contact support.');
+      alert(orderError ?? 'Could not place order. Please try again or contact support.');
       return;
     }
 
     setLastOrderId(placedOrder.id);
     const waPhone = storeWhatsApp.replace(/\D/g, '') || formData.mobile.replace(/\D/g, '');
-    const waMessage = buildOrderWhatsAppMessage({
+    const waMessage = buildSingleProductWhatsAppMessage({
       orderId: placedOrder.id,
       customerName: formData.fullName,
       customerWhatsApp: formData.mobile,
       productName: orderProductName,
       quantity,
-      total: totalPrice,
+      total: placedOrder.total,
       city: formData.city,
       address: formData.address,
       paymentLabel,
       size: selectedSize || undefined,
+      color: selectedColor || undefined,
     });
     setWhatsappConfirmUrl(buildWhatsAppLink(waPhone, waMessage));
 
@@ -635,7 +687,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   };
   
   // Calculate actual sold count from orders
-  const actualSoldCount = getSoldCount(product, orders);
+  const actualSoldCount = product?.soldCount ?? 0;
 
   // Generate quantity options from pricing tiers or default
   // Debug: Log pricing tiers
@@ -729,7 +781,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 ✓ Free Delivery
               </span>
             ) : null}
-            {product.productMeta?.stockQuantity != null ? (
+            {typeof product.productMeta?.stockQuantity === 'number' ? (
               <span
                 className={`product-stock-badge${
                   product.productMeta.stockQuantity <= 0
@@ -1427,6 +1479,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 )}
 
                 <ClothesStitchBadge product={product} animated />
+                <ShoesGenderBadge product={product} animated />
 
                 {product.freeDelivery && (
                   <motion.span 
@@ -1536,7 +1589,14 @@ export default function ProductPage({ params }: ProductPageProps) {
                 className="product-price-block"
               >
                 <ClothesSizesLine product={product} />
-                <div className="product-price-row" style={{ marginTop: isClothesCategory(product.category) ? 10 : 0 }}>
+                <ClothesColorsLine product={product} />
+                <div
+                  className="product-price-row"
+                  style={{
+                    marginTop:
+                      isClothesCategory(product.category) || isShoesCategory(product.category) ? 10 : 0,
+                  }}
+                >
                   <div className="product-price-left">
                     <div className="flex items-baseline" style={{ gap: '12px', flexWrap: 'wrap' }}>
                       <span style={{ 
@@ -1705,18 +1765,32 @@ export default function ProductPage({ params }: ProductPageProps) {
                   />
                 </motion.div>
 
-                {isClothesCategory(product.category) && product.clothesOptions ? (
-                  <ClothesSizeSelector
-                    product={product}
-                    value={formData.selectedSize}
-                    onChange={(size) => {
-                      setFormData((prev: typeof formData) => {
-                        const updated = { ...prev, selectedSize: size };
-                        formDataRef.current = updated;
-                        return updated;
-                      });
-                    }}
-                  />
+                {(isClothesCategory(product.category) && product.clothesOptions) ||
+                (isShoesCategory(product.category) && product.shoesOptions) ? (
+                  <>
+                    <ClothesSizeSelector
+                      product={product}
+                      value={formData.selectedSize}
+                      onChange={(size) => {
+                        setFormData((prev: typeof formData) => {
+                          const updated = { ...prev, selectedSize: size };
+                          formDataRef.current = updated;
+                          return updated;
+                        });
+                      }}
+                    />
+                    <ClothesColorSelector
+                      product={product}
+                      value={formData.selectedColor}
+                      onChange={(color) => {
+                        setFormData((prev: typeof formData) => {
+                          const updated = { ...prev, selectedColor: color };
+                          formDataRef.current = updated;
+                          return updated;
+                        });
+                      }}
+                    />
+                  </>
                 ) : null}
 
                 {/* Quantity */}

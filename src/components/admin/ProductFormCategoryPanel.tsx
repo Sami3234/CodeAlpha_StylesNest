@@ -6,10 +6,14 @@ import {
   isClothesSizeRequired,
   type ClothesOptions,
 } from '@/lib/clothes-options';
+import type { ShoesOptions } from '@/lib/shoes-options';
 import {
   categoryShowsClothesPanel,
   categoryShowsGender,
+  categoryShowsShoesPanel,
   CLOTHES_COLOR_PRESETS,
+  SHOE_COLOR_PRESETS,
+  SHOE_SIZE_OPTIONS,
 } from '@/lib/category-form-fields';
 import type { AdminProductTFunction } from '@/lib/admin/product-form-shared';
 
@@ -17,8 +21,12 @@ type Props = {
   category: string;
   clothesOptions: ClothesOptions;
   setClothesOptions: React.Dispatch<React.SetStateAction<ClothesOptions>>;
+  shoesOptions: ShoesOptions;
+  setShoesOptions: React.Dispatch<React.SetStateAction<ShoesOptions>>;
   toggleClothesSize: (size: string) => void;
-  toggleColor: (color: string) => void;
+  toggleShoeSize: (size: string) => void;
+  toggleClothesColor: (color: string) => void;
+  toggleShoeColor: (color: string) => void;
   fieldError?: string;
   onClearError: () => void;
   t: AdminProductTFunction;
@@ -28,20 +36,37 @@ export default function ProductFormCategoryPanel({
   category,
   clothesOptions,
   setClothesOptions,
+  shoesOptions,
+  setShoesOptions,
   toggleClothesSize,
-  toggleColor,
+  toggleShoeSize,
+  toggleClothesColor,
+  toggleShoeColor,
   fieldError,
   onClearError,
   t,
 }: Props) {
   const showGender = categoryShowsGender(category);
   const showClothes = categoryShowsClothesPanel(category);
+  const showShoes = categoryShowsShoesPanel(category);
 
-  if (!showGender && !showClothes) return null;
+  if (!showGender && !showClothes && !showShoes) return null;
 
   const panelTitle = showClothes
     ? t('admin.form.clothesOptions')
-    : t('admin.form.categoryAudience', { defaultValue: 'Audience' });
+    : showShoes
+      ? t('admin.form.shoesOptions', { defaultValue: 'Shoes options' })
+      : t('admin.form.categoryAudience', { defaultValue: 'Audience' });
+
+  const genderValue = showShoes ? shoesOptions.gender : clothesOptions.gender;
+  const setGender = (g: 'men' | 'women') => {
+    if (showShoes) {
+      setShoesOptions((p) => ({ ...p, gender: g }));
+    } else {
+      setClothesOptions((p) => ({ ...p, gender: g }));
+    }
+    onClearError();
+  };
 
   return (
     <div className={`pf-category-panel${fieldError ? ' pf-category-panel--error' : ''}`}>
@@ -60,16 +85,13 @@ export default function ProductFormCategoryPanel({
             {(['men', 'women'] as const).map((g) => (
               <label
                 key={g}
-                className={`pf-chip${clothesOptions.gender === g ? ' pf-chip--active pf-chip--gender' : ''}`}
+                className={`pf-chip${genderValue === g ? ' pf-chip--active pf-chip--gender' : ''}`}
               >
                 <input
                   type="radio"
-                  name="clothesGender"
-                  checked={clothesOptions.gender === g}
-                  onChange={() => {
-                    setClothesOptions((p) => ({ ...p, gender: g }));
-                    onClearError();
-                  }}
+                  name="categoryGender"
+                  checked={genderValue === g}
+                  onChange={() => setGender(g)}
                 />
                 {g === 'men' ? t('admin.form.clothesMen') : t('admin.form.clothesWomen')}
               </label>
@@ -154,7 +176,67 @@ export default function ProductFormCategoryPanel({
                   <button
                     key={color}
                     type="button"
-                    onClick={() => toggleColor(color)}
+                    onClick={() => toggleClothesColor(color)}
+                    className={`pf-color-btn${selected ? ' pf-color-btn--active' : ''}`}
+                  >
+                    {color}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {showShoes ? (
+        <>
+          <div className="pf-category-field">
+            <label className="pf-category-label">
+              {t('admin.form.shoesSizes', { defaultValue: 'Shoe sizes' })}{' '}
+              <span className="pf-label-required">*</span>
+            </label>
+            <p className="pf-category-hint">
+              {t('admin.form.shoesSizesHint', {
+                defaultValue: 'Select EU sizes available for this pair (e.g. 38, 39, 40).',
+              })}
+            </p>
+            <div className="pf-chip-row">
+              {SHOE_SIZE_OPTIONS.map((size) => {
+                const selected = shoesOptions.sizes.includes(size);
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleShoeSize(size)}
+                    className={`pf-size-btn${selected ? ' pf-size-btn--active' : ''}`}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="pf-category-field">
+            <label className="pf-category-label">
+              {t('admin.form.shoesColors', { defaultValue: 'Shoe colors' })}
+              <span className="pf-badge pf-badge-optional" style={{ marginLeft: 8 }}>
+                Optional
+              </span>
+            </label>
+            <p className="pf-category-hint">
+              {t('admin.form.shoesColorsHint', {
+                defaultValue: 'Colors customers can choose when ordering.',
+              })}
+            </p>
+            <div className="pf-chip-row">
+              {SHOE_COLOR_PRESETS.map((color) => {
+                const selected = (shoesOptions.colors ?? []).includes(color);
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => toggleShoeColor(color)}
                     className={`pf-color-btn${selected ? ' pf-color-btn--active' : ''}`}
                   >
                     {color}

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,10 @@ export const dynamic = 'force-dynamic';
  * 
  * Usage: POST /api/migrate-database
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   try {
     const oldDatabaseUrl = process.env.OLD_DATABASE_URL;
     const newDatabaseUrl = process.env.DATABASE_URL;
@@ -337,7 +341,10 @@ export async function POST() {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   return NextResponse.json({
     message: 'Database Migration API',
     instructions: 'Send a POST request to migrate data from OLD_DATABASE_URL to DATABASE_URL',

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +9,10 @@ export const dynamic = 'force-dynamic';
  * Update sold count for products with 0 or very low sales
  * Sets random 3-digit numbers (100-999)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   try {
     console.log('Updating sold counts...');
     
@@ -45,7 +49,7 @@ export async function GET() {
   }
 }
 
-export async function POST() {
-  return GET();
+export async function POST(request: NextRequest) {
+  return GET(request);
 }
 

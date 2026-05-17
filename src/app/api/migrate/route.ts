@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { products as initialProducts } from '@/data/products';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,10 @@ export const dynamic = 'force-dynamic';
  * API endpoint to migrate initial products data to database
  * This will populate the database with the initial products
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   try {
     console.log('Starting migration...');
     
@@ -85,7 +89,7 @@ export async function GET() {
   }
 }
 
-export async function POST() {
-  return GET();
+export async function POST(request: NextRequest) {
+  return GET(request);
 }
 

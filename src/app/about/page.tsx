@@ -1,79 +1,36 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { useContactSettings } from '@/context/ContactSettingsContext';
 
 export default function AboutPage() {
-  const [contactInfo, setContactInfo] = useState({
-    whatsapp: '923001234567',
-    phone: '+92 300 1234567',
-    email: 'info@stylesnest.com',
-    address: 'Vehari, Pakistan'
-  });
-  const [contactLoaded, setContactLoaded] = useState(false);
+  const { settings: contactInfo, loaded: contactLoaded } = useContactSettings();
 
   useEffect(() => {
-    // Priority fetch for contact settings - fetch immediately on mount
-    // Check if we're navigating to contact section
-    const hash = window.location.hash;
-    const isContactSection = hash === '#contact';
-    
-    // Fetch contact settings immediately - always fetch on mount
-    const fetchContactSettings = async () => {
-      try {
-        const response = await fetch('/api/contact-settings', { 
-          cache: 'no-store'
-        });
-        const data = await response.json();
-        if (data.success && data.settings) {
-          setContactInfo(data.settings);
-        }
-        setContactLoaded(true);
-      } catch (err) {
-        // Keep default values on error (already set in state)
-        setContactLoaded(true);
-      }
-    };
-
-    // Always fetch immediately - contact info should be ready
-    fetchContactSettings();
-
-    // Handle hash change (when clicking Contact Us link from other pages)
     const handleHashChange = () => {
       if (window.location.hash === '#contact') {
-        // Scroll to contact section smoothly
         setTimeout(() => {
           const element = document.getElementById('contact');
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         }, 100);
-        
-        // Fetch if not already loaded
-        if (!contactLoaded) {
-          fetchContactSettings();
-        }
       }
     };
 
-    // Check hash on mount and scroll if needed
-    if (isContactSection) {
-      setTimeout(() => {
-        const element = document.getElementById('contact');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
+    if (window.location.hash === '#contact') {
+      handleHashChange();
     }
 
     window.addEventListener('hashchange', handleHashChange);
-    
+
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [contactLoaded]);
+  }, []);
   const features = [
     {
       icon: '✓',

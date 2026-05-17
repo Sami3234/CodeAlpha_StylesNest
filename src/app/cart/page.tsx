@@ -10,15 +10,27 @@ import Footer from '@/components/Footer';
 import WhatsAppFab from '@/components/WhatsAppFab';
 import { useCart } from '@/context/CartContext';
 import { useProducts } from '@/context/ProductContext';
-import { persistCheckoutProductIds } from '@/lib/checkout-selection';
+import CartLineOptionsEditor from '@/components/CartLineOptionsEditor';
+import {
+  formatCartLineOptionsSummary,
+  validateCartLineOptions,
+} from '@/lib/cart-line-options';
+import { persistCheckoutLineKeys } from '@/lib/checkout-selection';
 import { getProductTitle } from '@/utils/getProductText';
 import { formatPrice } from '@/utils/formatPrice';
+import { getLineTotal } from '@/lib/product-pricing';
+import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
+import {
+  clearOrderWhatsAppConfirm,
+  readOrderWhatsAppConfirm,
+} from '@/lib/order-whatsapp-storage';
 
 function CartPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { lines, hydrated, setLineQuantity, removeFromCart, clearCart } = useCart();
+  const { lines, hydrated, setLineQuantity, removeCartLine, updateLineOptions, clearCart } =
+    useCart();
   const { products, loading } = useProducts();
 
   const rows = useMemo(
@@ -35,17 +47,24 @@ function CartPageContent() {
   const selectableSignature = useMemo(
     () =>
       selectableRows
-        .map((r) => `${r.line.productId}:${r.line.quantity}`)
+        .map(
+          (r) =>
+            `${r.line.lineKey}:${r.line.quantity}:${r.line.selectedSize ?? ''}:${r.line.selectedColor ?? ''}`,
+        )
         .sort()
         .join('|'),
     [selectableRows],
   );
 
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [whatsappConfirm, setWhatsappConfirm] = useState(
+    () => (typeof window !== 'undefined' ? readOrderWhatsAppConfirm() : null),
+  );
 
   useEffect(() => {
     if (searchParams.get('placed') === '1') {
+      setWhatsappConfirm(readOrderWhatsAppConfirm());
       setBanner({
         type: 'success',
         text: 'Order placed successfully. We will contact you soon.',
@@ -55,50 +74,66 @@ function CartPageContent() {
   }, [searchParams, router]);
 
   useEffect(() => {
-    const validIds = selectableRows.map((r) => r.line.productId);
-    const validSet = new Set(validIds);
-    setSelectedIds((prev) => {
-      const next = new Set<number>();
-      prev.forEach((id) => {
-        if (validSet.has(id)) next.add(id);
+    const validKeys = selectableRows.map((r) => r.line.lineKey);
+    const validSet = new Set(validKeys);
+    setSelectedKeys((prev) => {
+      const next = new Set<string>();
+      prev.forEach((key) => {
+        if (validSet.has(key)) next.add(key);
       });
-      validIds.forEach((id) => {
-        if (!prev.has(id)) next.add(id);
+      validKeys.forEach((key) => {
+        if (!prev.has(key)) next.add(key);
       });
       return next;
     });
   }, [selectableSignature]);
 
-  const toggleSelected = useCallback((productId: number) => {
-    setSelectedIds((prev) => {
+  const toggleSelected = useCallback((lineKey: string) => {
+    setSelectedKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
+      if (next.has(lineKey)) next.delete(lineKey);
+      else next.add(lineKey);
       return next;
     });
   }, []);
 
   const selectAllValid = useCallback(() => {
-    setSelectedIds(new Set(selectableRows.map((r) => r.line.productId)));
+    setSelectedKeys(new Set(selectableRows.map((r) => r.line.lineKey)));
   }, [selectableRows]);
 
   const selectNoneValid = useCallback(() => {
-    setSelectedIds(new Set());
+    setSelectedKeys(new Set());
   }, []);
 
   const subtotalAll = rows.reduce((sum, { line, product }) => {
     if (!product) return sum;
-    return sum + product.currentPrice * line.quantity;
+    return sum + getLineTotal(product, line.quantity);
   }, 0);
 
   const selectedLines = useMemo(
-    () => selectableRows.filter((r) => selectedIds.has(r.line.productId)),
-    [selectableRows, selectedIds],
+    () => selectableRows.filter((r) => selectedKeys.has(r.line.lineKey)),
+    [selectableRows, selectedKeys],
   );
 
   const selectedSubtotal = selectedLines.reduce(
-    (sum, { line, product }) => sum + (product ? product.currentPrice * line.quantity : 0),
+    (sum, { line, product }) => sum + (product ? getLineTotal(product, line.quantity) : 0),
     0,
+  );
+
+  const changeLineQuantity = useCallback(
+    (lineKey: string, product: NonNullable<(typeof rows)[0]['product']>, line: (typeof lines)[0], nextQty: number) => {
+      const check = validateStockForQuantity(product, lines, nextQty, {
+        selectedSize: line.selectedSize,
+        selectedColor: line.selectedColor,
+      });
+      if (!check.ok) {
+        setBanner({ type: 'error', text: check.error });
+        return;
+      }
+      setBanner(null);
+      setLineQuantity(lineKey, check.quantity);
+    },
+    [lines, setLineQuantity],
   );
 
   const selectedCount = selectedLines.length;
@@ -107,8 +142,43 @@ function CartPageContent() {
 
   const goToCheckout = () => {
     if (selectedCount === 0) return;
+
+    const invalid = selectedLines
+      .map(({ line, product }) => {
+        const result = validateCartLineOptions(product!, {
+          selectedSize: line.selectedSize,
+          selectedColor: line.selectedColor,
+        });
+        return result.valid ? null : { title: getProductTitle(product!), error: result.error };
+      })
+      .filter((x): x is { title: string; error: string | undefined } => x !== null);
+
+    if (invalid.length > 0) {
+      setBanner({
+        type: 'error',
+        text: `${invalid[0].title}: ${invalid[0].error ?? 'Please select size and color.'}`,
+      });
+      return;
+    }
+
+    for (const { line, product } of selectedLines) {
+      if (!product) continue;
+      if (isOutOfStock(product)) {
+        setBanner({ type: 'error', text: `${getProductTitle(product)} is out of stock.` });
+        return;
+      }
+      const stockCheck = validateStockForQuantity(product, lines, line.quantity, {
+        selectedSize: line.selectedSize,
+        selectedColor: line.selectedColor,
+      });
+      if (!stockCheck.ok) {
+        setBanner({ type: 'error', text: `${getProductTitle(product)}: ${stockCheck.error}` });
+        return;
+      }
+    }
+
     setBanner(null);
-    persistCheckoutProductIds([...selectedIds]);
+    persistCheckoutLineKeys([...selectedKeys]);
     router.push('/cart/checkout');
   };
 
@@ -144,12 +214,35 @@ function CartPageContent() {
         </h1>
         <p style={{ color: '#64748b', marginBottom: '20px', fontSize: '15px' }}>
           Select items with the checkbox, then open{' '}
-          <strong>Place order</strong> for the full checkout page. Continue browsing on{' '}
+          <strong>Place order</strong> for the full checkout page.           Continue browsing on{' '}
           <Link href="/shop" style={{ color: '#667eea', fontWeight: 600 }}>
             Shop
           </Link>
           .
         </p>
+
+        {whatsappConfirm ? (
+          <div className="order-success-whatsapp mb-5">
+            <h3>Confirm on WhatsApp</h3>
+            <p>
+              Order submit ho chuka hai. Bara-e-meherbani WhatsApp par confirm kar dein taake hum jaldi process
+              kar saken. (Order ID: {whatsappConfirm.orderId})
+            </p>
+            <a href={whatsappConfirm.confirmUrl} target="_blank" rel="noopener noreferrer">
+              WhatsApp par confirm karein
+            </a>
+            <button
+              type="button"
+              className="mt-3 block text-sm text-slate-500 underline"
+              onClick={() => {
+                clearOrderWhatsAppConfirm();
+                setWhatsappConfirm(null);
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
 
         {banner ? (
           <div
@@ -210,10 +303,13 @@ function CartPageContent() {
             <ul className="flex flex-col gap-4">
               {rows.map(({ line, product }) => {
                 const canSelect = !!product;
-                const isSelected = selectedIds.has(line.productId);
+                const isSelected = selectedKeys.has(line.lineKey);
+                const optionsSummary = product
+                  ? formatCartLineOptionsSummary(product, line)
+                  : null;
                 return (
                   <motion.li
-                    key={line.productId}
+                    key={line.lineKey}
                     layout
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -234,7 +330,7 @@ function CartPageContent() {
                           className="sr-only"
                           checked={isSelected}
                           disabled={!canSelect}
-                          onChange={() => canSelect && toggleSelected(line.productId)}
+                          onChange={() => canSelect && toggleSelected(line.lineKey)}
                           aria-label={
                             product
                               ? `Select ${product && getProductTitle(product)} for checkout`
@@ -281,9 +377,23 @@ function CartPageContent() {
                           >
                             {getProductTitle(product)}
                           </Link>
+                          {isOutOfStock(product) ? (
+                            <p className="mt-1 text-sm font-semibold text-red-600">Out of stock</p>
+                          ) : null}
                           <p style={{ color: '#64748b', fontSize: '14px', marginTop: '6px' }}>
-                            {formatPrice(product.currentPrice)} PKR each
+                            Line total: {formatPrice(getLineTotal(product, line.quantity))} PKR
                           </p>
+                          {optionsSummary ? (
+                            <p className="mt-1 text-sm font-medium text-[#4338ca]">{optionsSummary}</p>
+                          ) : null}
+                          <CartLineOptionsEditor
+                            product={product}
+                            value={{
+                              selectedSize: line.selectedSize,
+                              selectedColor: line.selectedColor,
+                            }}
+                            onChange={(options) => updateLineOptions(line.lineKey, options)}
+                          />
                         </>
                       ) : (
                         <p className="font-medium text-amber-700">
@@ -298,7 +408,10 @@ function CartPageContent() {
                           type="button"
                           aria-label="Decrease quantity"
                           className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-slate-700 transition hover:bg-slate-100"
-                          onClick={() => setLineQuantity(line.productId, line.quantity - 1)}
+                          onClick={() =>
+                            changeLineQuantity(line.lineKey, product!, line, line.quantity - 1)
+                          }
+                          disabled={!product}
                         >
                           −
                         </button>
@@ -312,7 +425,10 @@ function CartPageContent() {
                           type="button"
                           aria-label="Increase quantity"
                           className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-slate-700 transition hover:bg-slate-100"
-                          onClick={() => setLineQuantity(line.productId, line.quantity + 1)}
+                          onClick={() =>
+                            changeLineQuantity(line.lineKey, product!, line, line.quantity + 1)
+                          }
+                          disabled={!product || isOutOfStock(product)}
                         >
                           +
                         </button>
@@ -320,13 +436,13 @@ function CartPageContent() {
                       <button
                         type="button"
                         className="text-sm font-semibold text-red-600 hover:underline"
-                        onClick={() => removeFromCart(line.productId)}
+                        onClick={() => removeCartLine(line.lineKey)}
                       >
                         Remove
                       </button>
                       {product ? (
                         <p className="w-full text-right text-lg font-bold text-[#c44569] sm:w-auto">
-                          {formatPrice(product.currentPrice * line.quantity)} PKR
+                          {formatPrice(getLineTotal(product, line.quantity))} PKR
                         </p>
                       ) : null}
                     </div>

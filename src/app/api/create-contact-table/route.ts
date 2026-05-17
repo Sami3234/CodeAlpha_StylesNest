@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { requireAdminSession } from '@/lib/require-admin-session';
 import {
   ensureContactAnnouncementColumns,
   ensureContactLandingExtrasColumns,
@@ -11,7 +12,10 @@ import { apiErrorResponse } from '@/lib/safe-errors';
  * Quick endpoint to create contact_settings table
  * Call this if you get table not found errors
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminSession(request);
+  if (!admin.ok) return admin.response;
+
   try {
     await sql`
       CREATE TABLE IF NOT EXISTS contact_settings (
@@ -55,6 +59,6 @@ export async function GET() {
   }
 }
 
-export async function POST() {
-  return GET();
+export async function POST(request: NextRequest) {
+  return GET(request);
 }

@@ -3,12 +3,16 @@ import { v2 as cloudinary } from 'cloudinary';
 import { configureCloudinary } from '@/lib/cloudinary-config';
 import { landingImageFolder, sanitizePathSegment } from '@/lib/cloudinary-folders';
 import { apiErrorResponse } from '@/lib/safe-errors';
+import { requireAdminSession } from '@/lib/require-admin-session';
 
 configureCloudinary();
 
 // Upload image to Cloudinary only (without saving to DB)
 export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const section = formData.get('section') as string;
