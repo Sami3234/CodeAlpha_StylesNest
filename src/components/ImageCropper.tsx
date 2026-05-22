@@ -450,7 +450,7 @@ export default function ImageCropper({
         .image-cropper-backdrop {
           position: fixed;
           inset: 0;
-          z-index: 1000;
+          z-index: 10130;
           display: flex;
           align-items: center;
           justify-content: center;

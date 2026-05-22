@@ -1,0 +1,178 @@
+.asle__head {
+  margin-bottom: 12px;
+}
+
+.asle__title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.asle__desc {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.asle__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.asle--grid .asle__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Footer: 5 links — 2 + 2 + 1 on wide screens */
+.alp-page--wide .asle--grid .asle__list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .alp-page--wide .asle--grid .asle__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .asle--grid .asle__list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.asle-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.asle-card--active {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.asle-card--compact {
+  padding: 10px;
+}
+
+.asle-card__row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.asle-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asle-card--compact .asle-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.asle-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.asle-card__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.asle-card__label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.asle-card__status {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.asle-card__status--on {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.asle-card__input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #2c3e50;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.asle-card__input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.12);
+}
+
+.asle-card__hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.asle-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.asle-card__link {
+  font-size: 11px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.asle-card__link:hover {
+  text-decoration: underline;
+}
+
+.asle-card__clear {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #c62828;
+  background: #fff5f5;
+  border: 1px solid #ffcdd2;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}

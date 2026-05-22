@@ -391,8 +391,7 @@ function CheckoutPageInner() {
             orderTotal={subtotal}
           >
             <p className="mt-4 text-sm text-slate-600 leading-relaxed">
-              Order submit ke baad WhatsApp par confirm karne ka option milega — taake hum aap ka order
-              jaldi process kar saken.
+              After you submit, you can confirm your order on WhatsApp so we can process it faster.
             </p>
           </OrderDeliveryForm>
         </section>

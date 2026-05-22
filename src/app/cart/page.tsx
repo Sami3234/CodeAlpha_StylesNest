@@ -225,11 +225,11 @@ function CartPageContent() {
           <div className="order-success-whatsapp mb-5">
             <h3>Confirm on WhatsApp</h3>
             <p>
-              Order submit ho chuka hai. Bara-e-meherbani WhatsApp par confirm kar dein taake hum jaldi process
-              kar saken. (Order ID: {whatsappConfirm.orderId})
+              Your order has been submitted. Please confirm on WhatsApp so we can process it quickly. (Order
+              ID: {whatsappConfirm.orderId})
             </p>
             <a href={whatsappConfirm.confirmUrl} target="_blank" rel="noopener noreferrer">
-              WhatsApp par confirm karein
+              Confirm on WhatsApp
             </a>
             <button
               type="button"

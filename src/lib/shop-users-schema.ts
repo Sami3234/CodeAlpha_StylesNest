@@ -12,6 +12,7 @@ export type ShopUserRow = {
   address: string | null;
   provider: ShopAuthProvider;
   provider_account_id: string | null;
+  is_blocked: boolean;
   created_at: string | Date;
   last_login_at: string | Date;
 };
@@ -22,6 +23,7 @@ export type ShopUserProfile = {
   city: string;
   address: string;
   email: string | null;
+  image: string | null;
 };
 
 export async function ensureShopUsersTable() {
@@ -60,4 +62,5 @@ export async function ensureShopUsersTable() {
   await sql`ALTER TABLE shop_users ADD COLUMN IF NOT EXISTS phone TEXT`;
   await sql`ALTER TABLE shop_users ADD COLUMN IF NOT EXISTS city TEXT`;
   await sql`ALTER TABLE shop_users ADD COLUMN IF NOT EXISTS address TEXT`;
+  await sql`ALTER TABLE shop_users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN NOT NULL DEFAULT false`;
 }

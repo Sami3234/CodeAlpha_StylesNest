@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useProducts } from '@/context/ProductContext';
 import { useOrders } from '@/context/OrderContext';
-import Image from 'next/image';
 import Link from 'next/link';
 import { getProductTitle } from '@/utils/getProductText';
+import AdminThumbImage from '@/components/admin/AdminThumbImage';
 
 const statusConfig: Record<string, { color: string; bgColor: string; icon: string }> = {
   pending: { color: '#FF6B35', bgColor: 'rgba(255, 107, 53, 0.12)', icon: '⏳' },
@@ -181,10 +181,12 @@ export default function AdminDashboard() {
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Total Orders</p>
             <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{totalOrders}</p>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Today</p>
-            <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{todayOrders}</p>
-          </div>
+          <Link href="/khanadmin/orders?period=today" style={{ textDecoration: 'none' }}>
+            <div style={{ textAlign: 'center', cursor: 'pointer' }} className="hover:opacity-90">
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Today</p>
+              <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{todayOrders}</p>
+            </div>
+          </Link>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Avg Order</p>
             <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{(totalRevenue / (totalOrders - cancelledOrders) || 0).toFixed(2)} PKR</p>
@@ -431,11 +433,10 @@ export default function AdminDashboard() {
                 }}
               >
                 <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-                  <Image 
-                    src={product.image} 
-                    alt={getProductTitle(product)} 
-                    fill 
-                    style={{ objectFit: 'cover' }} 
+                  <AdminThumbImage
+                    src={product.image}
+                    alt={getProductTitle(product)}
+                    sizes="50px"
                   />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>

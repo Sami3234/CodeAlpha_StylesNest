@@ -34,12 +34,9 @@ export function buildPageMetadata({
   const displayTitle = title.includes(siteConfig.name)
     ? title
     : `${title} | ${siteConfig.name}`;
-  const pageTitle = title.includes(siteConfig.name)
-    ? { absolute: title }
-    : title;
 
   return {
-    title: pageTitle,
+    title: { absolute: displayTitle },
     description: truncate(description, 155),
     keywords: [...siteConfig.keywords, ...keywords],
     metadataBase: new URL(getSiteUrl()),

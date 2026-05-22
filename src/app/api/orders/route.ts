@@ -8,6 +8,13 @@ import {
   validateAndPriceOrderLines,
   type OrderLineInput,
 } from '@/lib/validate-order-request';
+import {
+  normalizeOrderPayload,
+} from '@/lib/normalize-order-payload';
+import { getCurrentTimeInTimezone, getTodayDateInTimezone } from '@/lib/order-date';
+import { ensureOrdersAdminColumns } from '@/lib/orders-schema';
+import { mapOrderRow } from '@/lib/admin-orders-query';
+import { logAdminAction } from '@/lib/admin-audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,44 +24,60 @@ async function nextOrderId(): Promise<string> {
   return `#QE${String(count + 1).padStart(4, '0')}`;
 }
 
-function mapOrderRow(row: Record<string, unknown>) {
-  return {
-    id: row.id as string,
-    customer: row.customer as string,
-    phone: row.phone as string,
-    city: row.city as string,
-    address: row.address as string,
-    products: row.products,
-    total: parseFloat(String(row.total)),
-    status: row.status as string,
-    date: String(row.date).slice(0, 10),
-    time: String(row.time).slice(0, 8),
-  };
+function clientIp(request: NextRequest): string | null {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0]?.trim() || null;
+  return request.headers.get('x-real-ip');
 }
 
-/** Admin only — list orders for the panel. */
+/** Admin only — list all orders (dashboard sync). Prefer /api/admin/orders/list for paginated UI. */
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdminSession(request);
     if (!admin.ok) return admin.response;
 
-    const rows = await sql`
-      SELECT
-        id,
-        customer,
-        phone,
-        city,
-        address,
-        products,
-        total,
-        status,
-        date,
-        time,
-        created_at,
-        updated_at
-      FROM orders
-      ORDER BY date DESC, time DESC
-    `;
+    await ensureOrdersAdminColumns();
+
+    let rows;
+    try {
+      rows = await sql`
+        SELECT
+          id,
+          customer,
+          phone,
+          city,
+          address,
+          products,
+          total,
+          status,
+          date,
+          time,
+          notes,
+          tracking_id,
+          created_at,
+          updated_at
+        FROM orders
+        ORDER BY date DESC, time DESC
+      `;
+    } catch {
+      rows = await sql`
+        SELECT
+          id,
+          customer,
+          phone,
+          city,
+          address,
+          products,
+          total,
+          status,
+          date,
+          time,
+          created_at,
+          updated_at
+        FROM orders
+        ORDER BY date DESC, time DESC
+      `;
+    }
 
     const orders = rows.map((row) => mapOrderRow(row as Record<string, unknown>));
 
@@ -125,12 +148,14 @@ export async function POST(request: NextRequest) {
 
     const orderDate =
       typeof date === 'string' && date.trim()
-        ? date.trim().slice(0, 10)
-        : new Date().toISOString().slice(0, 10);
+        ? normalizeOrderPayload({ date }).date
+        : getTodayDateInTimezone();
     const orderTime =
       typeof time === 'string' && time.trim()
-        ? time.trim().slice(0, 8)
-        : new Date().toTimeString().slice(0, 8);
+        ? normalizeOrderPayload({ time }).time
+        : getCurrentTimeInTimezone();
+
+    await ensureOrdersAdminColumns();
 
     const result = await sql`
       INSERT INTO orders (
@@ -176,40 +201,77 @@ export async function PUT(request: NextRequest) {
     const admin = await requireAdminSession(request);
     if (!admin.ok) return admin.response;
 
+    await ensureOrdersAdminColumns();
+
     const body = await request.json();
-    const {
-      id,
-      customer,
-      phone,
-      city,
-      address,
-      products,
-      total,
-      status,
-      date,
-      time,
-    } = body;
+    const id = typeof body.id === 'string' ? body.id.trim() : '';
+    if (!id) {
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
+    }
+
+    const existing = await sql`
+      SELECT customer, phone, city, address, products, total, status, date, time, notes, tracking_id
+      FROM orders
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+
+    if (!existing.length) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    const row = existing[0] as Record<string, unknown>;
+    const normalized = normalizeOrderPayload({
+      customer: body.customer ?? row.customer,
+      phone: body.phone ?? row.phone,
+      city: body.city ?? row.city,
+      address: body.address ?? row.address,
+      products: body.products ?? row.products,
+      total: body.total ?? row.total,
+      status: body.status ?? row.status,
+      date: body.date ?? row.date,
+      time: body.time ?? row.time,
+      notes: body.notes ?? row.notes,
+      trackingId: body.trackingId ?? body.tracking_id ?? row.tracking_id,
+    });
+
+    if (!normalized.customer || !normalized.phone || !normalized.city || !normalized.address) {
+      return NextResponse.json({ error: 'Customer delivery fields are required.' }, { status: 400 });
+    }
+
+    const previousStatus = String(row.status ?? '');
 
     const result = await sql`
       UPDATE orders
       SET
-        customer = ${customer},
-        phone = ${phone},
-        city = ${city},
-        address = ${address},
-        products = ${JSON.stringify(products)}::jsonb,
-        total = ${total},
-        status = ${status},
-        date = ${date},
-        time = ${time},
+        customer = ${normalized.customer},
+        phone = ${normalized.phone},
+        city = ${normalized.city},
+        address = ${normalized.address},
+        products = ${normalized.productsJson}::jsonb,
+        total = ${normalized.total}::decimal,
+        status = ${normalized.status},
+        date = ${normalized.date}::date,
+        time = ${normalized.time}::time,
+        notes = ${normalized.notes},
+        tracking_id = ${normalized.trackingId},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
       RETURNING *
     `;
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-    }
+    await logAdminAction({
+      adminId: admin.adminId,
+      adminEmail: admin.email,
+      action: 'order.update',
+      entityType: 'order',
+      entityId: id,
+      details: {
+        status: normalized.status,
+        previousStatus,
+      },
+      ip: clientIp(request),
+    });
 
     return NextResponse.json({ order: mapOrderRow(result[0] as Record<string, unknown>) });
   } catch (error) {
@@ -239,6 +301,15 @@ export async function DELETE(request: NextRequest) {
     if (result.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
+
+    await logAdminAction({
+      adminId: admin.adminId,
+      adminEmail: admin.email,
+      action: 'order.delete',
+      entityType: 'order',
+      entityId: id,
+      ip: clientIp(request),
+    });
 
     return NextResponse.json({ success: true, id: result[0].id });
   } catch (error) {

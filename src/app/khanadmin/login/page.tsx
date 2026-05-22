@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { clientFetch } from '@/lib/client-fetch';
+import { fetchAdminAuthenticated } from '@/lib/admin-auth-client';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -14,14 +16,14 @@ export default function AdminLogin() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/auth');
-      const data = await response.json();
-      
+      const response = await clientFetch('/api/admin/auth', { cache: 'no-store' });
+      const data = (await response.json()) as { authenticated?: boolean };
       if (data.authenticated) {
         router.push('/khanadmin');
-      } else {
-        setIsCheckingAuth(false);
+        return;
       }
+      await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
+      setIsCheckingAuth(false);
     } catch {
       setIsCheckingAuth(false);
     }
@@ -40,17 +42,23 @@ export default function AdminLogin() {
     try {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        router.push('/khanadmin');
-        router.refresh();
+        const authed = await fetchAdminAuthenticated();
+        if (authed) {
+          router.push('/khanadmin');
+          router.refresh();
+        } else {
+          setError(
+            'Login response OK but session cookie was not saved. Clear site cookies for localhost and try again.',
+          );
+        }
       } else {
         setError(data.error || 'Login failed');
       }
@@ -157,6 +165,8 @@ export default function AdminLogin() {
             </label>
             <input
               type="email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -196,6 +206,8 @@ export default function AdminLogin() {
             </label>
             <input
               type="password"
+              name="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

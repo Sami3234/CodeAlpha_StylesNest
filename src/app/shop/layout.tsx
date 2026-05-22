@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import '@/components/seo/seo-crawl.css';
 import JsonLd from '@/components/seo/JsonLd';
 import ShopSeoContent from '@/components/seo/ShopSeoContent';
 import { buildPageMetadata } from '@/lib/seo/metadata';

@@ -97,7 +97,7 @@ export async function findCredentialsUser(email: string) {
   await ensureShopUsersTable();
   const normalized = email.trim().toLowerCase();
   const rows = await sql`
-    SELECT id, email, name, image, provider, password_hash
+    SELECT id, email, name, image, provider, password_hash, COALESCE(is_blocked, false) AS is_blocked
     FROM shop_users
     WHERE provider = 'credentials' AND LOWER(email) = ${normalized}
     LIMIT 1
@@ -110,6 +110,7 @@ export async function findCredentialsUser(email: string) {
         image: string | null;
         provider: string;
         password_hash: string | null;
+        is_blocked: boolean;
       }
     | undefined;
 }
@@ -155,17 +156,98 @@ export async function registerCredentialsUser(input: {
 export async function listShopUsers(): Promise<ShopUserRow[]> {
   await ensureShopUsersTable();
   const rows = await sql`
-    SELECT id, email, name, image, phone, city, address, provider, provider_account_id, created_at, last_login_at
+    SELECT
+      id,
+      email,
+      name,
+      image,
+      phone,
+      city,
+      address,
+      provider,
+      provider_account_id,
+      COALESCE(is_blocked, false) AS is_blocked,
+      created_at,
+      last_login_at
     FROM shop_users
     ORDER BY last_login_at DESC NULLS LAST, id DESC
   `;
-  return rows as ShopUserRow[];
+  return rows.map((row) => ({
+    ...(row as ShopUserRow),
+    is_blocked: Boolean((row as { is_blocked?: boolean }).is_blocked),
+  }));
+}
+
+export async function getShopUserById(userId: number): Promise<ShopUserRow | null> {
+  await ensureShopUsersTable();
+  const rows = await sql`
+    SELECT
+      id,
+      email,
+      name,
+      image,
+      phone,
+      city,
+      address,
+      provider,
+      provider_account_id,
+      COALESCE(is_blocked, false) AS is_blocked,
+      created_at,
+      last_login_at
+    FROM shop_users
+    WHERE id = ${userId}
+    LIMIT 1
+  `;
+  if (!rows.length) return null;
+  const row = rows[0] as ShopUserRow;
+  return { ...row, is_blocked: Boolean(row.is_blocked) };
+}
+
+export async function isShopUserBlocked(userId: number): Promise<boolean> {
+  await ensureShopUsersTable();
+  const rows = await sql`
+    SELECT COALESCE(is_blocked, false) AS is_blocked
+    FROM shop_users
+    WHERE id = ${userId}
+    LIMIT 1
+  `;
+  if (!rows.length) return true;
+  return Boolean((rows[0] as { is_blocked: boolean }).is_blocked);
+}
+
+export async function setShopUserBlocked(
+  userId: number,
+  blocked: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await ensureShopUsersTable();
+  const existing = await getShopUserById(userId);
+  if (!existing) {
+    return { ok: false, error: 'User not found' };
+  }
+  await sql`
+    UPDATE shop_users
+    SET is_blocked = ${blocked}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${userId}
+  `;
+  return { ok: true };
+}
+
+export async function deleteShopUser(
+  userId: number,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await ensureShopUsersTable();
+  const existing = await getShopUserById(userId);
+  if (!existing) {
+    return { ok: false, error: 'User not found' };
+  }
+  await sql`DELETE FROM shop_users WHERE id = ${userId}`;
+  return { ok: true };
 }
 
 export async function getShopUserProfile(userId: number): Promise<ShopUserProfile | null> {
   await ensureShopUsersTable();
   const rows = await sql`
-    SELECT id, email, name, phone, city, address
+    SELECT id, email, name, image, phone, city, address
     FROM shop_users
     WHERE id = ${userId}
     LIMIT 1
@@ -174,6 +256,7 @@ export async function getShopUserProfile(userId: number): Promise<ShopUserProfil
   const row = rows[0] as {
     email: string | null;
     name: string | null;
+    image: string | null;
     phone: string | null;
     city: string | null;
     address: string | null;
@@ -184,12 +267,69 @@ export async function getShopUserProfile(userId: number): Promise<ShopUserProfil
     city: row.city?.trim() ?? '',
     address: row.address?.trim() ?? '',
     email: row.email,
+    image: row.image?.trim() || null,
   };
+}
+
+export async function updateShopUserName(
+  userId: number,
+  fullName: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const name = fullName.trim().slice(0, 120);
+  if (!name || name.length < 2) {
+    return { ok: false, error: 'Name must be at least 2 characters' };
+  }
+
+  await ensureShopUsersTable();
+  const existing = await getShopUserById(userId);
+  if (!existing) {
+    return { ok: false, error: 'User not found' };
+  }
+
+  await sql`
+    UPDATE shop_users
+    SET name = ${name}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${userId}
+  `;
+
+  return { ok: true };
+}
+
+export async function updateShopUserImage(
+  userId: number,
+  imageUrl: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const image = imageUrl?.trim() || null;
+
+  if (image) {
+    try {
+      const host = new URL(image).hostname.toLowerCase();
+      if (!host.endsWith('cloudinary.com')) {
+        return { ok: false, error: 'Invalid image URL' };
+      }
+    } catch {
+      return { ok: false, error: 'Invalid image URL' };
+    }
+  }
+
+  await ensureShopUsersTable();
+  const existing = await getShopUserById(userId);
+  if (!existing) {
+    return { ok: false, error: 'User not found' };
+  }
+
+  await sql`
+    UPDATE shop_users
+    SET image = ${image}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${userId}
+  `;
+
+  return { ok: true };
 }
 
 export async function updateShopUserProfile(
   userId: number,
-  profile: ShopUserProfile
+  profile: Pick<ShopUserProfile, 'fullName' | 'phone' | 'city' | 'address'> & { email?: string | null },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const fullName = profile.fullName.trim().slice(0, 120);
   const phone = profile.phone.trim().slice(0, 32);

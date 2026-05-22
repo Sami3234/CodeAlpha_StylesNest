@@ -1,0 +1,251 @@
+.prp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prp-skeleton-head {
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: prp-shimmer 1.2s ease infinite;
+}
+
+.prp-skeleton-card {
+  height: 280px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: prp-shimmer 1.2s ease infinite;
+}
+
+.prp-photo-skeleton {
+  height: 120px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  margin-bottom: 12px;
+}
+
+@keyframes prp-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.prp-pending-banner {
+  background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.prp-pending-banner strong {
+  display: block;
+  font-size: 15px;
+  color: #9a3412;
+  margin-bottom: 4px;
+}
+
+.prp-pending-banner p {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.prp-card {
+  background: #fff;
+  border: 1px solid #e8ecf1;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+}
+
+@media (min-width: 480px) {
+  .prp-card {
+    padding: 20px 22px;
+    border-radius: 18px;
+  }
+}
+
+.prp-card__head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+@media (min-width: 520px) {
+  .prp-card__head {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+}
+
+.prp-card__head-text {
+  min-width: 0;
+}
+
+.prp-card__product {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+@media (min-width: 480px) {
+  .prp-card__product {
+    font-size: 16px;
+  }
+}
+
+.prp-card__meta {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.prp-card__link {
+  color: #ea580c;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.prp-card__link:hover {
+  text-decoration: underline;
+}
+
+.prp-status {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.prp-status--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.prp-status--approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.prp-status--rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.prp-submitted-note {
+  margin: 0;
+  padding-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.prp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prp-stars {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.prp-star-btn {
+  border: none;
+  background: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #fbbf24;
+  line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prp-star-btn--off {
+  color: #e2e8f0;
+}
+
+.prp-input,
+.prp-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.prp-textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.prp-submit {
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 48px;
+}
+
+.prp-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.prp-msg {
+  font-size: 13px;
+  margin: 0;
+}
+
+.prp-msg--ok {
+  color: #166534;
+}
+
+.prp-msg--err {
+  color: #b91c1c;
+}
+
+.prp-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #64748b;
+}
+
+.prp-empty__hint {
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.prp-card--submitted {
+  opacity: 0.92;
+}

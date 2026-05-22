@@ -17,14 +17,7 @@ type LandingStripCarouselProps = {
 
 function buildItems(images: string[], maxSlots: number): DisplayItem[] {
   const valid = images.filter((img) => img && img.trim() !== '');
-  if (valid.length === 0) {
-    return Array.from({ length: maxSlots }, (_, index) => ({ image: '', index }));
-  }
-  const items: DisplayItem[] = valid.map((image, index) => ({ image, index }));
-  while (items.length < maxSlots) {
-    items.push({ image: '', index: items.length });
-  }
-  return items;
+  return valid.slice(0, maxSlots).map((image, index) => ({ image, index }));
 }
 
 const CONFIG: Record<
@@ -113,6 +106,19 @@ export default function LandingStripCarousel({
     const id = window.setInterval(step, 22);
     return () => window.clearInterval(id);
   }, [items, scrollDirection]);
+
+  if (items.length === 0) {
+    return (
+      <div className={`${cfg.gridClass} landing-strip-empty`} data-scroll={scrollDirection}>
+        <p className="landing-strip-empty__text">
+          New {cfg.label.toLowerCase()} arrivals —{' '}
+          <a href={`/shop?category=${variant === 'cosmetics' ? 'cosmetics' : 'electronics'}`}>
+            browse the shop
+          </a>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div ref={scrollRef} className={cfg.gridClass} data-scroll={scrollDirection}>

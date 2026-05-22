@@ -40,6 +40,7 @@ import {
   formatPaymentMethodForOrder,
   type PaymentMethod,
 } from '@/lib/payment-methods';
+import ProductReviews from '@/components/reviews/ProductReviews';
 import '@/components/product-page.css';
 
 interface ProductPageProps {
@@ -882,17 +883,16 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div className="order-success-whatsapp">
                   <h3>Confirm on WhatsApp</h3>
                   <p>
-                    Order submit karne ke baad bara-e-meherbani WhatsApp par confirm kar dein taake hum
-                    aap ka order jaldi process kar saken.
-                    {lastOrderId ? ` (Order ID: ${lastOrderId})` : ''}
+                    Please confirm your order on WhatsApp so we can process it quickly.
+                    {lastOrderId ? ` Order ID: ${lastOrderId}.` : ''}
                   </p>
                   {whatsappConfirmUrl ? (
                     <a href={whatsappConfirmUrl} target="_blank" rel="noopener noreferrer">
-                      WhatsApp par confirm karein
+                      Confirm on WhatsApp
                     </a>
                   ) : (
                     <p style={{ fontSize: 13, color: '#718096', margin: 0 }}>
-                      Admin panel se store WhatsApp number set karein, phir yahan direct link show hogi.
+                      WhatsApp confirmation will be available once the store number is configured.
                     </p>
                   )}
                 </div>
@@ -2039,6 +2039,8 @@ export default function ProductPage({ params }: ProductPageProps) {
             </div>
           </motion.div>
           )}
+
+          {!orderSubmitted ? <ProductReviews productId={product.id} /> : null}
         </div>
       </main>
 

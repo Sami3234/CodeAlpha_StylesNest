@@ -40,3 +40,15 @@ export function landingImageFolder(section: string): string {
 export function homepageBulkFolder(): string {
   return `${cloudinaryUploadRoot()}/homepage`;
 }
+
+/** Customer review photos: stylesnest/reviews/{userId}/ */
+export function reviewImageFolder(userId: number): string {
+  const root = cloudinaryUploadRoot();
+  return `${root}/reviews/user_${userId}`;
+}
+
+/** Shop customer profile avatars: stylesnest/profiles/user_{userId}/ */
+export function profileImageFolder(userId: number): string {
+  const root = cloudinaryUploadRoot();
+  return `${root}/profiles/user_${userId}`;
+}

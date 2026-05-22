@@ -12,6 +12,7 @@ import WhatsAppFab from '@/components/WhatsAppFab';
 import { useProducts } from '@/context/ProductContext';
 import ConnectionProblem from '@/components/network/ConnectionProblem';
 import { getProductDescription, getProductTitle } from '@/utils/getProductText';
+import { dedupeByProductTitle } from '@/lib/seo/dedupe-products';
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
   ladiesbag: 'jewelry',
@@ -55,7 +56,15 @@ function ShopPageContent() {
       });
     }
 
-    return filtered;
+    const deduped = dedupeByProductTitle(
+      filtered.map((product) => ({
+        product,
+        id: Number(product.id),
+        name: getProductTitle(product),
+      })),
+    ).map((row) => row.product);
+
+    return deduped;
   }, [activeCategory, searchQuery, activeProducts]);
 
   const handleCategoryChange = (category: string) => {
@@ -95,6 +104,7 @@ function ShopPageContent() {
       <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
 
       <main className="flex-1 min-w-0">
+        <h1 className="sr-only">Shop All Products — StylesNest Pakistan</h1>
         {showConnectionIssue ? (
           <ConnectionProblem
             kind={fetchError ?? 'network'}

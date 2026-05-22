@@ -23,4 +23,8 @@ export interface Order {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   date: string;
   time: string;
+  /** Internal admin note (not shown to customer on storefront). */
+  notes?: string;
+  /** Courier / tracking reference. */
+  trackingId?: string;
 }

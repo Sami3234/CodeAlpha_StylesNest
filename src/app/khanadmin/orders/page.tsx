@@ -6,9 +6,14 @@ import { useOrders, Order } from '@/context/OrderContext';
 import { useProducts } from '@/context/ProductContext';
 import { useToast } from '@/components/Toast';
 import { cities, getCityName } from '@/data/products';
-import Image from 'next/image';
 import * as XLSX from 'xlsx';
 import AdminLoading from '@/components/admin/AdminLoading';
+import AdminThumbImage from '@/components/admin/AdminThumbImage';
+import OrderDateRangeBar from '@/components/admin/OrderDateRangeBar';
+import OrderWorkflowActions from '@/components/admin/OrderWorkflowActions';
+import { getProductImageByName } from '@/lib/admin-product-image';
+import { getTodayDateInTimezone } from '@/lib/order-date';
+import { useAdminOrdersList } from '@/hooks/useAdminOrdersList';
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -58,6 +63,8 @@ const translations: Record<string, string> = {
   'admin.orders.table.date': 'Date',
   'admin.orders.table.actions': 'Actions',
   'admin.orders.selectAll': 'Select All',
+  'admin.orders.notes': 'Internal notes',
+  'admin.orders.tracking': 'Tracking ID',
   'admin.cancel': 'Cancel',
   'admin.save': 'Save',
 };
@@ -109,19 +116,6 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
     if (hasStatusChanged) {
       onUpdateStatus(order.id, selectedStatus);
     }
-  };
-
-  // Helper function to get product image by name
-  const getProductImage = (productName: string) => {
-    if (!productName) return 'https://via.placeholder.com/100';
-    const product = products.find(p => {
-      const titleEn = typeof p.title === 'object' ? p.title.en : p.title;
-      const titleAr = typeof p.title === 'object' ? p.title.ar : '';
-      return titleEn.toLowerCase().includes(productName.toLowerCase()) ||       
-        productName.toLowerCase().includes(titleEn.toLowerCase()) ||       
-        (titleAr && titleAr.toLowerCase().includes(productName.toLowerCase()));
-    });
-    return product?.image || product?.images?.[0] || 'https://via.placeholder.com/100';
   };
 
   return (
@@ -361,12 +355,10 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
                     flexShrink: 0,
                     backgroundColor: '#f5f5f5',
                   }}>
-                    <Image 
-                      src={getProductImage(product.name)} 
-                      alt={product.name} 
-                      fill 
-                      style={{ objectFit: 'cover' }}
-                      unoptimized
+                    <AdminThumbImage
+                      src={getProductImageByName(product.name, products)}
+                      alt={product.name}
+                      sizes="60px"
                     />
                   </div>
                   
@@ -405,7 +397,7 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
             padding: '12px 14px',
             backgroundColor: '#f8f9fa',
             borderRadius: '10px',
-            marginBottom: '20px',
+            marginBottom: '16px',
           }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
@@ -415,6 +407,19 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
               {order.date} • {order.time}
             </span>
           </div>
+
+          {order.trackingId?.trim() ? (
+            <p style={{ fontSize: '13px', color: '#475569', marginBottom: '12px' }}>
+              <strong>{t('admin.orders.tracking')}:</strong> {order.trackingId}
+            </p>
+          ) : null}
+          {order.notes?.trim() ? (
+            <p style={{ fontSize: '13px', color: '#475569', marginBottom: '16px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '8px' }}>
+              <strong>{t('admin.orders.notes')}:</strong> {order.notes}
+            </p>
+          ) : null}
+
+          <OrderWorkflowActions order={order} />
         </div>
       </div>
     </div>
@@ -435,6 +440,8 @@ function EditOrderModal({ order, isOpen, onClose, onSave }: EditOrderModalProps)
     phone: '',
     city: '',
     address: '',
+    notes: '',
+    trackingId: '',
     products: [] as Array<{name: string; quantity: number; price: number}>,
   });
 
@@ -446,6 +453,8 @@ function EditOrderModal({ order, isOpen, onClose, onSave }: EditOrderModalProps)
         phone: order.phone,
         city: order.city,
         address: order.address,
+        notes: order.notes ?? '',
+        trackingId: order.trackingId ?? '',
         products: order.products || [],
       });
     }
@@ -650,6 +659,49 @@ function EditOrderModal({ order, isOpen, onClose, onSave }: EditOrderModalProps)
             />
           </div>
 
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1E293B', marginBottom: '8px' }}>
+              {t('admin.orders.tracking')}
+            </label>
+            <input
+              type="text"
+              value={formData.trackingId}
+              onChange={(e) => setFormData({ ...formData, trackingId: e.target.value })}
+              placeholder="Courier tracking number"
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: '2px solid #e8e8e8',
+                borderRadius: '10px',
+                fontSize: '14px',
+                color: '#000',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1E293B', marginBottom: '8px' }}>
+              {t('admin.orders.notes')}
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={2}
+              placeholder="Internal note (not shown to customer)"
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: '2px solid #e8e8e8',
+                borderRadius: '10px',
+                fontSize: '14px',
+                color: '#000',
+                resize: 'vertical',
+                outline: 'none',
+              }}
+            />
+          </div>
+
           {/* Products - Editable Quantity */}
           <div style={{
             backgroundColor: '#f8f9fa',
@@ -782,6 +834,9 @@ function AdminOrdersContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const statusParam = searchParams.get('status');
+  const periodParam = searchParams.get('period');
+  const filterToday = periodParam === 'today';
+
   const { showToast } = useToast();
   
   // Translation function
@@ -789,71 +844,79 @@ function AdminOrdersContent() {
     return translations[key] || options?.defaultValue || key;
   };
   
-  // Use orders from context
-  const { orders, updateOrder, updateOrderStatus, deleteOrder, getOrderStats } = useOrders();
+  const { updateOrder, updateOrderStatus, deleteOrder, reloadOrders } = useOrders();
+  const list = useAdminOrdersList();
+
   const { products } = useProducts();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') ?? '');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [openStatusDropdown, setOpenStatusDropdown] = useState<string | null>(null);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 100;
+
+  const orders = list.orders;
+  const currentPage = list.page;
+  const totalPages = list.totalPages;
+  const filteredOrders = orders;
+  const paginatedOrders = orders;
 
   // Use URL param as source of truth
   const filterStatus = statusParam || 'all';
   
   // Update URL when filter changes (button click)
-  const setFilterStatus = (status: string) => {
-    // Clear selected orders when switching tabs
-    setSelectedOrders([]);
-    // Reset to page 1 when changing filters
-    setCurrentPage(1);
-    
-    const newStatus = status === 'all' ? null : status;
+  const goToPage = (pageNum: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (newStatus) {
-      params.set('status', newStatus);
-    } else {
-      params.delete('status');
-    }
+    if (pageNum <= 1) params.delete('page');
+    else params.set('page', String(pageNum));
     router.push(`/khanadmin/orders?${params.toString()}`);
   };
 
-  // Get stats from context
-  const orderStats = getOrderStats();
-  const stats = {
-    total: orderStats.total,
-    pending: orderStats.pending,
-    processing: orderStats.processing,
-    shipped: orderStats.shipped,
-    delivered: orderStats.delivered,
-    cancelled: orderStats.cancelled,
-    revenue: orderStats.totalRevenue,
+  const setFilterStatus = (status: string) => {
+    setSelectedOrders([]);
+    const newStatus = status === 'all' ? null : status;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('page');
+    if (newStatus) params.set('status', newStatus);
+    else params.delete('status');
+    router.push(`/khanadmin/orders?${params.toString()}`);
   };
 
-  // Filter orders
-  const filteredOrders = orders.filter(order => {
-    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.phone.includes(searchQuery);
-    return matchesStatus && matchesSearch;
-  });
+  const clearTodayFilter = () => {
+    setSelectedOrders([]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('period');
+    params.delete('page');
+    const qs = params.toString();
+    router.push(qs ? `/khanadmin/orders?${qs}` : '/khanadmin/orders');
+  };
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-  const startIndex = (currentPage - 1) * ordersPerPage;
-  const endIndex = startIndex + ordersPerPage;
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+  const applySearch = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('page');
+    const q = searchInput.trim();
+    if (q) params.set('q', q);
+    else params.delete('q');
+    router.push(`/khanadmin/orders?${params.toString()}`);
+  };
 
-  const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
-    updateOrderStatus(orderId, newStatus);
-    setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
-    setOpenStatusDropdown(null); // Close dropdown after status change
+  const orderStats = list.stats;
+  const stats = {
+    total: orderStats?.total ?? 0,
+    pending: orderStats?.pending ?? 0,
+    processing: orderStats?.processing ?? 0,
+    shipped: orderStats?.shipped ?? 0,
+    delivered: orderStats?.delivered ?? 0,
+    cancelled: orderStats?.cancelled ?? 0,
+    revenue: orderStats?.totalRevenue ?? 0,
+  };
+
+  const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
+    await updateOrderStatus(orderId, newStatus);
+    setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
+    setOpenStatusDropdown(null);
+    await Promise.all([list.reload(), reloadOrders()]);
     showToast('Record Updated', 'info');
   };
 
@@ -880,35 +943,24 @@ function AdminOrdersContent() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveOrder = (orderId: string, orderData: Partial<Order>) => {
-    updateOrder(orderId, orderData);
+  const handleSaveOrder = async (orderId: string, orderData: Partial<Order>) => {
+    await updateOrder(orderId, orderData);
     setIsEditModalOpen(false);
     setEditingOrder(null);
+    await Promise.all([list.reload(), reloadOrders()]);
     showToast('Changes Saved', 'success');
   };
 
-  const handleDeleteOrder = (orderId: string) => {
+  const handleDeleteOrder = async (orderId: string) => {
     if (window.confirm(t('admin.orders.deleteConfirm'))) {
-      deleteOrder(orderId);
+      await deleteOrder(orderId);
       if (selectedOrder?.id === orderId) {
         setIsModalOpen(false);
         setSelectedOrder(null);
       }
+      await Promise.all([list.reload(), reloadOrders()]);
       showToast('Item Deleted Successfully', 'success');
     }
-  };
-
-  // Helper function to get product image by name (same as in modal)
-  const getProductImage = (productName: string) => {
-    if (!productName) return 'https://via.placeholder.com/100';
-    const product = products.find(p => {
-      const titleEn = typeof p.title === 'object' ? p.title.en : p.title;
-      const titleAr = typeof p.title === 'object' ? p.title.ar : '';
-      return titleEn.toLowerCase().includes(productName.toLowerCase()) ||       
-        productName.toLowerCase().includes(titleEn.toLowerCase()) ||       
-        (titleAr && titleAr.toLowerCase().includes(productName.toLowerCase()));
-    });
-    return product?.image || product?.images?.[0] || 'https://via.placeholder.com/100';
   };
 
   // Handle checkbox selection
@@ -948,14 +1000,8 @@ function AdminOrdersContent() {
         }
       }
       
-      // Refresh orders from API after bulk update
-      const response = await fetch('/api/orders', { cache: 'no-store' });
-      if (response.ok) {
-        // Refresh page to show updated orders
-        window.location.reload();
-      }
-      
-      // Clear selection
+      await Promise.all([list.reload(), reloadOrders()]);
+
       setSelectedOrders([]);
       
       showToast(`${count} orders updated to ${newStatus}`, 'success');
@@ -1023,8 +1069,21 @@ function AdminOrdersContent() {
     exportToExcel(ordersToExport);
   };
 
-  const handleExportAll = () => {
-    exportToExcel(filteredOrders);
+  const handleExportAll = async () => {
+    try {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', '1');
+      params.set('limit', '5000');
+      const res = await fetch(`/api/admin/orders/list?${params.toString()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        exportToExcel(data.orders ?? []);
+      } else {
+        exportToExcel(filteredOrders);
+      }
+    } catch {
+      exportToExcel(filteredOrders);
+    }
   };
 
   // Import from Excel function
@@ -1134,8 +1193,7 @@ function AdminOrdersContent() {
           );
         }
         
-        // Refresh page to show new orders
-        setTimeout(() => window.location.reload(), 1500);
+        await Promise.all([list.reload(), reloadOrders()]);
       } else {
         const errorData = await response.json();
         showToast(`Import failed: ${errorData.error}`, 'error');
@@ -1150,6 +1208,10 @@ function AdminOrdersContent() {
     event.target.value = '';
   };
 
+  if (list.loading && orders.length === 0) {
+    return <AdminLoading message="Loading orders" subMessage="Fetching from database" />;
+  }
+
   return (
     <div>
       {/* Page Title with Export Buttons */}
@@ -1159,12 +1221,37 @@ function AdminOrdersContent() {
             {t('admin.orders.title')}
           </h1>
           <p style={{ color: '#666', fontSize: '14px', marginTop: '4px' }}>
-            {t('admin.orders.subtitle')}
+            {filterToday
+              ? `Today's orders (${getTodayDateInTimezone()}) — ${list.total} found`
+              : t('admin.orders.subtitle')}
           </p>
         </div>
 
-        {/* Export Buttons */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        {/* Export / Import / Today filter */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {filterToday ? (
+            <button
+              type="button"
+              onClick={clearTodayFilter}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 18px',
+                borderRadius: '10px',
+                border: '1px solid #10B981',
+                backgroundColor: '#ecfdf5',
+                color: '#059669',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              className="hover:opacity-90"
+            >
+              Show all orders
+            </button>
+          ) : null}
           {selectedOrders.length > 0 && (
             <button
               onClick={handleExportSelected}
@@ -1358,6 +1445,8 @@ function AdminOrdersContent() {
         </div>
       </div>
 
+      <OrderDateRangeBar filterToday={filterToday} onClearToday={clearTodayFilter} />
+
       {/* Filters */}
       <div style={{
         backgroundColor: '#fff',
@@ -1384,8 +1473,11 @@ function AdminOrdersContent() {
             <input
               type="text"
               placeholder={t('admin.orders.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applySearch();
+              }}
+              onChange={(e) => setSearchInput(e.target.value)}
               style={{
                 width: '100%',
                 padding: '12px 12px 12px 42px',
@@ -1397,6 +1489,22 @@ function AdminOrdersContent() {
               }}
             />
           </div>
+          <button
+            type="button"
+            onClick={applySearch}
+            style={{
+              padding: '12px 18px',
+              borderRadius: '10px',
+              border: 'none',
+              backgroundColor: '#1E293B',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+          >
+            Search
+          </button>
 
           {/* Status Filter */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1556,12 +1664,10 @@ function AdminOrdersContent() {
                               border: '1px solid #e0e0e0',
                             }}
                           >
-                            <Image
-                              src={getProductImage(product.name)}
+                            <AdminThumbImage
+                              src={getProductImageByName(product.name, products)}
                               alt={product.name}
-                              fill
-                              style={{ objectFit: 'cover' }}
-                              unoptimized
+                              sizes="40px"
                             />
                           </div>
                         ))}
@@ -1859,12 +1965,10 @@ function AdminOrdersContent() {
                           border: '1px solid #e0e0e0',
                         }}
                       >
-                        <Image
-                          src={getProductImage(product.name)}
+                        <AdminThumbImage
+                          src={getProductImageByName(product.name, products)}
                           alt={product.name}
-                          fill
-                          style={{ objectFit: 'cover' }}
-                          unoptimized
+                          sizes="45px"
                         />
                       </div>
                     ))}
@@ -2132,7 +2236,7 @@ function AdminOrdersContent() {
           }}>
             {/* Previous Button */}
             <button
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              onClick={() => goToPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               style={{
                 padding: '10px 16px',
@@ -2186,7 +2290,7 @@ function AdminOrdersContent() {
                 return (
                   <button
                     key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
+                    onClick={() => goToPage(pageNum)}
                     style={{
                       padding: '10px 16px',
                       borderRadius: '10px',
@@ -2211,7 +2315,7 @@ function AdminOrdersContent() {
 
             {/* Next Button */}
             <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               style={{
                 padding: '10px 16px',
@@ -2246,7 +2350,7 @@ function AdminOrdersContent() {
               fontWeight: '500',
               whiteSpace: 'nowrap',
             }}>
-              Page {currentPage} of {totalPages} • {filteredOrders.length} orders
+              Page {currentPage} of {totalPages} • {list.total} orders
             </div>
           </div>
         )}

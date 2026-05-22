@@ -1,10 +1,15 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { Product } from '@/data/products';
 import { clientMessageFromApi, GENERIC_CLIENT_ERROR, sanitizeClientMessage } from '@/lib/safe-errors';
 import { clientFetch, NetworkError } from '@/lib/client-fetch';
 import type { FetchErrorKind } from '@/lib/is-network-error';
+import { isProtectedAdminPanelPath } from '@/lib/admin-path';
+import { ADMIN_LIVE_POLL_MS } from '@/lib/admin-live-sync';
+import { getProductTitle } from '@/utils/getProductText';
+import { dedupeByProductTitle } from '@/lib/seo/dedupe-products';
 
 interface ProductContextType {
   products: Product[];
@@ -21,18 +26,16 @@ interface ProductContextType {
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 export function ProductProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const adminPanel = isProtectedAdminPanelPath(pathname);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<FetchErrorKind | null>(null);
 
-  // Fetch products from API on mount
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
     try {
-      setFetchError(null);
+      if (!silent) setFetchError(null);
       const response = await clientFetch('/api/products', {
         cache: 'no-store',
         credentials: 'same-origin',
@@ -56,9 +59,35 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         setProducts((prev) => (prev.length > 0 ? prev : []));
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchProducts();
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    if (!adminPanel) return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchProducts({ silent: true });
+      }
+    }, ADMIN_LIVE_POLL_MS);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchProducts({ silent: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [adminPanel, fetchProducts]);
 
   const addProduct = async (productData: Partial<Product>) => {
     // Extract text - English only
@@ -203,7 +232,14 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   // Get only active products for the main store
   const getActiveProducts = () => {
-    return products.filter(p => p.status === 'active' || !p.status);
+    const active = products.filter((p) => p.status === 'active' || !p.status);
+    return dedupeByProductTitle(
+      active.map((product) => ({
+        product,
+        id: Number(product.id),
+        name: getProductTitle(product),
+      })),
+    ).map((row) => row.product);
   };
 
   return (
@@ -214,7 +250,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       deleteProduct,
       toggleProductStatus,
       getActiveProducts,
-      reloadProducts: fetchProducts,
+      reloadProducts: () => fetchProducts({ silent: true }),
       loading,
       fetchError,
     }}>

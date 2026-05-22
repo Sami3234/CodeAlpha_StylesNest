@@ -1,6 +1,7 @@
 import { sql } from '@/lib/db';
 import { ensureProductSchema } from '@/lib/ensure-product-schema';
 import { mapProductRow } from '@/lib/product-mapper';
+import { dedupeByProductTitle } from '@/lib/seo/dedupe-products';
 
 export type CrawlProduct = {
   id: number;
@@ -24,7 +25,7 @@ export async function getProductsForCrawl(): Promise<CrawlProduct[]> {
       ORDER BY updated_at DESC NULLS LAST, id DESC
       LIMIT ${MAX_CRAWL_PRODUCTS}
     `;
-    return rows.map((row) => {
+    const mapped = rows.map((row) => {
       const p = mapProductRow(row as Record<string, unknown>);
       return {
         id: p.id,
@@ -34,6 +35,7 @@ export async function getProductsForCrawl(): Promise<CrawlProduct[]> {
         image: p.image,
       };
     });
+    return dedupeByProductTitle(mapped);
   } catch {
     return [];
   }

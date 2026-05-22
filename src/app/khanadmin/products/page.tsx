@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import Image from 'next/image';
+import AdminThumbImage from '@/components/admin/AdminThumbImage';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { categories, Product } from '@/data/products';
 import { useProducts } from '@/context/ProductContext';
@@ -438,11 +438,10 @@ function AdminProductsContent() {
             <div key={product.id} style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', opacity: product.status === 'inactive' ? 0.6 : 1 }}>
               <div style={{ display: 'flex', gap: '14px' }}>
                 <div style={{ width: '80px', height: '80px', borderRadius: '10px', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-                  <Image 
-                    src={product.image} 
-                    alt={getProductTitle(product)} 
-                    fill 
-                    style={{ objectFit: 'cover' }} 
+                  <AdminThumbImage
+                    src={product.image}
+                    alt={getProductTitle(product)}
+                    sizes="80px"
                   />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -498,12 +497,11 @@ function AdminProductsContent() {
                   <td style={{ padding: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                       <div style={{ width: '56px', height: '56px', borderRadius: '10px', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-                        <Image 
-                    src={product.image} 
-                    alt={getProductTitle(product)} 
-                    fill 
-                    style={{ objectFit: 'cover' }} 
-                  />
+                        <AdminThumbImage
+                          src={product.image}
+                          alt={getProductTitle(product)}
+                          sizes="56px"
+                        />
                       </div>
                       <div style={{ maxWidth: '220px' }}>
                         <p style={{ fontSize: '14px', color: '#1a1a2e', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

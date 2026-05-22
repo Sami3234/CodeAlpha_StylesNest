@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { changeShopUserPassword } from '@/lib/shop-users';
+import { requireShopSession } from '@/lib/require-shop-session';
 import { passwordsMatch, validatePasswordStrength } from '@/lib/password-policy';
 
 export const dynamic = 'force-dynamic';
@@ -13,13 +13,14 @@ function parseUserId(sessionUserId: string | undefined): number | null {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
-    const userId = parseUserId(session?.user?.id);
+    const { session, error: authError } = await requireShopSession();
+    if (authError) return authError;
+    const userId = parseUserId(session!.user?.id);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session?.user?.authProvider && session.user.authProvider !== 'credentials') {
+    if (session!.user?.authProvider && session.user.authProvider !== 'credentials') {
       return NextResponse.json(
         { error: 'Password change is only available for email sign-in accounts' },
         { status: 400 }

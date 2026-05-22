@@ -124,6 +124,13 @@ export default function ProfileOrderDetail({ order, onBack }: ProfileOrderDetail
           {order.city} — {order.address}
         </p>
       </section>
+
+      {order.status === 'delivered' ? (
+        <p className="profile-order-card__hint" style={{ marginTop: 16 }}>
+          Delivered — add your review with photos under{' '}
+          <strong>My reviews</strong> in the account menu.
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
+import './admin/admin-sidebar.css';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { 
@@ -147,70 +148,20 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
     <>
       {/* Overlay for mobile */}
       {isOpen && isMobile && (
-        <div
-          onClick={onClose}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 40,
-          }}
-        />
+        <div className="admin-sidebar-overlay" onClick={onClose} role="presentation" />
       )}
 
-      {/* Sidebar */}
       <aside
-        style={{
-          width: '260px',
-          height: 'calc(100vh - 90px)',
-          background: 'linear-gradient(180deg, #2c3e50 0%, #34495e 100%)',
-          position: 'fixed',
-          top: '90px',
-          bottom: 0,
-          left: isOpen ? 0 : '-260px',
-          zIndex: 50,
-          transition: 'left 0.3s ease',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '2px 0 20px rgba(0,0,0,0.15)',
-          borderRight: '1px solid rgba(255,255,255,0.1)',
-        }}
+        className={`admin-sidebar${isOpen ? ' admin-sidebar--open' : ' admin-sidebar--closed'}`}
       >
-        {/* Admin Title */}
-        <div
-          style={{
-            padding: '24px 20px',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0,
-            background: 'rgba(52, 152, 219, 0.1)',
-          }}
-        >
-          <h2 style={{ 
-            color: '#fff', 
-            fontSize: '20px', 
-            fontWeight: '700',
-            letterSpacing: '0.5px',
-            background: 'linear-gradient(135deg, #ecf0f1 0%, #3498db 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
-            Admin Panel
-          </h2>
-          {/* Close button for mobile */}
+        <div className="admin-sidebar__head">
+          <h2 className="admin-sidebar__title">Admin Panel</h2>
           {isMobile && (
             <button
+              type="button"
+              className="admin-sidebar__close"
               onClick={onClose}
-              style={{
-                color: '#fff',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-              }}
+              aria-label="Close menu"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -220,9 +171,8 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
           )}
         </div>
 
-        {/* Menu Items - Scrollable */}
-        <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '10px' }}>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        <nav className="admin-sidebar__nav" aria-label="Admin navigation">
+          <ul>
             {menuItems.map((item) => {
               // Products should not be active if a category is selected
               const isActive = item.id === 'products' 
@@ -233,40 +183,9 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                   <Link
                     href={item.href}
                     onClick={isMobile ? onClose : undefined}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '14px',
-                      padding: '16px 20px',
-                      color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
-                      textDecoration: 'none',
-                      backgroundColor: isActive 
-                        ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                        : 'transparent',
-                      borderLeft: isActive ? '4px solid #3498db' : '4px solid transparent',
-                      borderRadius: isActive ? '0 12px 12px 0' : '0',
-                      transition: 'all 0.3s ease',
-                      marginRight: '8px',
-                      position: 'relative',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                        e.currentTarget.style.transform = 'translateX(4px)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.transform = 'translateX(0)';
-                      }
-                    }}
+                    className={`admin-sidebar__link${isActive ? ' admin-sidebar__link--active' : ''}`}
                   >
-                    <span style={{ 
-                      opacity: isActive ? 1 : 0.7,
-                      color: isActive ? '#3498db' : 'inherit',
-                      transition: 'all 0.3s ease'
-                    }}>
+                    <span className="admin-sidebar__link-icon">
                       {item.icon}
                     </span>
                     <span style={{ 
@@ -864,7 +783,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
               </div>
             </li>
 
-            {/* Shop customers (login) */}
+            {/* Shop users (storefront accounts) */}
             <li>
               <Link
                 href="/khanadmin/users"
@@ -916,7 +835,62 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                     letterSpacing: '0.3px',
                   }}
                 >
-                  Customers
+                  Users
+                </span>
+              </Link>
+            </li>
+
+            {/* Product reviews */}
+            <li>
+              <Link
+                href="/khanadmin/reviews"
+                onClick={isMobile ? onClose : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '16px 20px',
+                  color: pathname === '/khanadmin/reviews' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  textDecoration: 'none',
+                  backgroundColor: pathname === '/khanadmin/reviews'
+                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
+                    : 'transparent',
+                  borderLeft: pathname === '/khanadmin/reviews' ? '4px solid #3498db' : '4px solid transparent',
+                  borderRadius: pathname === '/khanadmin/reviews' ? '0 12px 12px 0' : '0',
+                  transition: 'all 0.3s ease',
+                  marginRight: '8px',
+                }}
+                onMouseEnter={(e) => {
+                  if (pathname !== '/khanadmin/reviews') {
+                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (pathname !== '/khanadmin/reviews') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.transform = 'translateX(0)';
+                  }
+                }}
+              >
+                <span
+                  style={{
+                    opacity: pathname === '/khanadmin/reviews' ? 1 : 0.7,
+                    color: pathname === '/khanadmin/reviews' ? '#3498db' : 'inherit',
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: pathname === '/khanadmin/reviews' ? '600' : '400',
+                    letterSpacing: '0.3px',
+                  }}
+                >
+                  Reviews
                 </span>
               </Link>
             </li>
@@ -1029,16 +1003,10 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
           </ul>
         </nav>
 
-        {/* Logout Button - Fixed at Bottom */}
-        <div
-          style={{
-            padding: '16px',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            backgroundColor: '#2c3e50',
-            flexShrink: 0,
-          }}
-        >
+        <div className="admin-sidebar__foot">
           <button
+            type="button"
+            className="admin-sidebar__logout"
             onClick={async () => {
               try {
                 await fetch('/api/admin/logout', { method: 'POST' });
@@ -1047,32 +1015,6 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
               } catch (error) {
                 console.error('Logout error:', error);
               }
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '10px 14px',
-              backgroundColor: 'transparent',
-              color: 'rgba(255,255,255,0.8)',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '400',
-              border: '1px solid rgba(255,255,255,0.2)',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer',
-              width: '100%',
-              textAlign: 'left',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(231, 76, 60, 0.2)';
-              e.currentTarget.style.borderColor = 'rgba(231, 76, 60, 0.5)';
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-              e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

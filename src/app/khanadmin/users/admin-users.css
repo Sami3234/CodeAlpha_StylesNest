@@ -1,0 +1,254 @@
+.au-page {
+  padding: 24px 28px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.au-header {
+  margin-bottom: 24px;
+}
+
+.au-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.au-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.au-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.au-stat {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.au-stat__label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.au-stat__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 4px;
+}
+
+.au-stat--blocked .au-stat__value {
+  color: #dc2626;
+}
+
+.au-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.au-search {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.au-search:focus {
+  outline: 2px solid #3498db;
+  outline-offset: 0;
+  border-color: #3498db;
+}
+
+.au-filter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.au-filter button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.au-filter button.is-active {
+  background: #1e293b;
+  color: #fff;
+  border-color: #1e293b;
+}
+
+.au-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.au-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.au-table thead tr {
+  background: #f8fafc;
+  text-align: left;
+}
+
+.au-table th {
+  padding: 12px 14px;
+  font-weight: 600;
+  color: #475569;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.au-table td {
+  padding: 12px 14px;
+  border-top: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.au-table tr.is-blocked {
+  background: #fef2f2;
+}
+
+.au-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.au-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.au-user-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.au-user-phone {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.au-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.au-badge--active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.au-badge--blocked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.au-badge--google {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.au-badge--apple {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.au-badge--email {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.au-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.au-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.au-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.au-btn--block {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.au-btn--unblock {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.au-btn--delete {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.au-empty {
+  color: #64748b;
+  padding: 24px;
+  text-align: center;
+}
+
+.au-provider-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.au-provider-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}

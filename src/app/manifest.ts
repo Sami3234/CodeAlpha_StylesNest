@@ -1,9 +1,7 @@
 import type { MetadataRoute } from 'next';
-import { getSiteUrl, siteConfig } from '@/lib/seo/site';
+import { siteConfig } from '@/lib/seo/site';
 
 export default function manifest(): MetadataRoute.Manifest {
-  const base = getSiteUrl();
-
   return {
     name: siteConfig.name,
     short_name: siteConfig.name,
@@ -27,6 +25,5 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable',
       },
     ],
-    id: `${base}/`,
   };
 }

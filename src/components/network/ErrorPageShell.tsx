@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import './network-ui.css';
 
 type ErrorPageShellProps = {
   children: ReactNode;

@@ -4,6 +4,7 @@ import Apple from 'next-auth/providers/apple';
 import Credentials from 'next-auth/providers/credentials';
 import {
   findCredentialsUser,
+  isShopUserBlocked,
   upsertShopUser,
   verifyShopPassword,
 } from '@/lib/shop-users';
@@ -42,7 +43,7 @@ providers.push(
       if (!email || !password) return null;
 
       const user = await findCredentialsUser(email);
-      if (!user || !verifyShopPassword(password, user.password_hash)) {
+      if (!user || user.is_blocked || !verifyShopPassword(password, user.password_hash)) {
         return null;
       }
 
@@ -72,7 +73,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (account?.provider === 'credentials') {
         const dbUser = await findCredentialsUser(user.email ?? '');
-        if (!dbUser) return false;
+        if (!dbUser || dbUser.is_blocked) return false;
         await upsertShopUser({
           email: dbUser.email,
           name: dbUser.name,
@@ -101,10 +102,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         providerAccountId: account.providerAccountId,
       });
 
+      if (await isShopUserBlocked(id)) {
+        return false;
+      }
+
       user.id = String(id);
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (user?.id) {
         token.shopUserId = user.id;
       }
@@ -114,12 +119,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user?.email) token.email = user.email;
       if (user?.name) token.name = user.name;
       if (user?.image) token.picture = user.image;
+
+      if (trigger === 'update' && session) {
+        const nextName = session.name ?? session.user?.name;
+        const nextImage = session.image ?? session.user?.image;
+        if (typeof nextName === 'string') token.name = nextName;
+        if (typeof nextImage === 'string') token.picture = nextImage;
+        if (nextImage === null) token.picture = null;
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.shopUserId as string;
         session.user.authProvider = (token.authProvider as string) ?? 'credentials';
+        session.user.name = (token.name as string | undefined) ?? session.user.name;
+        session.user.image = (token.picture as string | undefined) ?? session.user.image ?? null;
+        session.user.email = (token.email as string | undefined) ?? session.user.email;
       }
       return session;
     },

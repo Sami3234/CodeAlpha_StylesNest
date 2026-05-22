@@ -5,7 +5,12 @@ import { getSiteUrl, shopCategories } from '@/lib/seo/site';
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = getSiteUrl();
+  let base: string;
+  try {
+    base = getSiteUrl();
+  } catch {
+    base = 'https://www.stylesnest.store';
+  }
   const now = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -15,6 +20,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
+    if (!process.env.DATABASE_URL) {
+      return staticPages;
+    }
+
     const categoryPages: MetadataRoute.Sitemap = shopCategories.map((cat) => ({
       url: cat.slug === 'all' ? `${base}/shop` : `${base}/shop?category=${cat.slug}`,
       lastModified: now,

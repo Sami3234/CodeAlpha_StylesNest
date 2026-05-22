@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import JsonLd from '@/components/seo/JsonLd';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { breadcrumbJsonLd, productJsonLd } from '@/lib/seo/json-ld-builders';
+import { getProductReviewSummary } from '@/lib/product-reviews';
 import { truncate } from '@/lib/seo/site';
 import { sql } from '@/lib/db';
 import { ensureProductSchema } from '@/lib/ensure-product-schema';
@@ -75,6 +76,13 @@ export default async function ProductLayout({ params, children }: Props) {
     product.description.en ||
     `Buy ${name} at StylesNest with free delivery in Pakistan.`;
 
+  let reviewSummary = { averageRating: 0, totalCount: 0 };
+  try {
+    reviewSummary = await getProductReviewSummary(product.id);
+  } catch {
+    /* reviews optional for schema */
+  }
+
   const jsonLd = [
     productJsonLd({
       id: product.id,
@@ -83,6 +91,8 @@ export default async function ProductLayout({ params, children }: Props) {
       image: product.image,
       price: product.currentPrice,
       category: product.category,
+      averageRating: reviewSummary.averageRating,
+      reviewCount: reviewSummary.totalCount,
     }),
     breadcrumbJsonLd([
       { name: 'Home', path: '/' },

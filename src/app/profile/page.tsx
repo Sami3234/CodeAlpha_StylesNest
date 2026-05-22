@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useLoginModal } from '@/context/LoginModalContext';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { usePendingReviews } from '@/context/PendingReviewsContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PasswordStrengthList from '@/components/auth/PasswordStrengthList';
@@ -19,12 +21,20 @@ import {
   IoLogOutOutline,
   IoPersonCircleOutline,
   IoReceiptOutline,
+  IoStarOutline,
   IoStorefrontOutline,
 } from 'react-icons/io5';
+import ProfileIdentityEditor from '@/components/profile/ProfileIdentityEditor';
 import ProfileOrdersPanel from '@/components/profile/ProfileOrdersPanel';
+import ProfileReviewsPanel from '@/components/profile/ProfileReviewsPanel';
 import './profile.css';
 
-type ProfileTab = 'details' | 'orders';
+type ProfileTab = 'details' | 'orders' | 'reviews';
+
+function parseTabParam(value: string | null): ProfileTab | null {
+  if (value === 'orders' || value === 'reviews' || value === 'details') return value;
+  return null;
+}
 
 type ProfileForm = {
   fullName: string;
@@ -33,10 +43,13 @@ type ProfileForm = {
   address: string;
 };
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { openLogin } = useLoginModal();
+  const { pendingCount } = usePendingReviews();
 
   const [form, setForm] = useState<ProfileForm>({
     fullName: '',
@@ -55,6 +68,9 @@ export default function ProfilePage() {
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('details');
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileInSection, setMobileInSection] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   const isEmailAccount = session?.user?.authProvider === 'credentials';
 
@@ -70,8 +86,10 @@ export default function ProfilePage() {
           city: data.profile.city ?? '',
           address: data.profile.address ?? '',
         });
+        setProfileImage(data.profile.image ?? session?.user?.image ?? null);
       } else if (session?.user?.name) {
         setForm((f) => ({ ...f, fullName: session.user?.name ?? '' }));
+        setProfileImage(session?.user?.image ?? null);
       }
     } catch {
       setMessage({ type: 'err', text: 'Could not load profile' });
@@ -92,6 +110,43 @@ export default function ProfilePage() {
       void loadProfile();
     }
   }, [status, loadProfile]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 899px)');
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    if (pathname !== '/profile' || !isMobile) return;
+    if (!searchParams.get('tab')) {
+      setMobileInSection(false);
+    }
+  }, [pathname, isMobile, searchParams]);
+
+  useEffect(() => {
+    const tab = parseTabParam(searchParams.get('tab'));
+    if (!tab) return;
+    setActiveTab(tab);
+    if (!isMobile) {
+      setMobileInSection(true);
+    }
+  }, [searchParams, isMobile]);
+
+  const openMobileTab = (tab: ProfileTab) => {
+    setActiveTab(tab);
+    setMobileInSection(true);
+  };
+
+  const backToMobileHub = () => {
+    setMobileInSection(false);
+    router.replace('/profile', { scroll: false });
+  };
+
+  const showMobileHub = isMobile && !mobileInSection;
+  const showMobileBack = isMobile && mobileInSection;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,43 +247,66 @@ export default function ProfilePage() {
       <main className="profile-page">
         <div className="profile-page__inner">
           <header className="profile-page__header">
-            <Link href="/shop" className="profile-back">
-              <IoArrowBack size={18} aria-hidden />
-              Back to shop
-            </Link>
             <h1 className="profile-page__title">My account</h1>
             <p className="profile-page__subtitle">
-              {activeTab === 'orders'
-                ? 'Track your orders and delivery status'
-                : 'Manage delivery details and account security'}
+              {showMobileHub
+                ? 'Choose a section below'
+                : activeTab === 'orders'
+                  ? 'Track your orders and delivery status'
+                  : activeTab === 'reviews'
+                    ? 'Review delivered products and add photos'
+                    : 'Manage delivery details and account security'}
             </p>
           </header>
 
           <div className="profile-layout">
             <aside className="profile-sidebar">
               <div className="profile-sidebar__card">
-                <div className="profile-sidebar__avatar-wrap">
-                  <div className="profile-avatar">
-                    <IoPersonCircleOutline size={52} color="#94a3b8" aria-hidden />
-                  </div>
-                </div>
-                <h2 className="profile-sidebar__name">{displayName}</h2>
-                <p className="profile-sidebar__email">{session.user.email}</p>
-                <span className="profile-badge">{method}</span>
+                <ProfileIdentityEditor
+                  fullName={displayName}
+                  email={session.user.email ?? null}
+                  imageUrl={profileImage}
+                  providerLabel={method}
+                  compact={isMobile}
+                  onNameChange={(name) => {
+                    setForm((f) => ({ ...f, fullName: name }));
+                  }}
+                  onImageChange={setProfileImage}
+                />
 
                 <nav className="profile-sidebar__nav" aria-label="Account shortcuts">
                   <button
                     type="button"
                     className={`profile-sidebar__link${activeTab === 'orders' ? ' profile-sidebar__link--active' : ''}`}
-                    onClick={() => setActiveTab('orders')}
+                    onClick={() => {
+                      setActiveTab('orders');
+                      if (isMobile) setMobileInSection(true);
+                    }}
                   >
                     <IoReceiptOutline size={20} aria-hidden />
                     My orders
                   </button>
                   <button
                     type="button"
+                    className={`profile-sidebar__link${activeTab === 'reviews' ? ' profile-sidebar__link--active' : ''}`}
+                    onClick={() => {
+                      setActiveTab('reviews');
+                      if (isMobile) setMobileInSection(true);
+                    }}
+                  >
+                    <IoStarOutline size={20} aria-hidden />
+                    My reviews
+                    {pendingCount > 0 ? (
+                      <span className="profile-sidebar__badge">{pendingCount}</span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
                     className={`profile-sidebar__link${activeTab === 'details' ? ' profile-sidebar__link--active' : ''}`}
-                    onClick={() => setActiveTab('details')}
+                    onClick={() => {
+                      setActiveTab('details');
+                      if (isMobile) setMobileInSection(true);
+                    }}
                   >
                     <IoLocationOutline size={20} aria-hidden />
                     Delivery details
@@ -250,8 +328,86 @@ export default function ProfilePage() {
             </aside>
 
             <div className="profile-main">
+              {showMobileHub ? (
+                <nav className="profile-mobile-hub" aria-label="Account sections">
+                  <button
+                    type="button"
+                    className="profile-mobile-hub__item"
+                    onClick={() => openMobileTab('orders')}
+                  >
+                    <span className="profile-mobile-hub__icon" aria-hidden>
+                      <IoReceiptOutline size={24} />
+                    </span>
+                    <span className="profile-mobile-hub__text">
+                      <span className="profile-mobile-hub__title">My orders</span>
+                      <span className="profile-mobile-hub__desc">Track delivery &amp; status</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-mobile-hub__item"
+                    onClick={() => openMobileTab('reviews')}
+                  >
+                    <span className="profile-mobile-hub__icon" aria-hidden>
+                      <IoStarOutline size={24} />
+                    </span>
+                    <span className="profile-mobile-hub__text">
+                      <span className="profile-mobile-hub__title">
+                        My reviews
+                        {pendingCount > 0 ? (
+                          <span className="profile-mobile-hub__badge">{pendingCount}</span>
+                        ) : null}
+                      </span>
+                      <span className="profile-mobile-hub__desc">Rate delivered products</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-mobile-hub__item"
+                    onClick={() => openMobileTab('details')}
+                  >
+                    <span className="profile-mobile-hub__icon" aria-hidden>
+                      <IoLocationOutline size={24} />
+                    </span>
+                    <span className="profile-mobile-hub__text">
+                      <span className="profile-mobile-hub__title">Delivery details</span>
+                      <span className="profile-mobile-hub__desc">Address &amp; password</span>
+                    </span>
+                  </button>
+                  <Link href="/shop" className="profile-mobile-hub__item profile-mobile-hub__item--link">
+                    <span className="profile-mobile-hub__icon" aria-hidden>
+                      <IoStorefrontOutline size={24} />
+                    </span>
+                    <span className="profile-mobile-hub__text">
+                      <span className="profile-mobile-hub__title">Continue shopping</span>
+                      <span className="profile-mobile-hub__desc">Browse the store</span>
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    className="profile-mobile-hub__item profile-mobile-hub__item--muted"
+                    onClick={() => void signOut({ callbackUrl: '/' })}
+                  >
+                    <span className="profile-mobile-hub__icon" aria-hidden>
+                      <IoLogOutOutline size={24} />
+                    </span>
+                    <span className="profile-mobile-hub__text">
+                      <span className="profile-mobile-hub__title">Sign out</span>
+                    </span>
+                  </button>
+                </nav>
+              ) : (
+                <>
+              {showMobileBack ? (
+                <button type="button" className="profile-mobile-back" onClick={backToMobileHub}>
+                  <IoArrowBack size={18} aria-hidden />
+                  Back to account menu
+                </button>
+              ) : null}
               {activeTab === 'orders' ? (
                 <ProfileOrdersPanel refreshKey={ordersRefreshKey} />
+              ) : activeTab === 'reviews' ? (
+                <ProfileReviewsPanel />
               ) : (
                 <>
               {message ? (
@@ -396,25 +552,8 @@ export default function ProfilePage() {
                 </section>
               ) : null}
 
-              <div className="profile-mobile-actions" aria-label="Quick actions">
-                <button
-                  type="button"
-                  className="profile-btn profile-btn--secondary"
-                  onClick={() => setActiveTab('orders')}
-                >
-                  My orders
-                </button>
-                <Link href="/shop" className="profile-btn profile-btn--secondary">
-                  Continue shopping
-                </Link>
-                <button
-                  type="button"
-                  className="profile-btn profile-btn--ghost"
-                  onClick={() => void signOut({ callbackUrl: '/' })}
-                >
-                  Sign out
-                </button>
-              </div>
+                </>
+              )}
                 </>
               )}
             </div>
@@ -423,5 +562,28 @@ export default function ProfilePage() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="profile-page-root">
+          <Header />
+          <main className="profile-page">
+            <div className="profile-page__inner">
+              <div className="profile-skeleton" aria-hidden>
+                <div className="profile-skeleton__sidebar" />
+                <div className="profile-skeleton__main" />
+              </div>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      }
+    >
+      <ProfilePageContent />
+    </Suspense>
   );
 }

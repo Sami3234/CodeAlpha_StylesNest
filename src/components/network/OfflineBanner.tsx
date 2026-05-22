@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useNetworkStatus } from '@/context/NetworkStatusContext';
 import { BACK_ONLINE_MESSAGE, OFFLINE_MESSAGE } from '@/lib/network-messages';
-import './network-ui.css';
 
 export default function OfflineBanner() {
   const { isOnline } = useNetworkStatus();

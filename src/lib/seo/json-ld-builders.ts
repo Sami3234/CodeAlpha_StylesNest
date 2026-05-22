@@ -117,6 +117,8 @@ type ProductJsonLdInput = {
   currency?: string;
   category?: string;
   inStock?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
 };
 
 export function productJsonLd({
@@ -128,6 +130,8 @@ export function productJsonLd({
   currency = 'PKR',
   category,
   inStock = true,
+  averageRating,
+  reviewCount,
 }: ProductJsonLdInput) {
   const url = absoluteUrl(`/product/${id}`);
   const imageUrl = image.startsWith('http') ? image : absoluteUrl(image);
@@ -157,6 +161,17 @@ export function productJsonLd({
         name: siteConfig.name,
       },
     },
+    ...(reviewCount && reviewCount > 0 && averageRating
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: String(averageRating),
+            reviewCount: String(reviewCount),
+            bestRating: '5',
+            worstRating: '1',
+          },
+        }
+      : {}),
   };
 }
 

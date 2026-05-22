@@ -10,7 +10,13 @@ export async function GET(request: NextRequest) {
     const session = await validateAdminSession(token);
 
     if (!session) {
-      return NextResponse.json({ authenticated: false }, { status: 401 });
+      return NextResponse.json(
+        { authenticated: false },
+        {
+          status: 200,
+          headers: { 'Cache-Control': 'private, no-store, max-age=0' },
+        },
+      );
     }
 
     return NextResponse.json(

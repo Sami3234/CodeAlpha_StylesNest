@@ -1,9 +1,8 @@
 'use client';
 
-import type { ElementType } from 'react';
 import { motion } from 'framer-motion';
-import { FaWhatsapp, FaFacebookF, FaTiktok, FaShoppingBag } from 'react-icons/fa';
-import { SiShopify } from 'react-icons/si';
+import SocialBrandIcon, { socialBrandColor } from '@/components/SocialBrandIcon';
+import type { SocialLinkKey } from '@/lib/admin-social-links';
 
 export type FooterSocialSettings = {
   whatsapp: string;
@@ -21,52 +20,43 @@ function waLinkFromNumber(num: string): string {
 }
 
 const iconBtn =
-  'flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-xl text-white transition-colors hover:bg-white/20';
+  'flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-xl transition-colors hover:bg-white/20';
 
 export function FooterSocialLinks({ settings }: { settings: FooterSocialSettings }) {
   const waHref =
     settings.social_whatsapp.trim() || waLinkFromNumber(settings.whatsapp);
 
-  const items: {
-    href: string;
-    label: string;
-    Icon: ElementType<{ size?: number; 'aria-hidden'?: boolean }>;
-    className?: string;
-  }[] = [];
+  const items: { href: string; label: string; platform: SocialLinkKey }[] = [];
 
   if (waHref) {
-    items.push({ href: waHref, label: 'WhatsApp', Icon: FaWhatsapp, className: 'text-[#25D366]' });
+    items.push({ href: waHref, label: 'WhatsApp', platform: 'social_whatsapp' });
   }
   if (settings.social_facebook.trim()) {
     items.push({
       href: settings.social_facebook,
       label: 'Facebook',
-      Icon: FaFacebookF,
-      className: 'text-[#1877F2]',
+      platform: 'social_facebook',
     });
   }
   if (settings.social_tiktok.trim()) {
     items.push({
       href: settings.social_tiktok,
       label: 'TikTok',
-      Icon: FaTiktok,
-      className: 'text-white',
+      platform: 'social_tiktok',
     });
   }
   if (settings.social_daraz.trim()) {
     items.push({
       href: settings.social_daraz,
       label: 'Daraz',
-      Icon: FaShoppingBag,
-      className: 'text-[#F85606]',
+      platform: 'social_daraz',
     });
   }
   if (settings.social_shopify.trim()) {
     items.push({
       href: settings.social_shopify,
       label: 'Shopify',
-      Icon: SiShopify,
-      className: 'text-[#95BF47]',
+      platform: 'social_shopify',
     });
   }
 
@@ -74,7 +64,7 @@ export function FooterSocialLinks({ settings }: { settings: FooterSocialSettings
 
   return (
     <div className="mt-6 flex flex-wrap gap-3">
-      {items.map(({ href, label, Icon, className }) => (
+      {items.map(({ href, label, platform }) => (
         <motion.a
           key={label}
           href={href}
@@ -84,9 +74,10 @@ export function FooterSocialLinks({ settings }: { settings: FooterSocialSettings
           title={label}
           whileHover={{ scale: 1.08, y: -2 }}
           whileTap={{ scale: 0.95 }}
-          className={`${iconBtn} ${className ?? ''}`}
+          className={iconBtn}
+          style={{ color: socialBrandColor(platform) }}
         >
-          <Icon size={22} aria-hidden />
+          <SocialBrandIcon platform={platform} size={22} />
         </motion.a>
       ))}
     </div>

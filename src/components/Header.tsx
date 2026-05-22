@@ -10,6 +10,7 @@ import TopAnnouncementBar from '@/components/TopAnnouncementBar';
 import { IoBagOutline } from 'react-icons/io5';
 import { useCart } from '@/context/CartContext';
 import HeaderProfile, { HeaderProfileMobile } from '@/components/HeaderProfile';
+import AdminNotificationBell from '@/components/admin/AdminNotificationBell';
 
 const LOGO_MARK = '/StylesNest_Transparent.png';
 
@@ -122,34 +123,42 @@ export default function Header() {
           className="flex min-w-0 items-center overflow-visible"
           style={{ 
             height: '90px',
-            justifyContent: isAdminPanel ? 'center' : 'space-between'
+            justifyContent: isAdminPanel ? 'space-between' : 'space-between',
+            position: 'relative',
           }}
         >
           {/* Logo - Centered in Admin, Left in Regular */}
           {isAdminPanel ? (
-            <div
-              style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center'
-              }}
-            >
-              <Link 
-                href="/" 
+            <>
+              <div style={{ width: '44px', flexShrink: 0 }} aria-hidden />
+              <div
                 style={{
-                  textDecoration: 'none',
+                  flex: 1,
                   display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 0,
-                  cursor: 'pointer',
-                  zIndex: 10
+                  minWidth: 0,
                 }}
               >
-                <BrandMark />
-              </Link>
-            </div>
+                <Link 
+                  href="/" 
+                  style={{
+                    textDecoration: 'none',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 0,
+                    cursor: 'pointer',
+                    zIndex: 10,
+                  }}
+                >
+                  <BrandMark />
+                </Link>
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                <AdminNotificationBell />
+              </div>
+            </>
           ) : (
             <motion.div
               initial={{ x: -50, opacity: 0 }}

@@ -2,9 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { FaFacebookF, FaWhatsapp, FaShoppingBag } from 'react-icons/fa';
-import { SiShopify } from 'react-icons/si';
-import { topBarUrlCaption } from '@/lib/sanitize-contact-extras';
+import SocialBrandIcon from '@/components/SocialBrandIcon';
 import { useContactSettings } from '@/context/ContactSettingsContext';
 
 function waLinkFromNumber(num: string): string {
@@ -38,14 +36,11 @@ export default function TopAnnouncementBar() {
   const fb = settings.social_facebook.trim();
   const dz = settings.social_daraz.trim();
   const sp = (settings.social_shopify || '').trim();
-  const extraUrls = (settings.top_bar_links ?? []).filter((u) => typeof u === 'string' && u.trim());
-
   const hasMarquee = announcement.length > 0;
   const hasCare = careHref.length > 0;
   const hasIcons = !!(fb || waHref || dz || sp);
-  const hasExtraLinks = extraUrls.length > 0;
 
-  if (!hasMarquee && !hasCare && !hasIcons && !hasExtraLinks) return null;
+  if (!hasMarquee && !hasCare && !hasIcons) return null;
 
   const careInternal = careHref.startsWith('/') && !careHref.startsWith('//');
 
@@ -69,30 +64,6 @@ export default function TopAnnouncementBar() {
           )}
         </div>
         <div className="top-announcement-actions">
-          {hasExtraLinks ? (
-            <nav className="top-announcement-extra-links" aria-label="Promo links">
-              {extraUrls.map((hrefRaw, i) => {
-                const href = hrefRaw.trim();
-                const internal = href.startsWith('/') && !href.startsWith('//');
-                const caption = topBarUrlCaption(href);
-                return internal ? (
-                  <Link key={`tb-${i}-${href}`} href={href} className="top-announcement-extra-link">
-                    {caption}
-                  </Link>
-                ) : (
-                  <a
-                    key={`tb-${i}-${href}`}
-                    href={href}
-                    className="top-announcement-extra-link"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {caption}
-                  </a>
-                );
-              })}
-            </nav>
-          ) : null}
           {hasCare &&
             (careInternal ? (
               <Link href={careHref} className="top-announcement-care">
@@ -109,26 +80,26 @@ export default function TopAnnouncementBar() {
               </a>
             ))}
           <div className="top-announcement-icons">
-            {fb ? (
-              <a
-                href={fb}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="top-announcement-icon"
-              >
-                <FaFacebookF size={14} aria-hidden />
-              </a>
-            ) : null}
             {waHref ? (
               <a
                 href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"
-                className="top-announcement-icon"
+                className="top-announcement-icon top-announcement-icon--wa"
               >
-                <FaWhatsapp size={15} aria-hidden />
+                <SocialBrandIcon platform="social_whatsapp" size={15} />
+              </a>
+            ) : null}
+            {fb ? (
+              <a
+                href={fb}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="top-announcement-icon top-announcement-icon--fb"
+              >
+                <SocialBrandIcon platform="social_facebook" size={14} />
               </a>
             ) : null}
             {dz ? (
@@ -137,9 +108,9 @@ export default function TopAnnouncementBar() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Daraz"
-                className="top-announcement-icon"
+                className="top-announcement-icon top-announcement-icon--dz"
               >
-                <FaShoppingBag size={14} aria-hidden />
+                <SocialBrandIcon platform="social_daraz" size={14} />
               </a>
             ) : null}
             {sp ? (
@@ -148,9 +119,9 @@ export default function TopAnnouncementBar() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Shopify store"
-                className="top-announcement-icon"
+                className="top-announcement-icon top-announcement-icon--sp"
               >
-                <SiShopify size={14} aria-hidden />
+                <SocialBrandIcon platform="social_shopify" size={14} />
               </a>
             ) : null}
           </div>

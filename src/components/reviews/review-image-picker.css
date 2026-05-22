@@ -1,0 +1,248 @@
+.rip-root {
+  margin-bottom: 8px;
+}
+
+.rip-label {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.rip-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.rip-hint strong {
+  color: #ea580c;
+  font-weight: 600;
+}
+
+.rip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rip-tile {
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.rip-tile--required {
+  border-color: #fdba74;
+  background: #fffbf7;
+}
+
+.rip-tile--filled {
+  border-style: solid;
+  border-color: #e2e8f0;
+  cursor: default;
+}
+
+.rip-tile--uploading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.rip-tile__plus {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #94a3b8;
+}
+
+.rip-tile__plus-icon {
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
+  color: #64748b;
+}
+
+.rip-tile--required .rip-tile__plus-icon {
+  color: #ea580c;
+}
+
+.rip-tile__plus-text {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.rip-tile__img-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+.rip-tile__img-wrap img {
+  object-fit: cover;
+}
+
+.rip-tile__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile-only bottom sheet — hidden on desktop via JS */
+.rip-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10070;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.rip-sheet {
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+  animation: rip-sheet-in 0.2s ease;
+}
+
+@keyframes rip-sheet-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.rip-sheet__title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+}
+
+.rip-sheet__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  min-height: 48px;
+}
+
+.rip-sheet__btn:last-of-type {
+  border-bottom: none;
+}
+
+.rip-sheet__cancel {
+  margin-top: 8px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.rip-camera-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10080;
+  background: rgba(15, 23, 42, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.rip-camera-video {
+  width: 100%;
+  max-width: 480px;
+  max-height: 55vh;
+  border-radius: 12px;
+  background: #000;
+  object-fit: cover;
+}
+
+.rip-camera-bar {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.rip-camera-bar button {
+  flex: 1;
+  min-height: 48px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rip-camera-capture {
+  background: #fff;
+  color: #0f172a;
+}
+
+.rip-camera-cancel {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+@media (min-width: 400px) {
+  .rip-tile {
+    width: 96px;
+    height: 96px;
+  }
+}

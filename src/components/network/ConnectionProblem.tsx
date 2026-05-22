@@ -14,7 +14,6 @@ import {
   FORBIDDEN_MESSAGE,
   FORBIDDEN_TITLE,
 } from '@/lib/network-messages';
-import './network-ui.css';
 
 export type ConnectionProblemVariant = 'page' | 'section' | 'fullscreen';
 export type ConnectionProblemKind = 'offline' | 'network' | 'generic' | 'not-found' | 'forbidden';

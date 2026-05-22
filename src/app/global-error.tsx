@@ -2,7 +2,6 @@
 
 import ConnectionProblem from '@/components/network/ConnectionProblem';
 import ErrorPageShell from '@/components/network/ErrorPageShell';
-import '@/components/network/network-ui.css';
 
 export default function GlobalError({
   error,

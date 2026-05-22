@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import AdminThumbImage from '@/components/admin/AdminThumbImage';
 import { AbandonedOrder } from '@/utils/abandonedOrders';
 import { useProducts } from '@/context/ProductContext';
 import { useToast } from '@/components/Toast';
@@ -185,7 +185,7 @@ function DetailModal({ order, isOpen, onClose, products, t }: DetailModalProps) 
                     position: 'relative', 
                     flexShrink: 0 
                   }}>
-                    <Image src={product.image} alt={productName} fill style={{ objectFit: 'cover' }} />
+                    <AdminThumbImage src={product.image} alt={productName} sizes="80px" />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>

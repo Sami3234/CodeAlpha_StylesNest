@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { sql } from '@/lib/db';
-
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
+import { hashAdminPassword } from '@/lib/admin-password';
 
 function timingSafeEqualStr(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -59,7 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const hashed = hashPassword(newPassword);
+    const hashed = await hashAdminPassword(newPassword);
 
     if (targetEmail) {
       const updated = await sql`
