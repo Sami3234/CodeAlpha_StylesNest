@@ -102,10 +102,9 @@ export const rootMetadata: Metadata = {
   publisher: siteConfig.name,
   icons: {
     icon: [
-      { url: '/favicon/favicon.ico', sizes: 'any' },
+      { url: '/favicon.ico', sizes: 'any' },
       { url: '/favicon/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
       { url: '/favicon/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
-      ...brandIcons,
     ],
     shortcut: ['/favicon.ico'],
     apple: [{ url: '/favicon/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
