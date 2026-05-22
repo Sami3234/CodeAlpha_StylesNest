@@ -15,14 +15,14 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: siteConfig.language,
     icons: [
       {
-        src: siteConfig.logoPath,
-        sizes: '512x512',
+        src: '/favicon-192.png',
+        sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: siteConfig.logoPath,
-        sizes: '512x512',
+        src: '/favicon-48.png',
+        sizes: '48x48',
         type: 'image/png',
         purpose: 'maskable',
       },

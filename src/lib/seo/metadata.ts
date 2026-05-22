@@ -101,9 +101,13 @@ export const rootMetadata: Metadata = {
   creator: siteConfig.name,
   publisher: siteConfig.name,
   icons: {
-    icon: [...brandIcons, { url: '/favicon.ico', sizes: '48x48' }],
-    shortcut: ['/favicon.ico'],
-    apple: [{ url: logoUrl, type: 'image/png', sizes: '180x180' }],
+    icon: [
+      { url: '/favicon-48.png', type: 'image/png', sizes: '48x48' },
+      { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+      ...brandIcons,
+    ],
+    shortcut: ['/favicon-48.png'],
+    apple: [{ url: '/favicon-192.png', type: 'image/png', sizes: '192x192' }],
     other: [{ rel: 'mask-icon', url: logoUrl, color: '#1e293b' }],
   },
   formatDetection: {
