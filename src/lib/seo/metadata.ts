@@ -102,12 +102,13 @@ export const rootMetadata: Metadata = {
   publisher: siteConfig.name,
   icons: {
     icon: [
-      { url: '/favicon-48.png', type: 'image/png', sizes: '48x48' },
-      { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon/favicon.ico', sizes: 'any' },
+      { url: '/favicon/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/favicon/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
       ...brandIcons,
     ],
-    shortcut: ['/favicon-48.png'],
-    apple: [{ url: '/favicon-192.png', type: 'image/png', sizes: '192x192' }],
+    shortcut: ['/favicon.ico'],
+    apple: [{ url: '/favicon/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
     other: [{ rel: 'mask-icon', url: logoUrl, color: '#1e293b' }],
   },
   formatDetection: {
