@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import { absoluteUrl, getSiteUrl, siteConfig, truncate } from '@/lib/seo/site';
 
-const brandIcon = {
-  url: siteConfig.logoPath,
-  type: 'image/png',
-  sizes: '512x512',
-} as const;
+const logoUrl = absoluteUrl(siteConfig.logoPath);
+
+const brandIcons = [
+  { url: logoUrl, type: 'image/png', sizes: '48x48' },
+  { url: logoUrl, type: 'image/png', sizes: '96x96' },
+  { url: logoUrl, type: 'image/png', sizes: '192x192' },
+  { url: logoUrl, type: 'image/png', sizes: '512x512' },
+] as const;
 
 type PageSeoInput = {
   title: string;
@@ -28,11 +31,16 @@ export function buildPageMetadata({
 }: PageSeoInput): Metadata {
   const url = absoluteUrl(path);
   const ogImage = image ? absoluteUrl(image) : absoluteUrl(siteConfig.defaultOgImagePath);
-  const fullTitle = title.includes(siteConfig.name) ? title : `${title} | ${siteConfig.name}`;
+  const displayTitle = title.includes(siteConfig.name)
+    ? title
+    : `${title} | ${siteConfig.name}`;
+  const pageTitle = title.includes(siteConfig.name)
+    ? { absolute: title }
+    : title;
 
   return {
-    title: fullTitle,
-    description: truncate(description, 160),
+    title: pageTitle,
+    description: truncate(description, 155),
     keywords: [...siteConfig.keywords, ...keywords],
     metadataBase: new URL(getSiteUrl()),
     alternates: {
@@ -56,20 +64,20 @@ export function buildPageMetadata({
       locale: siteConfig.locale.replace('_', '-'),
       url,
       siteName: siteConfig.name,
-      title: fullTitle,
+      title: displayTitle,
       description: truncate(description, 200),
       images: [
         {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: fullTitle,
+          alt: displayTitle,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: fullTitle,
+      title: displayTitle,
       description: truncate(description, 200),
       images: [ogImage],
     },
@@ -93,9 +101,10 @@ export const rootMetadata: Metadata = {
   creator: siteConfig.name,
   publisher: siteConfig.name,
   icons: {
-    icon: [brandIcon, { url: siteConfig.logoPath, rel: 'shortcut icon' }],
-    apple: [brandIcon],
-    other: [{ rel: 'mask-icon', url: siteConfig.logoPath, color: '#1e293b' }],
+    icon: [...brandIcons, { url: '/favicon.ico', sizes: '48x48' }],
+    shortcut: ['/favicon.ico'],
+    apple: [{ url: logoUrl, type: 'image/png', sizes: '180x180' }],
+    other: [{ rel: 'mask-icon', url: logoUrl, color: '#1e293b' }],
   },
   formatDetection: {
     email: false,

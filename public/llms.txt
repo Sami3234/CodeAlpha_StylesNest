@@ -1,0 +1,26 @@
+# StylesNest
+> Online shopping in Pakistan — cosmetics, electronics, clothes, jewelry, watches, bags, and daily essentials.
+
+## Categories
+- All products: https://www.stylesnest.store/shop
+- Cosmetics: https://www.stylesnest.store/shop?category=cosmetics
+- Jewelry: https://www.stylesnest.store/shop?category=jewelry
+- Watches: https://www.stylesnest.store/shop?category=watches
+- Makeup: https://www.stylesnest.store/shop?category=makeup
+- Clothes: https://www.stylesnest.store/shop?category=clothes
+- Shoes: https://www.stylesnest.store/shop?category=shoes
+- Electronics: https://www.stylesnest.store/shop?category=electronics
+- Bags: https://www.stylesnest.store/shop?category=bags
+- Men fashion: https://www.stylesnest.store/shop?category=menfashion
+- General store: https://www.stylesnest.store/shop?category=general
+
+## Policies
+- Free delivery across Pakistan on eligible orders
+- Cash on Delivery (COD) available
+- Genuine products from trusted suppliers
+
+## Contact
+- Email: info@stylesnest.com
+- Location: Vehari, Pakistan
+- Website: https://www.stylesnest.store
+- About: https://www.stylesnest.store/about

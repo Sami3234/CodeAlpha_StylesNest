@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import AboutSeoContent from '@/components/seo/AboutSeoContent';
 import { buildPageMetadata } from '@/lib/seo/metadata';
+import { getContactForSchema } from '@/lib/seo/contact-for-schema';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'About Us & Contact',
@@ -9,6 +11,17 @@ export const metadata: Metadata = buildPageMetadata({
   keywords: ['StylesNest about', 'contact StylesNest', 'online store Pakistan'],
 });
 
-export default function AboutLayout({ children }: { children: React.ReactNode }) {
-  return children;
+export default async function AboutLayout({ children }: { children: React.ReactNode }) {
+  const contact = await getContactForSchema();
+
+  return (
+    <>
+      <AboutSeoContent
+        phone={contact.phone}
+        email={contact.email}
+        address={contact.address}
+      />
+      {children}
+    </>
+  );
 }

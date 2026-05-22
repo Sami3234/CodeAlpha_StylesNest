@@ -10,6 +10,7 @@ import HomeProductStrip from '@/components/HomeProductStrip';
 import CosmeticsProductCarousel from '@/components/CosmeticsProductCarousel';
 import ElectronicsProductCarousel from '@/components/ElectronicsProductCarousel';
 import './home-page.css';
+import HomeSeoContent from '@/components/seo/HomeSeoContent';
 
 export default function Home() {
   // Landing images from database
@@ -529,7 +530,7 @@ export default function Home() {
                 letterSpacing: '2px'
               }}
             >
-              گارمنٹس
+              <span lang="ur">گارمنٹس</span>
             </div>
             <h2
               style={{
@@ -1110,7 +1111,7 @@ export default function Home() {
                 letterSpacing: '2px'
               }}
             >
-              زیورات
+              <span lang="ur">زیورات</span>
             </div>
             <h2
               className="jewelry-section-title"
@@ -1229,7 +1230,7 @@ export default function Home() {
                   fontWeight: '700'
                 }}
               >
-                امپورٹڈ کا سٹیکس
+                <span lang="ur">امپورٹڈ کا سٹیکس</span>
               </span>
               <span
                 style={{
@@ -1341,7 +1342,7 @@ export default function Home() {
                 animation: 'fadeInUp 0.8s ease-out'
               }}
             >
-              کپڑے
+              <span lang="ur">کپڑے</span>
             </div>
             <h2
               style={{
@@ -1558,7 +1559,7 @@ export default function Home() {
                 letterSpacing: '2px'
               }}
             >
-              الیکٹرانکس
+              <span lang="ur">الیکٹرانکس</span>
             </div>
             <h2
               style={{
@@ -1751,7 +1752,7 @@ export default function Home() {
                   animation: 'fadeInUp 0.8s ease-out'
                 }}
               >
-                جنرل
+                <span lang="ur">جنرل</span>
               </h2>
               <h3
                 style={{
@@ -2052,6 +2053,8 @@ export default function Home() {
       
       {/* WhatsApp Floating Action Button */}
       <WhatsAppFab />
+
+      <HomeSeoContent />
     </div>
   );
 }

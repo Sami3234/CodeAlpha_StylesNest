@@ -3,6 +3,7 @@ import "./globals.css";
 import JsonLd from "@/components/seo/JsonLd";
 import { rootMetadata } from "@/lib/seo/metadata";
 import { onlineStoreJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld-builders";
+import { getContactForSchema } from "@/lib/seo/contact-for-schema";
 import AppProviders from "@/components/providers/AppProviders";
 
 export { rootMetadata as metadata };
@@ -31,11 +32,13 @@ export const viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const contact = await getContactForSchema();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -43,7 +46,9 @@ export default function RootLayout({
         style={{ backgroundColor: '#f5f5f5', color: '#171717' }}
         suppressHydrationWarning
       >
-        <JsonLd data={[organizationJsonLd(), websiteJsonLd(), onlineStoreJsonLd()]} />
+        <JsonLd
+          data={[organizationJsonLd(contact), websiteJsonLd(contact), onlineStoreJsonLd()]}
+        />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

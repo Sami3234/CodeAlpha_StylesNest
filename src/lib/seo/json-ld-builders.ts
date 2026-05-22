@@ -1,6 +1,12 @@
-import { absoluteUrl, getSiteUrl, siteConfig } from '@/lib/seo/site';
+import type { SchemaContact } from '@/lib/seo/contact-for-schema';
+import { phoneToE164 } from '@/lib/seo/contact-for-schema';
+import { absoluteUrl, getSiteUrl, shopCategories, siteConfig } from '@/lib/seo/site';
 
-export function organizationJsonLd() {
+export function organizationJsonLd(contact?: SchemaContact) {
+  const phone = contact?.phone ?? siteConfig.phone;
+  const email = contact?.email ?? siteConfig.contactEmail;
+  const addressLine = contact?.address ?? siteConfig.address;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -12,15 +18,56 @@ export function organizationJsonLd() {
       width: 512,
       height: 512,
     },
-    email: siteConfig.contactEmail,
+    email,
+    telephone: phoneToE164(phone),
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Vehari',
+      addressRegion: 'Punjab',
+      addressCountry: 'PK',
+      streetAddress: addressLine,
+    },
+    contactPoint: {
+      '@type': 'ContactPoint',
+      telephone: phoneToE164(phone),
+      contactType: 'customer service',
+      email,
+      availableLanguage: ['en', 'ur'],
+      areaServed: siteConfig.country,
+    },
     areaServed: {
       '@type': 'Country',
       name: siteConfig.country,
     },
+    ...(contact?.sameAs?.length ? { sameAs: contact.sameAs } : {}),
   };
 }
 
-export function websiteJsonLd() {
+/** Helps Google understand main nav / category links (sitelinks hints). */
+export function siteNavigationJsonLd() {
+  const navItems = [
+    { name: 'Shop All Products', path: '/shop' },
+    { name: 'About & Contact', path: '/about' },
+    ...shopCategories
+      .filter((c) => c.slug !== 'all')
+      .map((c) => ({
+        name: c.label,
+        path: `/shop?category=${c.slug}`,
+      })),
+  ];
+
+  return navItems.map((item, index) => ({
+    '@context': 'https://schema.org',
+    '@type': 'SiteNavigationElement',
+    position: index + 1,
+    name: item.name,
+    url: absoluteUrl(item.path),
+  }));
+}
+
+export function websiteJsonLd(contact?: SchemaContact) {
+  const navParts = siteNavigationJsonLd();
+
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -28,6 +75,13 @@ export function websiteJsonLd() {
     url: getSiteUrl(),
     description: siteConfig.description,
     inLanguage: siteConfig.language,
+    publisher: {
+      '@type': 'Organization',
+      name: siteConfig.name,
+      logo: absoluteUrl(siteConfig.logoPath),
+      ...(contact?.sameAs?.length ? { sameAs: contact.sameAs } : {}),
+    },
+    hasPart: navParts,
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -86,6 +140,10 @@ export function productJsonLd({
     image: imageUrl,
     sku: String(id),
     category,
+    brand: {
+      '@type': 'Brand',
+      name: siteConfig.name,
+    },
     offers: {
       '@type': 'Offer',
       url,
@@ -99,6 +157,34 @@ export function productJsonLd({
         name: siteConfig.name,
       },
     },
+  };
+}
+
+export function itemListJsonLd(
+  products: { id: number; name: string; price: number }[],
+  listName = 'StylesNest Shop',
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: listName,
+    numberOfItems: products.length,
+    itemListElement: products.slice(0, 50).map((p, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: absoluteUrl(`/product/${p.id}`),
+      name: p.name,
+      item: {
+        '@type': 'Product',
+        name: p.name,
+        url: absoluteUrl(`/product/${p.id}`),
+        offers: {
+          '@type': 'Offer',
+          priceCurrency: 'PKR',
+          price: p.price.toFixed(0),
+        },
+      },
+    })),
   };
 }
 

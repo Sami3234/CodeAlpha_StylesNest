@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import ShopSeoContent from '@/components/seo/ShopSeoContent';
 import { buildPageMetadata } from '@/lib/seo/metadata';
+import { breadcrumbJsonLd, itemListJsonLd } from '@/lib/seo/json-ld-builders';
+import { getProductsForCrawl } from '@/lib/seo/products-for-crawl';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Shop All Products',
@@ -9,6 +13,22 @@ export const metadata: Metadata = buildPageMetadata({
   keywords: ['shop online Pakistan', 'StylesNest shop', 'all categories'],
 });
 
-export default function ShopLayout({ children }: { children: React.ReactNode }) {
-  return children;
+export default async function ShopLayout({ children }: { children: React.ReactNode }) {
+  const products = await getProductsForCrawl();
+
+  const jsonLd = [
+    breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Shop', path: '/shop' },
+    ]),
+    itemListJsonLd(products),
+  ];
+
+  return (
+    <>
+      <JsonLd data={jsonLd} />
+      <ShopSeoContent products={products} />
+      {children}
+    </>
+  );
 }

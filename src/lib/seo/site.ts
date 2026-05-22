@@ -5,7 +5,9 @@ export const siteConfig = {
   legalName: 'StylesNest',
   title: 'StylesNest — Online Shopping in Pakistan | Free Delivery',
   description:
-    'Shop cosmetics, electronics, clothes, jewelry, watches, bags and daily essentials at StylesNest. Authentic products, great prices, and free delivery across Pakistan with cash on delivery.',
+    'Shop cosmetics, electronics, clothes & jewelry at StylesNest Pakistan. Genuine products, free delivery & cash on delivery nationwide.',
+  phone: '+923001234567',
+  address: 'Vehari, Pakistan',
   locale: 'en_PK',
   language: 'en',
   country: 'Pakistan',
@@ -53,7 +55,7 @@ export function getSiteUrl(): string {
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.SITE_URL?.trim() ||
     process.env.AUTH_URL?.trim() ||
-    'https://stylesnest.com';
+    'https://www.stylesnest.store';
   return raw.replace(/\/$/, '');
 }
 
