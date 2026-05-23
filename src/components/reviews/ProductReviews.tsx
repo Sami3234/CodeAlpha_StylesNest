@@ -78,6 +78,10 @@ export default function ProductReviews({ productId }: Props) {
 
   const total = summary?.totalCount ?? 0;
 
+  if (loading || total === 0) {
+    return null;
+  }
+
   return (
     <motion.section
       className="pr-section"
@@ -103,13 +107,7 @@ export default function ProductReviews({ productId }: Props) {
         ) : null}
       </div>
 
-      {loading ? (
-        <p className="pr-loading" role="status">
-          Loading reviews…
-        </p>
-      ) : null}
-
-      {!loading && summary && total > 0 ? (
+      {summary && total > 0 ? (
         <div className="pr-bars" aria-hidden>
           {([5, 4, 3, 2, 1] as const).map((star) => {
             const count = summary.distribution[star] ?? 0;
@@ -127,7 +125,7 @@ export default function ProductReviews({ productId }: Props) {
         </div>
       ) : null}
 
-      {!loading && reviews.length > 0 ? (
+      {reviews.length > 0 ? (
         <div className="pr-list">
           {reviews.map((r, index) => (
             <motion.article
@@ -174,14 +172,6 @@ export default function ProductReviews({ productId }: Props) {
         </div>
       ) : null}
 
-      {!loading && total === 0 ? (
-        <div className="pr-empty">
-          <div className="pr-empty__icon" aria-hidden>
-            ★
-          </div>
-          <p>No reviews yet. Be the first after your order is delivered!</p>
-        </div>
-      ) : null}
     </motion.section>
   );
 }

@@ -12,6 +12,11 @@ import {
   isClothesSizeRequired,
 } from '@/lib/clothes-options';
 import {
+  categoryColorsRequired,
+  getProductAvailableColors,
+  productColorsDisplayLabel,
+} from '@/lib/product-colors';
+import {
   isShoesCategory,
   shoesGenderLabel,
   shoesSizesDisplayLabel,
@@ -109,22 +114,42 @@ export function ShoesGenderBadge({
 
 /** Available colors — display only */
 export function ClothesColorsLine({ product }: { product: Product }) {
+  const colors = getProductAvailableColors(product);
+  if (colors.length === 0) return null;
+
   if (isShoesCategory(product.category) && product.shoesOptions) {
     const display = shoesColorsDisplayLabel(product.shoesOptions);
-    if (!display) return null;
-    return (
-      <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#4a5568', textAlign: 'left' }}>
-        <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
-        {display.value}
-      </p>
-    );
+    if (display) {
+      return (
+        <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#4a5568', textAlign: 'left' }}>
+          <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+          {display.value}
+        </p>
+      );
+    }
   }
 
-  if (!isClothesCategory(product.category) || !product.clothesOptions) {
-    return null;
+  if (isClothesCategory(product.category) && product.clothesOptions) {
+    const display = clothesColorsDisplayLabel(product.clothesOptions);
+    if (display) {
+      return (
+        <p
+          style={{
+            margin: 0,
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#4a5568',
+            textAlign: 'left',
+          }}
+        >
+          <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+          {display.value}
+        </p>
+      );
+    }
   }
 
-  const display = clothesColorsDisplayLabel(product.clothesOptions);
+  const display = productColorsDisplayLabel(colors);
   if (!display) return null;
 
   return (
@@ -337,13 +362,13 @@ export function ClothesColorSelector({
   value: string;
   onChange: (color: string) => void;
 }) {
-  const colors = isShoesCategory(product.category)
-    ? (product.shoesOptions?.colors?.filter((c) => c.trim()) ?? [])
-    : (product.clothesOptions?.colors?.filter((c) => c.trim()) ?? []);
+  const colors = getProductAvailableColors(product);
 
-  if ((!isClothesCategory(product.category) && !isShoesCategory(product.category)) || colors.length === 0) {
+  if (colors.length === 0) {
     return null;
   }
+
+  const colorRequired = categoryColorsRequired(product.category) || colors.length > 0;
 
   return (
     <div>
@@ -351,7 +376,7 @@ export function ClothesColorSelector({
         className="block text-[15px] font-semibold text-[#2d3748] mb-2.5"
       >
         Select Color
-        <span className="text-[#e53e3e] ml-1">*</span>
+        {colorRequired ? <span className="text-[#e53e3e] ml-1">*</span> : null}
       </label>
       <div className="flex flex-wrap gap-2.5">
         {colors.map((color) => {

@@ -11,8 +11,6 @@ import {
   categoryShowsClothesPanel,
   categoryShowsGender,
   categoryShowsShoesPanel,
-  CLOTHES_COLOR_PRESETS,
-  SHOE_COLOR_PRESETS,
   SHOE_SIZE_OPTIONS,
 } from '@/lib/category-form-fields';
 import type { AdminProductTFunction } from '@/lib/admin/product-form-shared';
@@ -25,8 +23,6 @@ type Props = {
   setShoesOptions: React.Dispatch<React.SetStateAction<ShoesOptions>>;
   toggleClothesSize: (size: string) => void;
   toggleShoeSize: (size: string) => void;
-  toggleClothesColor: (color: string) => void;
-  toggleShoeColor: (color: string) => void;
   fieldError?: string;
   onClearError: () => void;
   t: AdminProductTFunction;
@@ -40,8 +36,6 @@ export default function ProductFormCategoryPanel({
   setShoesOptions,
   toggleClothesSize,
   toggleShoeSize,
-  toggleClothesColor,
-  toggleShoeColor,
   fieldError,
   onClearError,
   t,
@@ -160,31 +154,6 @@ export default function ProductFormCategoryPanel({
               })}
             </div>
           </div>
-
-          <div className="pf-category-field">
-            <label className="pf-category-label">
-              {t('admin.form.clothesColors')}
-              <span className="pf-badge pf-badge-optional" style={{ marginLeft: 8 }}>
-                Optional
-              </span>
-            </label>
-            <p className="pf-category-hint">{t('admin.form.clothesColorsHint')}</p>
-            <div className="pf-chip-row">
-              {CLOTHES_COLOR_PRESETS.map((color) => {
-                const selected = (clothesOptions.colors ?? []).includes(color);
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => toggleClothesColor(color)}
-                    className={`pf-color-btn${selected ? ' pf-color-btn--active' : ''}`}
-                  >
-                    {color}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </>
       ) : null}
 
@@ -211,35 +180,6 @@ export default function ProductFormCategoryPanel({
                     className={`pf-size-btn${selected ? ' pf-size-btn--active' : ''}`}
                   >
                     {size}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="pf-category-field">
-            <label className="pf-category-label">
-              {t('admin.form.shoesColors', { defaultValue: 'Shoe colors' })}
-              <span className="pf-badge pf-badge-optional" style={{ marginLeft: 8 }}>
-                Optional
-              </span>
-            </label>
-            <p className="pf-category-hint">
-              {t('admin.form.shoesColorsHint', {
-                defaultValue: 'Colors customers can choose when ordering.',
-              })}
-            </p>
-            <div className="pf-chip-row">
-              {SHOE_COLOR_PRESETS.map((color) => {
-                const selected = (shoesOptions.colors ?? []).includes(color);
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => toggleShoeColor(color)}
-                    className={`pf-color-btn${selected ? ' pf-color-btn--active' : ''}`}
-                  >
-                    {color}
                   </button>
                 );
               })}

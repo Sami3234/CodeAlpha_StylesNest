@@ -652,7 +652,7 @@ export default function UnsubmittedOrdersPage() {
   // Export to Excel function
   const exportToExcel = (ordersToExport: AbandonedOrder[]) => {
     if (ordersToExport.length === 0) {
-      alert(t('admin.orders.export.noOrdersSelected'));
+      showToast(t('admin.orders.export.noOrdersSelected'), 'error');
       return;
     }
 

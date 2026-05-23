@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import AppToaster from '@/components/ui/AppToaster';
 import { ProductProvider } from '@/context/ProductContext';
 import { OrderProvider } from '@/context/OrderProvider';
 import { CartProvider } from '@/context/CartContext';
@@ -15,17 +16,20 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   return (
     <NetworkProviders>
       <ContactSettingsProvider>
-      <AuthProvider>
-        <LoginModalProvider>
-          <PendingReviewsProvider>
-            <ProductProvider>
-              <CartProvider>
-                <OrderProvider>{children}</OrderProvider>
-              </CartProvider>
-            </ProductProvider>
-          </PendingReviewsProvider>
-        </LoginModalProvider>
-      </AuthProvider>
+        <AuthProvider>
+          <LoginModalProvider>
+            <PendingReviewsProvider>
+              <ProductProvider>
+                <CartProvider>
+                  <OrderProvider>
+                    {children}
+                    <AppToaster variant="store" />
+                  </OrderProvider>
+                </CartProvider>
+              </ProductProvider>
+            </PendingReviewsProvider>
+          </LoginModalProvider>
+        </AuthProvider>
       </ContactSettingsProvider>
     </NetworkProviders>
   );

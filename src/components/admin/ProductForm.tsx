@@ -18,6 +18,7 @@ import {
 import { isShoesCategory } from '@/lib/shoes-options';
 import { DEFAULT_SHOES_OPTIONS, type ShoesOptions } from '@/lib/shoes-options';
 import { adminProductT, type AdminProductTFunction, isValidProductImageUrl } from '@/lib/admin/product-form-shared';
+import ColorListEditor from '@/components/admin/ColorListEditor';
 import ProductFormMetaFields from '@/components/admin/ProductFormMetaFields';
 import ProductFormCategoryPanel from '@/components/admin/ProductFormCategoryPanel';
 import ProductFormImages, {
@@ -31,6 +32,11 @@ import {
   tagsToInput,
   type ProductMeta,
 } from '@/lib/product-meta';
+import {
+  categoryColorsRequired,
+  getInitialProductColors,
+  normalizeColorList,
+} from '@/lib/product-colors';
 import './product-form.css';
 
 export interface ProductFormProps {
@@ -137,8 +143,29 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
     ...product?.productMeta,
   }));
   const [tagsInput, setTagsInput] = useState(() => tagsToInput(product?.productMeta?.tags));
+  const [productColors, setProductColors] = useState<string[]>(() =>
+    getInitialProductColors(product),
+  );
 
   const t = tProp ?? adminProductT;
+
+  const updateProductColors = (colors: string[]) => {
+    const normalized = normalizeColorList(colors);
+    setProductColors(normalized);
+    setProductMeta((prev) => ({
+      ...prev,
+      availableColors: normalized.length ? normalized : undefined,
+    }));
+    if (isClothesCategory(formData.category)) {
+      setClothesOptions((prev) => ({ ...prev, colors: normalized }));
+    }
+    if (isShoesCategory(formData.category)) {
+      setShoesOptions((prev) => ({ ...prev, colors: normalized }));
+    }
+    if (fieldErrors.productColors) {
+      setFieldErrors((prev) => ({ ...prev, productColors: '' }));
+    }
+  };
 
   const toggleClothesSize = (size: string) => {
     setClothesOptions((prev) => {
@@ -148,33 +175,11 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
     });
   };
 
-  const toggleClothesColor = (color: string) => {
-    setClothesOptions((prev) => {
-      const colors = prev.colors ?? [];
-      const has = colors.includes(color);
-      return {
-        ...prev,
-        colors: has ? colors.filter((c) => c !== color) : [...colors, color],
-      };
-    });
-  };
-
   const toggleShoeSize = (size: string) => {
     setShoesOptions((prev) => {
       const has = prev.sizes.includes(size);
       const sizes = has ? prev.sizes.filter((s) => s !== size) : [...prev.sizes, size];
       return { ...prev, sizes };
-    });
-  };
-
-  const toggleShoeColor = (color: string) => {
-    setShoesOptions((prev) => {
-      const colors = prev.colors ?? [];
-      const has = colors.includes(color);
-      return {
-        ...prev,
-        colors: has ? colors.filter((c) => c !== color) : [...colors, color],
-      };
     });
   };
 
@@ -232,11 +237,24 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
         formData.category,
         clothesOptions,
         shoesOptions,
+        productColors,
       );
       if (!catCheck.valid) {
         newErrors.push(catCheck.error || 'Complete category options');
         newFieldErrors.clothesOptions = catCheck.error || 'Required';
+        if (catCheck.error?.toLowerCase().includes('color')) {
+          newFieldErrors.productColors = catCheck.error;
+        }
       }
+    }
+
+    if (
+      categoryColorsRequired(formData.category) &&
+      normalizeColorList(productColors).length === 0
+    ) {
+      const errorMsg = 'Add at least one color.';
+      newErrors.push(errorMsg);
+      newFieldErrors.productColors = errorMsg;
     }
 
     setErrors(newErrors);
@@ -285,6 +303,8 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
         .map((entry) => entry.url.trim())
         .filter((url) => url && isValidProductImageUrl(url))
         .slice(0, MAX_PRODUCT_IMAGES);
+      const savedColors = normalizeColorList(productColors);
+
       const productData: Partial<Product> = {
         currentPrice: formData.currentPrice,
         originalPrice: formData.originalPrice,
@@ -298,20 +318,21 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
         productMeta: normalizeProductMetaForSave({
           ...productMeta,
           tags: parseTagsInput(tagsInput),
+          availableColors: savedColors.length ? savedColors : undefined,
         }),
       };
       if (isShoesCategory(formData.category)) {
         productData.shoesOptions = {
           ...shoesOptions,
           sizes: [...shoesOptions.sizes],
-          colors: shoesOptions.colors ?? [],
+          colors: savedColors,
         };
         productData.clothesOptions = undefined;
       } else if (categoryShowsGender(formData.category) || isClothesCategory(formData.category)) {
         productData.clothesOptions = {
           ...clothesOptions,
           sizes: (clothesOptions.sizes ?? []).map((s) => s.toUpperCase()),
-          colors: clothesOptions.colors ?? [],
+          colors: isClothesCategory(formData.category) ? savedColors : clothesOptions.colors ?? [],
         };
         productData.shoesOptions = undefined;
       }
@@ -436,13 +457,26 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
                 setShoesOptions={setShoesOptions}
                 toggleClothesSize={toggleClothesSize}
                 toggleShoeSize={toggleShoeSize}
-                toggleClothesColor={toggleClothesColor}
-                toggleShoeColor={toggleShoeColor}
                 fieldError={fieldErrors.clothesOptions}
                 onClearError={() =>
                   setFieldErrors((prev) => ({ ...prev, clothesOptions: '' }))
                 }
                 t={t}
+              />
+
+              <ColorListEditor
+                colors={productColors}
+                onChange={updateProductColors}
+                required={categoryColorsRequired(formData.category)}
+                label={t('admin.form.productColors', { defaultValue: 'Product colors' })}
+                hint={t('admin.form.productColorsHint', {
+                  defaultValue:
+                    'Type each color name and press Add. Required for clothes and shoes; optional for other categories.',
+                })}
+                error={fieldErrors.productColors}
+                onClearError={() =>
+                  setFieldErrors((prev) => ({ ...prev, productColors: '' }))
+                }
               />
 
               {/* Prices Row */}

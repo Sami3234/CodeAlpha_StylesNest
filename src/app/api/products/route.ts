@@ -8,6 +8,11 @@ import { isShoesCategory, parseShoesOptions } from '@/lib/shoes-options';
 import { normalizeProductMetaForSave, parseProductMeta } from '@/lib/product-meta';
 import { apiErrorResponse } from '@/lib/safe-errors';
 import { hasValidAdminSession, requireAdminSession } from '@/lib/require-admin-session';
+import {
+  applyRealSoldCounts,
+  getSoldCountsMapFromOrders,
+  repairSoldCountsInBackground,
+} from '@/lib/product-sold-count';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +68,13 @@ export async function GET(request: NextRequest) {
           ORDER BY created_at DESC
         `;
 
-    const products = rows.map((row) => mapProductRow(row as Record<string, unknown>));
+    const soldMap = await getSoldCountsMapFromOrders();
+    repairSoldCountsInBackground();
+
+    const products = applyRealSoldCounts(
+      rows.map((row) => mapProductRow(row as Record<string, unknown>)),
+      soldMap,
+    );
 
     return NextResponse.json(
       { products },
@@ -99,7 +110,6 @@ export async function POST(request: NextRequest) {
       image,
       images,
       freeDelivery,
-      soldCount,
       category,
       features,
       pricingTiers,
@@ -176,7 +186,7 @@ export async function POST(request: NextRequest) {
         ${image},
         ${JSON.stringify(images || [])},
         ${freeDelivery},
-        ${soldCount || 0},
+        0,
         ${category},
         ${JSON.stringify(features?.en || [])},
         ${JSON.stringify(features?.ar || [])},
@@ -216,7 +226,6 @@ export async function PUT(request: NextRequest) {
       image,
       images,
       freeDelivery,
-      soldCount,
       category,
       features,
       pricingTiers,
@@ -252,7 +261,6 @@ export async function PUT(request: NextRequest) {
         image = ${image},
         images = ${JSON.stringify(images || [])},
         free_delivery = ${freeDelivery},
-        sold_count = ${soldCount || 0},
         category = ${category},
         features_en = ${JSON.stringify(features?.en || [])},
         features_ar = ${JSON.stringify(features?.ar || [])},

@@ -34,6 +34,7 @@ import {
 import { getLineTotal, getUnitPrice } from '@/lib/product-pricing';
 import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
 import { saveOrderWhatsAppConfirm } from '@/lib/order-whatsapp-storage';
+import { notifyError } from '@/lib/notify';
 import '@/components/product-page.css';
 
 function sanitizeCustomerField(raw: string, maxLen: number): string {
@@ -59,7 +60,7 @@ function CheckoutPageInner() {
   const { status: authStatus } = useSession();
   const { openLogin } = useLoginModal();
   const { lines, hydrated, removeLinesFromCart } = useCart();
-  const { products, loading: productsLoading } = useProducts();
+  const { products, loading: productsLoading, reloadProducts } = useProducts();
   const { addOrder } = useOrders();
 
   const [bootstrapped, setBootstrapped] = useState(false);
@@ -71,6 +72,11 @@ function CheckoutPageInner() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [storeWhatsApp, setStoreWhatsApp] = useState('');
+
+  const showFormError = useCallback((message: string) => {
+    setError(message);
+    notifyError(message);
+  }, []);
 
   useSavedCustomerDetails(setFormData, authStatus === 'authenticated');
 
@@ -159,12 +165,12 @@ function CheckoutPageInner() {
     const address = sanitizeCustomerField(formData.address, 500);
 
     if (!fullName || !phone || !city || !address) {
-      setError('Please fill all required fields.');
+      showFormError('Please fill all required fields.');
       return;
     }
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 10) {
-      setError('Enter a valid WhatsApp number (at least 10 digits).');
+      showFormError('Enter a valid WhatsApp number (at least 10 digits).');
       return;
     }
 
@@ -175,13 +181,13 @@ function CheckoutPageInner() {
     }
 
     if (checkoutRows.length === 0) {
-      setError('No valid items to order. Return to cart and try again.');
+      showFormError('No valid items to order. Return to cart and try again.');
       return;
     }
 
     for (const { line, product } of checkoutRows) {
       if (isOutOfStock(product)) {
-        setError(`${getProductTitle(product)} is out of stock.`);
+        showFormError(`${getProductTitle(product)} is out of stock.`);
         return;
       }
       const stockCheck = validateStockForQuantity(product, lines, line.quantity, {
@@ -189,7 +195,7 @@ function CheckoutPageInner() {
         selectedColor: line.selectedColor,
       });
       if (!stockCheck.ok) {
-        setError(`${getProductTitle(product)}: ${stockCheck.error}`);
+        showFormError(`${getProductTitle(product)}: ${stockCheck.error}`);
         return;
       }
       const result = validateCartLineOptions(product, {
@@ -197,7 +203,9 @@ function CheckoutPageInner() {
         selectedColor: line.selectedColor,
       });
       if (!result.valid) {
-        setError(`${getProductTitle(product)}: ${result.error ?? 'Please select size and color.'}`);
+        showFormError(
+          `${getProductTitle(product)}: ${result.error ?? 'Please select size and color.'}`,
+        );
         return;
       }
     }
@@ -239,9 +247,11 @@ function CheckoutPageInner() {
       });
 
       if (!placed) {
-        setError(orderError ?? 'Order could not be saved. Please try again.');
+        showFormError(orderError ?? 'Order could not be saved. Please try again.');
         return;
       }
+
+      void reloadProducts();
 
       const waPhone = storeWhatsApp.replace(/\D/g, '') || digits;
       const waMessage = buildOrderWhatsAppMessage({

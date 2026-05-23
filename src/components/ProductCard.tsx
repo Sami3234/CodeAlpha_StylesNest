@@ -14,6 +14,7 @@ import ClothesStitchBadge, { ClothesMetaRow, ShoesGenderBadge } from '@/componen
 import { ProductShortSummary } from '@/components/ProductMetaDisplay';
 import { productNeedsCartOptions } from '@/lib/cart-line-options';
 import { isOutOfStock, validateStockForAdd } from '@/lib/product-stock';
+import { notifyError, notifySuccess } from '@/lib/notify';
 
 interface ProductCardProps {
   product: Product;
@@ -261,10 +262,11 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               }
               const check = validateStockForAdd(product, lines, 1);
               if (!check.ok) {
-                alert(check.error);
+                notifyError(check.error ?? 'Could not add to cart.');
                 return;
               }
               addToCart(product.id, check.quantity);
+              notifySuccess('Added to cart');
             }}
             style={{
               flexShrink: 0,
@@ -298,10 +300,12 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         onConfirm={(options, quantity) => {
           const check = validateStockForAdd(product, lines, quantity, options);
           if (!check.ok) {
-            alert(check.error);
+            notifyError(check.error ?? 'Could not add to cart.');
             return;
           }
           addToCart(product.id, check.quantity, options);
+          notifySuccess('Added to cart');
+          setOptionsModalOpen(false);
         }}
       />
     </motion.div>

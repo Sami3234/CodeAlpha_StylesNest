@@ -15,13 +15,23 @@ import { getCurrentTimeInTimezone, getTodayDateInTimezone } from '@/lib/order-da
 import { ensureOrdersAdminColumns } from '@/lib/orders-schema';
 import { mapOrderRow } from '@/lib/admin-orders-query';
 import { logAdminAction } from '@/lib/admin-audit';
+import { nextOrderId } from '@/lib/next-order-id';
+import {
+  incrementSoldCountForOrderLines,
+  isCancelledOrderStatus,
+  reconcileSoldCountChange,
+} from '@/lib/product-sold-count';
+import { parseOrderProducts } from '@/lib/normalize-order-payload';
 
 export const dynamic = 'force-dynamic';
 
-async function nextOrderId(): Promise<string> {
-  const rows = await sql`SELECT COUNT(*)::int AS c FROM orders`;
-  const count = Number(rows[0]?.c ?? 0);
-  return `#QE${String(count + 1).padStart(4, '0')}`;
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code: string }).code === '23505'
+  );
 }
 
 function clientIp(request: NextRequest): string | null {
@@ -144,7 +154,7 @@ export async function POST(request: NextRequest) {
     }));
 
     const serverTotal = priced.total;
-    const id = typeof body.id === 'string' && body.id.trim() ? body.id.trim() : await nextOrderId();
+    const id = await nextOrderId();
 
     const orderDate =
       typeof date === 'string' && date.trim()
@@ -187,11 +197,27 @@ export async function POST(request: NextRequest) {
 
     await decrementStockForOrderLines(priced.products);
 
+    const orderStatus = String(status || 'pending');
+    if (!isCancelledOrderStatus(orderStatus)) {
+      await incrementSoldCountForOrderLines(priced.products);
+    }
+
     const order = mapOrderRow(result[0] as Record<string, unknown>);
 
     return NextResponse.json({ order }, { status: 201 });
   } catch (error) {
-    return apiErrorResponse({ message: 'Failed to create order', status: 500, cause: error });
+    if (isDuplicateKeyError(error)) {
+      return apiErrorResponse({
+        message: 'Order reference conflict. Please submit again.',
+        status: 409,
+        cause: error,
+      });
+    }
+    return apiErrorResponse({
+      message: 'We could not place your order. Please try again or contact support.',
+      status: 500,
+      cause: error,
+    });
   }
 }
 
@@ -240,6 +266,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const previousStatus = String(row.status ?? '');
+    const previousProducts = parseOrderProducts(row.products);
 
     const result = await sql`
       UPDATE orders
@@ -259,6 +286,11 @@ export async function PUT(request: NextRequest) {
       WHERE id = ${id}
       RETURNING *
     `;
+
+    await reconcileSoldCountChange(
+      { status: previousStatus, products: previousProducts },
+      { status: normalized.status, products: normalized.products },
+    );
 
     await logAdminAction({
       adminId: admin.adminId,
@@ -292,15 +324,28 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
+    const existing = await sql`
+      SELECT status, products FROM orders WHERE id = ${id} LIMIT 1
+    `;
+
+    if (!existing.length) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    const prev = existing[0] as { status: string; products: unknown };
+    const previousProducts = parseOrderProducts(prev.products);
+    const previousStatus = String(prev.status ?? '');
+
     const result = await sql`
       DELETE FROM orders
       WHERE id = ${id}
       RETURNING id
     `;
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-    }
+    await reconcileSoldCountChange(
+      { status: previousStatus, products: previousProducts },
+      { status: 'cancelled', products: [] },
+    );
 
     await logAdminAction({
       adminId: admin.adminId,

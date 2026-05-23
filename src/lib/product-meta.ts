@@ -3,6 +3,8 @@ export interface ProductMeta {
   stockQuantity?: number;
   shortSummary?: string;
   tags?: string[];
+  /** Custom color names customers can choose (all categories). */
+  availableColors?: string[];
   brand?: string;
   fabric?: string;
   weightGrams?: number;
@@ -32,6 +34,11 @@ export function parseProductMeta(raw: unknown): ProductMeta | undefined {
     .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
     .map((t) => t.trim());
 
+  const colorsRaw = Array.isArray(o.availableColors) ? o.availableColors : [];
+  const availableColors = colorsRaw
+    .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+    .map((c) => c.trim());
+
   let stockQuantity: number | undefined;
   if ('stockQuantity' in o && o.stockQuantity != null && o.stockQuantity !== '') {
     if (typeof o.stockQuantity === 'number' && !Number.isNaN(o.stockQuantity)) {
@@ -51,6 +58,7 @@ export function parseProductMeta(raw: unknown): ProductMeta | undefined {
     stockQuantity,
     shortSummary: typeof o.shortSummary === 'string' ? o.shortSummary.trim() : '',
     tags,
+    availableColors: availableColors.length ? availableColors : undefined,
     brand: typeof o.brand === 'string' ? o.brand.trim() : '',
     fabric: typeof o.fabric === 'string' ? o.fabric.trim() : '',
     weightGrams,
@@ -80,6 +88,9 @@ export function normalizeProductMetaForSave(meta: ProductMeta): ProductMeta {
         : undefined,
     shortSummary: meta.shortSummary?.trim() || undefined,
     tags: meta.tags?.length ? meta.tags.map((t) => t.trim()).filter(Boolean) : undefined,
+    availableColors: meta.availableColors?.length
+      ? meta.availableColors.map((c) => c.trim()).filter(Boolean)
+      : undefined,
     brand: meta.brand?.trim() || undefined,
     fabric: meta.fabric?.trim() || undefined,
     weightGrams:

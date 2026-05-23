@@ -1014,7 +1014,7 @@ function AdminOrdersContent() {
   // Export to Excel function
   const exportToExcel = (ordersToExport: Order[]) => {
     if (ordersToExport.length === 0) {
-      alert(t('admin.orders.export.noOrdersSelected'));
+      showToast(t('admin.orders.export.noOrdersSelected'), 'error');
       return;
     }
 

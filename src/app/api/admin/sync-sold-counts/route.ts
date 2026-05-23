@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { apiErrorResponse } from '@/lib/safe-errors';
 import { requireAdminSession } from '@/lib/require-admin-session';
+import { apiErrorResponse } from '@/lib/safe-errors';
 import { recalculateAllSoldCountsFromOrders } from '@/lib/product-sold-count';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * @deprecated Random fake sold counts removed.
- * Rebuilds sold_count from real non-cancelled orders only.
- */
-export async function GET(request: NextRequest) {
-  const admin = await requireAdminSession(request);
-  if (!admin.ok) return admin.response;
-
+/** Admin: rebuild sold_count from all non-cancelled orders. */
+export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
+
     const result = await recalculateAllSoldCountsFromOrders();
     return NextResponse.json({
       success: true,
-      message: `Synced real sold counts for ${result.productsUpdated} products from orders.`,
+      message: `Synced sold counts for ${result.productsUpdated} products.`,
       productsUpdated: result.productsUpdated,
     });
   } catch (error) {
@@ -27,8 +24,4 @@ export async function GET(request: NextRequest) {
       cause: error,
     });
   }
-}
-
-export async function POST(request: NextRequest) {
-  return GET(request);
 }

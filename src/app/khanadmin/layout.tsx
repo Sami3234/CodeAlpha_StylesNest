@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import AdminSidebar from '@/components/AdminSidebar';
 import { ToastProvider } from '@/components/Toast';
-import { Toaster } from 'sonner';
+import AppToaster from '@/components/ui/AppToaster';
 import AdminLoading from '@/components/admin/AdminLoading';
 import ConnectionProblem from '@/components/network/ConnectionProblem';
 import { clientFetch, isLikelyNetworkError, NetworkError } from '@/lib/client-fetch';
@@ -120,7 +120,7 @@ export default function AdminLayout({
 
   return (
     <ToastProvider>
-      <Toaster position="top-right" richColors closeButton duration={5000} />
+      <AppToaster variant="admin" />
       <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 100 }}>
           <Header />

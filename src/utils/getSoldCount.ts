@@ -1,44 +1,50 @@
 /**
- * Utility function to calculate actual sold count for a product from orders
- * Matches product titles (both English and Arabic) with order product names
+ * Calculate sold count for a product from orders (client-side fallback).
+ * Prefer product.soldCount from the database when available.
  */
 
 import type { Order } from '@/types/order';
 import { Product } from '@/data/products';
-import { getProductTitle } from './getProductText';
+import {
+  aggregateQuantitiesByProductId,
+  isCancelledOrderStatus,
+} from '@/lib/product-sold-count';
 
-/**
- * Calculate actual sold count for a product from orders
- * Only counts orders that are not cancelled
- */
 export function getSoldCount(product: Product, orders: Order[]): number {
-  if (!product || !orders || orders.length === 0) {
-    return 0;
+  if (!product?.id || !orders?.length) {
+    return product?.soldCount ?? 0;
   }
 
-  // Get product title in English
-  const productTitle = getProductTitle(product);
+  const productId = Math.floor(Number(product.id));
+  if (!Number.isFinite(productId) || productId < 1) {
+    return product.soldCount ?? 0;
+  }
 
-  // Count sold items from non-cancelled orders
   let soldCount = 0;
 
-  orders.forEach(order => {
-    // Skip cancelled orders
-    if (order.status === 'cancelled') {
-      return;
-    }
-
-    order.products.forEach(orderProduct => {
-      // Match by product name (English only)
-      if (
-        orderProduct.name === productTitle ||
-        orderProduct.name.trim() === productTitle.trim()
-      ) {
-        soldCount += orderProduct.quantity;
+  for (const order of orders) {
+    if (isCancelledOrderStatus(order.status)) continue;
+    for (const line of order.products) {
+      const lineId =
+        typeof line.productId === 'number' ? Math.floor(line.productId) : 0;
+      if (lineId === productId) {
+        soldCount += Math.floor(Number(line.quantity)) || 0;
       }
-    });
-  });
+    }
+  }
 
   return soldCount;
+}
+
+/** Sum sold quantities across orders (all products). */
+export function getSoldTotalsFromOrders(orders: Order[]): Map<number, number> {
+  const totals = new Map<number, number>();
+  for (const order of orders) {
+    if (isCancelledOrderStatus(order.status)) continue;
+    for (const [id, qty] of aggregateQuantitiesByProductId(order.products)) {
+      totals.set(id, (totals.get(id) ?? 0) + qty);
+    }
+  }
+  return totals;
 }
 

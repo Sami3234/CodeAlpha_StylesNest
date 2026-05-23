@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:bootstrap": "npx tsx scripts/bootstrap-neon.ts"
+    "db:bootstrap": "npx tsx scripts/bootstrap-neon.ts",
+    "test:api": "node scripts/test-apis.mjs",
+    "sync:sold-counts": "node scripts/sync-sold-counts.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

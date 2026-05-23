@@ -41,6 +41,7 @@ import {
   type PaymentMethod,
 } from '@/lib/payment-methods';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import { notifyError, notifySuccess } from '@/lib/notify';
 import '@/components/product-page.css';
 
 interface ProductPageProps {
@@ -478,7 +479,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     // Validate form
     if (!formData.fullName || !formData.mobile || !formData.city || !formData.address) {
-      alert('Please fill all required fields');
+      notifyError('Please fill all required fields');
       return;
     }
 
@@ -499,7 +500,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     if (isClothes || isShoes) {
       const optionsCheck = validateCartLineOptions(product, { selectedSize, selectedColor });
       if (!optionsCheck.valid) {
-        alert(optionsCheck.error ?? 'Please select size and color.');
+        notifyError(optionsCheck.error ?? 'Please select size and color.');
         return;
       }
     }
@@ -525,18 +526,18 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     const quantity = parseInt(formData.quantity, 10);
     if (!Number.isFinite(quantity) || quantity < 1) {
-      alert('Please enter a valid quantity');
+      notifyError('Please enter a valid quantity');
       return;
     }
 
     if (isOutOfStock(product)) {
-      alert('This product is out of stock.');
+      notifyError('This product is out of stock.');
       return;
     }
 
     const stockCheck = validateStockForQuantity(product, [], quantity);
     if (!stockCheck.ok) {
-      alert(stockCheck.error);
+      notifyError(stockCheck.error ?? 'Not enough stock for this quantity.');
       return;
     }
 
@@ -629,9 +630,11 @@ export default function ProductPage({ params }: ProductPageProps) {
     });
 
     if (!placedOrder) {
-      alert(orderError ?? 'Could not place order. Please try again or contact support.');
+      notifyError(orderError ?? 'Could not place order. Please try again or contact support.');
       return;
     }
+
+    void reloadProducts();
 
     setLastOrderId(placedOrder.id);
     const waPhone = storeWhatsApp.replace(/\D/g, '') || formData.mobile.replace(/\D/g, '');
@@ -660,7 +663,9 @@ export default function ProductPage({ params }: ProductPageProps) {
       console.error('Error saving recent orders:', error);
     }
 
-    // Show success message and scroll to top
+    notifySuccess('Order placed successfully!', {
+      description: 'Confirm on WhatsApp to speed up processing.',
+    });
     setOrderSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
@@ -1616,7 +1621,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                   </div>
                   <div className="product-price-right">
                     <ClothesGenderNearPrice product={product} />
-                    <span className="product-sold-badge">🔥 {actualSoldCount} Sold</span>
+                    {actualSoldCount > 0 ? (
+                      <span className="product-sold-badge">🔥 {actualSoldCount} Sold</span>
+                    ) : null}
                   </div>
                 </div>
               </motion.div>

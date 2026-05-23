@@ -22,21 +22,6 @@ export const SHOE_SIZE_OPTIONS = [
   '46',
 ] as const;
 
-export const SHOE_COLOR_PRESETS = [
-  'Black',
-  'White',
-  'Brown',
-  'Tan',
-  'Navy',
-  'Grey',
-  'Red',
-  'Blue',
-  'Pink',
-  'Beige',
-  'Green',
-  'Multi',
-] as const;
-
 export const DEFAULT_SHOES_OPTIONS: ShoesOptions = {
   gender: 'women',
   sizes: ['38', '39', '40'],

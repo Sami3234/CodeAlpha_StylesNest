@@ -11,6 +11,8 @@ import {
 } from 'react';
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
+import { friendlyErrorMessage } from '@/lib/notify';
+import { clientMessageFromApi } from '@/lib/safe-errors';
 import type { Order } from '@/types/order';
 import type { AdminOrderStats } from '@/lib/admin-orders-query';
 import type { FetchErrorKind } from '@/lib/is-network-error';
@@ -484,11 +486,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           return { order: data.order as Order };
         }
         const errBody = await response.json().catch(() => ({}));
-        const message =
-          typeof errBody.error === 'string' ? errBody.error : 'Failed to update order';
+        const message = friendlyErrorMessage(
+          clientMessageFromApi(errBody, 'Failed to update order'),
+          'Failed to update order',
+        );
         return { order: null, error: message };
       } catch {
-        return { order: null, error: 'Network error while placing order' };
+        return {
+          order: null,
+          error: friendlyErrorMessage('Network error while placing order'),
+        };
       }
     }
 
@@ -514,10 +521,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         return { order: data.order as Order };
       }
       const errBody = await response.json().catch(() => ({}));
-      const message = typeof errBody.error === 'string' ? errBody.error : 'Failed to place order';
+      const message = friendlyErrorMessage(
+        clientMessageFromApi(errBody, 'Failed to place order'),
+        'Failed to place order',
+      );
       return { order: null, error: message };
     } catch {
-      return { order: null, error: 'Network error while placing order' };
+      return {
+        order: null,
+        error: friendlyErrorMessage('Network error while placing order'),
+      };
     }
   };
 

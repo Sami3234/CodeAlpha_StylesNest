@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { notifyError, notifySuccess } from '@/lib/notify';
 
 export default function UploadImagesPage() {
   const [uploading, setUploading] = useState(false);
@@ -20,12 +21,12 @@ export default function UploadImagesPage() {
       const data = await response.json();
       if (data.success) {
         setResults((prev) => ({ ...prev, [imageName]: data.url }));
-        alert(`${imageName} uploaded successfully!\nURL: ${data.url}`);
+        notifySuccess(`${imageName} uploaded`, { description: data.url });
       } else {
-        alert(`Error: ${data.error}`);
+        notifyError(data.error ?? 'Upload failed');
       }
-    } catch (error) {
-      alert(`Error uploading ${imageName}: ${error}`);
+    } catch {
+      notifyError(`Could not upload ${imageName}. Please try again.`);
     } finally {
       setUploading(false);
     }
