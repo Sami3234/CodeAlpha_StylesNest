@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest) {
 
     const allRows = await sql`SELECT id FROM products`;
     const existing = new Set(
-      allRows.map((r) => Number((r as { id: number }).id))
+      allRows.map((r: Record<string, unknown>) => Number(r.id))
     );
     const validIds = requested.filter((id) => existing.has(id));
 

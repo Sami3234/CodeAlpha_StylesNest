@@ -9,6 +9,7 @@ import { cities, getCityName } from '@/data/products';
 import * as XLSX from 'xlsx';
 import AdminLoading from '@/components/admin/AdminLoading';
 import AdminThumbImage from '@/components/admin/AdminThumbImage';
+import AdminPkrAmount from '@/components/admin/AdminPkrAmount';
 import OrderDateRangeBar from '@/components/admin/OrderDateRangeBar';
 import OrderWorkflowActions from '@/components/admin/OrderWorkflowActions';
 import { getProductImageByName } from '@/lib/admin-product-image';
@@ -371,7 +372,7 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
                       Quantity: x{product.quantity}
                     </p>
                     <p style={{ fontSize: '14px', fontWeight: '600', color: '#10B981' }}>
-                      {product.price * product.quantity} PKR
+                      <AdminPkrAmount amount={product.price * product.quantity} size="compact" decimals={2} />
                     </p>
                   </div>
                 </div>
@@ -384,7 +385,7 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
                 alignItems: 'center',
               }}>
                 <span style={{ fontSize: '14px', color: '#fff', fontWeight: '500' }}>{t('admin.orders.total')}</span>
-                <span style={{ fontSize: '18px', color: '#10B981', fontWeight: '700' }}>{order.total.toFixed(2)} PKR</span>
+                <AdminPkrAmount amount={order.total} size="inline" decimals={2} style={{ color: '#10B981' }} />
               </div>
             </div>
           </div>
@@ -729,7 +730,7 @@ function EditOrderModal({ order, isOpen, onClose, onSave }: EditOrderModalProps)
                     {product.name}
                   </p>
                   <p style={{ fontSize: '12px', color: '#666' }}>
-                    Price: {product.price.toFixed(2)} PKR
+                    Price: <AdminPkrAmount amount={product.price} size="compact" decimals={2} />
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -774,7 +775,11 @@ function EditOrderModal({ order, isOpen, onClose, onSave }: EditOrderModalProps)
                 {t('admin.orders.total')}
               </span>
               <span style={{ fontSize: '18px', fontWeight: '700', color: '#10B981' }}>
-                {formData.products.reduce((sum, p) => sum + (p.price * p.quantity), 0).toFixed(2)} PKR
+                <AdminPkrAmount
+                  amount={formData.products.reduce((sum, p) => sum + p.price * p.quantity, 0)}
+                  size="stat"
+                  decimals={2}
+                />
               </span>
             </div>
           </div>
@@ -1371,7 +1376,7 @@ function AdminOrdersContent() {
           color: '#fff',
         }}>
           <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '6px' }}>{t('admin.orders.stats.revenue')}</p>
-          <p style={{ fontSize: '22px', fontWeight: '700' }}>{stats.revenue.toFixed(2)} PKR</p>
+          <AdminPkrAmount amount={stats.revenue} size="summary" decimals={2} onDark />
         </div>
 
         {/* Pending */}
@@ -1726,7 +1731,7 @@ function AdminOrdersContent() {
                   </td>
                   <td style={{ padding: '16px' }}>
                     <p style={{ fontSize: '16px', fontWeight: '700', color: '#10B981' }}>
-                      {order.total.toFixed(2)} PKR
+                      <AdminPkrAmount amount={order.total} size="inline" decimals={2} />
                     </p>
                   </td>
                   <td style={{ padding: '16px', position: 'relative', overflow: 'visible' }}>
@@ -2136,7 +2141,7 @@ function AdminOrdersContent() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (order.status === 'cancelled' && filterStatus === 'cancelled') ? '10px' : '0' }}>
                   <div>
                     <p style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Total</p>
-                    <p style={{ fontSize: '20px', fontWeight: '700', color: '#10B981' }}>{order.total.toFixed(2)} PKR</p>
+                    <AdminPkrAmount amount={order.total} size="stat" decimals={2} style={{ color: '#10B981' }} />
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button

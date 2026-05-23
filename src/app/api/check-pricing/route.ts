@@ -11,9 +11,9 @@ export async function GET() {
       LIMIT 3
     `;
 
-    const analysis = products.map(p => ({
+    const analysis = products.map((p: Record<string, unknown>) => ({
       id: p.id,
-      title: p.title_en.substring(0, 30),
+      title: String(p.title_en ?? '').substring(0, 30),
       price: p.current_price,
       pricingTiers: p.pricing_tiers,
       isArray: Array.isArray(p.pricing_tiers),

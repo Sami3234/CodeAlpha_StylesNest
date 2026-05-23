@@ -118,6 +118,8 @@ export default function AdminProfile() {
 
   const handleLogout = async () => {
     try {
+      const { clearAdminAuthCache } = await import('@/lib/admin-auth-client');
+      clearAdminAuthCache();
       await fetch('/api/admin/logout', { method: 'POST' });
       router.push('/khanadmin/login');
     } catch (error) {

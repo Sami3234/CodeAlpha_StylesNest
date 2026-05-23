@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { parseAdminLiveSince } from '@/lib/admin-live-sync';
 import { sql } from '@/lib/db';
 import { validatePasswordStrength } from '@/lib/password-policy';
 import {
@@ -153,6 +154,12 @@ export async function registerCredentialsUser(input: {
   return { ok: true, id };
 }
 
+export async function countShopUsers(): Promise<number> {
+  await ensureShopUsersTable();
+  const rows = await sql`SELECT COUNT(*)::int AS c FROM shop_users`;
+  return Number((rows[0] as { c?: number })?.c ?? 0);
+}
+
 export async function listShopUsers(): Promise<ShopUserRow[]> {
   await ensureShopUsersTable();
   const rows = await sql`
@@ -172,7 +179,7 @@ export async function listShopUsers(): Promise<ShopUserRow[]> {
     FROM shop_users
     ORDER BY last_login_at DESC NULLS LAST, id DESC
   `;
-  return rows.map((row) => ({
+  return rows.map((row: Record<string, unknown>) => ({
     ...(row as ShopUserRow),
     is_blocked: Boolean((row as { is_blocked?: boolean }).is_blocked),
   }));
@@ -422,11 +429,13 @@ export type AdminUserAlert = {
 export async function listNewShopUsersSince(since: string | null): Promise<AdminUserAlert[]> {
   await ensureShopUsersTable();
 
-  const rows = since
+  const sinceAt = parseAdminLiveSince(since);
+
+  const rows = sinceAt
     ? await sql`
         SELECT id, name, email, provider, created_at
         FROM shop_users
-        WHERE created_at > (${since}::timestamptz - INTERVAL '15 seconds')
+        WHERE created_at > ${sinceAt}
         ORDER BY created_at DESC
         LIMIT 50
       `
@@ -437,7 +446,7 @@ export async function listNewShopUsersSince(since: string | null): Promise<Admin
         LIMIT 20
       `;
 
-  return rows.map((row) => ({
+  return rows.map((row: Record<string, unknown>) => ({
     id: row.id as number,
     name: (row.name as string | null) ?? null,
     email: (row.email as string | null) ?? null,

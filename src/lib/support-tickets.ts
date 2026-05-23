@@ -1,3 +1,4 @@
+import { parseAdminLiveSince } from '@/lib/admin-live-sync';
 import { sql } from '@/lib/db';
 import {
   ensureSupportTicketsTable,
@@ -163,6 +164,12 @@ export async function countOpenSupportTickets(): Promise<number> {
   return Number(rows[0]?.c ?? 0);
 }
 
+export async function countSupportTickets(): Promise<number> {
+  await ensureSupportTicketsTable();
+  const rows = await sql`SELECT COUNT(*)::int AS c FROM support_tickets`;
+  return Number((rows[0] as { c?: number })?.c ?? 0);
+}
+
 export async function updateSupportTicket(
   id: number,
   patch: { status?: SupportTicketStatus; adminNotes?: string },
@@ -205,12 +212,14 @@ export async function listNewOpenSupportTicketsSince(
 ): Promise<AdminSupportAlert[]> {
   await ensureSupportTicketsTable();
 
-  const rows = since
+  const sinceAt = parseAdminLiveSince(since);
+
+  const rows = sinceAt
     ? await sql`
         SELECT id, name, email, phone, subject, message, created_at
         FROM support_tickets
         WHERE status = 'open'
-          AND created_at > (${since}::timestamptz - INTERVAL '15 seconds')
+          AND created_at > ${sinceAt}
         ORDER BY created_at DESC
         LIMIT 50
       `

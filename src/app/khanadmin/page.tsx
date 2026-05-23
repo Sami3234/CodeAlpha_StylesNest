@@ -1,10 +1,15 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useProducts } from '@/context/ProductContext';
 import { useOrders } from '@/context/OrderContext';
 import Link from 'next/link';
 import { getProductTitle } from '@/utils/getProductText';
 import AdminThumbImage from '@/components/admin/AdminThumbImage';
+import AdminPkrAmount from '@/components/admin/AdminPkrAmount';
+import type { AdminDashboardStats } from '@/lib/admin-dashboard-stats';
+import { ADMIN_BOOTSTRAP_EVENT, type AdminBootstrapPayload } from '@/lib/admin-bootstrap';
+import { safeCount } from '@/lib/safe-number';
 
 const statusConfig: Record<string, { color: string; bgColor: string; icon: string }> = {
   pending: { color: '#FF6B35', bgColor: 'rgba(255, 107, 53, 0.12)', icon: '⏳' },
@@ -14,17 +19,61 @@ const statusConfig: Record<string, { color: string; bgColor: string; icon: strin
   cancelled: { color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.12)', icon: '❌' },
 };
 
+const defaultDashboardExtras = (): AdminDashboardStats => ({
+  totalUsers: 0,
+  totalReviews: 0,
+  pendingReviews: 0,
+  approvedReviews: 0,
+  openSupportTickets: 0,
+  totalSupportTickets: 0,
+  unsubmittedOrders: 0,
+});
+
+const quickStatCardStyle = {
+  backgroundColor: '#fff',
+  borderRadius: '12px',
+  padding: '16px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  textDecoration: 'none',
+  color: 'inherit',
+  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+} as const;
+
 export default function AdminDashboard() {
   const { products } = useProducts();
-  const { orders, getOrderStats } = useOrders();
+  const { orders, getOrderStats, orderNotifications } = useOrders();
+  const [dashboardExtras, setDashboardExtras] = useState<AdminDashboardStats>(defaultDashboardExtras);
+
+  useEffect(() => {
+    const applyBootstrap = (detail: AdminBootstrapPayload) => {
+      setDashboardExtras({
+        totalUsers: safeCount(detail.totalUsers),
+        totalReviews: safeCount(detail.totalReviews),
+        pendingReviews: safeCount(detail.pendingReviews),
+        approvedReviews: safeCount(detail.approvedReviews),
+        openSupportTickets: safeCount(detail.openSupportTickets),
+        totalSupportTickets: safeCount(detail.totalSupportTickets),
+        unsubmittedOrders: safeCount(detail.unsubmittedOrders),
+      });
+    };
+
+    const onBootstrap = (event: Event) => {
+      applyBootstrap((event as CustomEvent<AdminBootstrapPayload>).detail);
+    };
+
+    window.addEventListener(ADMIN_BOOTSTRAP_EVENT, onBootstrap);
+    return () => window.removeEventListener(ADMIN_BOOTSTRAP_EVENT, onBootstrap);
+  }, []);
 
   // Calculate product stats
   const activeProducts = products.filter(p => p.status === 'active' || !p.status).length;
   const inactiveProducts = products.filter(p => p.status === 'inactive').length;
-  const totalCategories = [...new Set(products.map(p => p.category))].length;
+  const totalProducts = products.length;
 
-  // Get order stats from context
-  const stats = getOrderStats();
+  // Get order stats from context (sanitized in OrderProvider)
   const {
     total: totalOrders,
     pending: pendingOrders,
@@ -38,11 +87,43 @@ export default function AdminDashboard() {
     cancelledAmount,
     totalRevenue,
     todayOrders,
-  } = stats;
+  } = getOrderStats();
 
   // Recent products & orders
   const recentProducts = products.slice(0, 5);
   const recentOrders = orders.slice(0, 5);
+  const {
+    totalUsers,
+    totalReviews,
+    pendingReviews,
+    approvedReviews,
+    openSupportTickets,
+    totalSupportTickets,
+    unsubmittedOrders: unsubmittedFromApi,
+  } = dashboardExtras;
+
+  /** Average product pieces per order (count only, not PKR). */
+  const ordersForAvg = orders.filter((o) => o.status !== 'cancelled');
+  const avgOrderItems =
+    ordersForAvg.length > 0
+      ? ordersForAvg.reduce(
+          (sum, o) =>
+            sum +
+            (o.products ?? []).reduce((s, p) => s + safeCount(p.quantity || 1), 0),
+          0,
+        ) / ordersForAvg.length
+      : 0;
+  const avgOrderItemsSafe = Number.isFinite(avgOrderItems) ? avgOrderItems : 0;
+  const avgOrderItemsLabel =
+    avgOrderItemsSafe % 1 === 0
+      ? String(Math.round(avgOrderItemsSafe))
+      : avgOrderItemsSafe.toFixed(1);
+  const unsubmittedTotal = Math.max(
+    safeCount(orderNotifications.abandoned),
+    safeCount(unsubmittedFromApi),
+  );
+  const inProgressOrders = safeCount(processingOrders) + safeCount(shippedOrders);
+  const cartOrdersCount = orders.filter((o) => o.products.length > 1).length;
 
   return (
     <div>
@@ -72,7 +153,7 @@ export default function AdminDashboard() {
           }} className="hover:scale-105 hover:shadow-lg">
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', opacity: 0.1, fontSize: '100px' }}>⏳</div>
             <p style={{ fontSize: '13px', opacity: 0.9, marginBottom: '8px' }}>Pending Amount</p>
-            <p style={{ fontSize: '32px', fontWeight: '700' }}>{pendingAmount.toFixed(2)} PKR</p>
+            <AdminPkrAmount amount={pendingAmount} size="hero" decimals={2} onDark />
             <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
               {pendingOrders} orders waiting
             </p>
@@ -93,9 +174,9 @@ export default function AdminDashboard() {
           }} className="hover:scale-105 hover:shadow-lg">
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', opacity: 0.1, fontSize: '100px' }}>🚚</div>
             <p style={{ fontSize: '13px', opacity: 0.9, marginBottom: '8px' }}>In Progress</p>
-            <p style={{ fontSize: '32px', fontWeight: '700' }}>{processingAmount.toFixed(2)} PKR</p>
+            <AdminPkrAmount amount={processingAmount} size="hero" decimals={2} onDark />
             <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
-              {processingOrders + shippedOrders} orders in progress
+              {safeCount(processingOrders) + safeCount(shippedOrders)} orders in progress
             </p>
           </div>
         </Link>
@@ -114,7 +195,7 @@ export default function AdminDashboard() {
           }} className="hover:scale-105 hover:shadow-lg">
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', opacity: 0.1, fontSize: '100px' }}>✅</div>
             <p style={{ fontSize: '13px', opacity: 0.9, marginBottom: '8px' }}>Completed Amount</p>
-            <p style={{ fontSize: '32px', fontWeight: '700' }}>{completedAmount.toFixed(2)} PKR</p>
+            <AdminPkrAmount amount={completedAmount} size="hero" decimals={2} onDark />
             <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
               {deliveredOrders} orders delivered
             </p>
@@ -136,7 +217,7 @@ export default function AdminDashboard() {
           }} className="hover:scale-105 hover:shadow-lg">
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', opacity: 0.1, fontSize: '100px' }}>❌</div>
             <p style={{ fontSize: '13px', opacity: 0.9, marginBottom: '8px' }}>Cancelled</p>
-            <p style={{ fontSize: '32px', fontWeight: '700' }}>{cancelledAmount.toFixed(2)} PKR</p>
+            <AdminPkrAmount amount={cancelledAmount} size="hero" decimals={2} onDark />
             <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
               {cancelledOrders} orders cancelled
             </p>
@@ -171,38 +252,65 @@ export default function AdminDashboard() {
           </div>
           <div>
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>Total Revenue</p>
-            <p style={{ fontSize: '28px', fontWeight: '700', color: '#10B981' }}>{totalRevenue.toFixed(2)} PKR</p>
+            <AdminPkrAmount
+              amount={totalRevenue}
+              size="summary"
+              decimals={2}
+              onDark
+              style={{ color: '#10B981' }}
+            />
           </div>
         </div>
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Total Orders</p>
-            <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{totalOrders}</p>
-          </div>
           <Link href="/khanadmin/orders?period=today" style={{ textDecoration: 'none' }}>
             <div style={{ textAlign: 'center', cursor: 'pointer' }} className="hover:opacity-90">
               <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Today</p>
               <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{todayOrders}</p>
+              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>orders</p>
             </div>
           </Link>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Avg Order</p>
-            <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{(totalRevenue / (totalOrders - cancelledOrders) || 0).toFixed(2)} PKR</p>
+            <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{avgOrderItemsLabel}</p>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>items / order</p>
           </div>
+          <Link href="/khanadmin/unsubmitted" style={{ textDecoration: 'none' }}>
+            <div style={{ textAlign: 'center', cursor: 'pointer' }} className="hover:opacity-90">
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Unsubmitted</p>
+              <p
+                style={{
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: unsubmittedTotal > 0 ? '#FB923C' : '#fff',
+                }}
+              >
+                {unsubmittedTotal}
+              </p>
+              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>not completed</p>
+            </div>
+          </Link>
+          <Link href="/khanadmin/orders?status=processing" style={{ textDecoration: 'none' }}>
+            <div style={{ textAlign: 'center', cursor: 'pointer' }} className="hover:opacity-90">
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>In Progress</p>
+              <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{inProgressOrders}</p>
+              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>processing</p>
+            </div>
+          </Link>
+          {cartOrdersCount > 0 ? (
+            <Link href="/khanadmin/cart-orders" style={{ textDecoration: 'none' }}>
+              <div style={{ textAlign: 'center', cursor: 'pointer' }} className="hover:opacity-90">
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Cart Orders</p>
+                <p style={{ fontSize: '20px', fontWeight: '600', color: '#fff' }}>{cartOrdersCount}</p>
+                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>multi-item</p>
+              </div>
+            </Link>
+          ) : null}
         </div>
       </div>
 
       {/* Quick Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: '12px', marginBottom: '24px' }}>
-        <div style={{
-          backgroundColor: '#fff',
-          borderRadius: '12px',
-          padding: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}>
+        <Link href="/khanadmin/products" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
           <div style={{
             width: '44px',
             height: '44px',
@@ -219,20 +327,13 @@ export default function AdminDashboard() {
             </svg>
           </div>
           <div>
-            <p style={{ fontSize: '12px', color: '#666' }}>Active</p>
+            <p style={{ fontSize: '12px', color: '#666' }}>Active Products</p>
             <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>{activeProducts}</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{totalProducts} total</p>
           </div>
-        </div>
+        </Link>
 
-        <div style={{
-          backgroundColor: '#fff',
-          borderRadius: '12px',
-          padding: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}>
+        <Link href="/khanadmin/products" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
           <div style={{
             width: '44px',
             height: '44px',
@@ -251,18 +352,11 @@ export default function AdminDashboard() {
           <div>
             <p style={{ fontSize: '12px', color: '#666' }}>Inactive</p>
             <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>{inactiveProducts}</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>need attention</p>
           </div>
-        </div>
+        </Link>
 
-        <div style={{
-          backgroundColor: '#fff',
-          borderRadius: '12px',
-          padding: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}>
+        <Link href="/khanadmin/users" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
           <div style={{
             width: '44px',
             height: '44px',
@@ -274,49 +368,135 @@ export default function AdminDashboard() {
             color: '#3B82F6',
           }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="8" y1="6" x2="21" y2="6" />
-              <line x1="8" y1="12" x2="21" y2="12" />
-              <line x1="8" y1="18" x2="21" y2="18" />
-              <line x1="3" y1="6" x2="3.01" y2="6" />
-              <line x1="3" y1="12" x2="3.01" y2="12" />
-              <line x1="3" y1="18" x2="3.01" y2="18" />
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </div>
           <div>
-            <p style={{ fontSize: '12px', color: '#666' }}>Categories</p>
-            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>{totalCategories}</p>
+            <p style={{ fontSize: '12px', color: '#666' }}>Total Users</p>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>
+              {totalUsers.toLocaleString('en-PK')}
+            </p>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>shop accounts</p>
           </div>
-        </div>
+        </Link>
 
-        <div style={{
-          backgroundColor: '#fff',
-          borderRadius: '12px',
-          padding: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}>
+        <Link href="/khanadmin/reviews" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
           <div style={{
             width: '44px',
             height: '44px',
             borderRadius: '10px',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            backgroundColor: 'rgba(245, 158, 11, 0.12)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#8B5CF6',
+            color: '#D97706',
           }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
           </div>
           <div>
-            <p style={{ fontSize: '12px', color: '#666' }}>Avg Order</p>
-            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>${Math.round(totalRevenue / (totalOrders - cancelledOrders) || 0)}</p>
+            <p style={{ fontSize: '12px', color: '#666' }}>Total Reviews</p>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>
+              {totalReviews.toLocaleString('en-PK')}
+            </p>
+            <p style={{ fontSize: '11px', color: pendingReviews > 0 ? '#D97706' : '#94a3b8', marginTop: '2px' }}>
+              {pendingReviews} pending · {approvedReviews} live
+            </p>
           </div>
-        </div>
+        </Link>
+      </div>
+
+      {/* Engagement snapshot */}
+      <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: '12px', marginBottom: '24px' }}>
+        <Link href="/khanadmin/orders" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
+          <div style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#10B981',
+            fontSize: '18px',
+          }}>
+            📦
+          </div>
+          <div>
+            <p style={{ fontSize: '12px', color: '#666' }}>All Orders</p>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>{totalOrders}</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{shippedOrders} shipped</p>
+          </div>
+        </Link>
+
+        <Link href="/khanadmin/support" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
+          <div style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#EF4444',
+            fontSize: '18px',
+          }}>
+            💬
+          </div>
+          <div>
+            <p style={{ fontSize: '12px', color: '#666' }}>Support Tickets</p>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>{totalSupportTickets}</p>
+            <p style={{ fontSize: '11px', color: openSupportTickets > 0 ? '#EF4444' : '#94a3b8', marginTop: '2px' }}>
+              {openSupportTickets} open
+            </p>
+          </div>
+        </Link>
+
+        <Link href="/khanadmin/orders?status=pending" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
+          <div style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(255, 107, 53, 0.12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FF6B35',
+            fontSize: '18px',
+          }}>
+            ⏳
+          </div>
+          <div>
+            <p style={{ fontSize: '12px', color: '#666' }}>Pending Orders</p>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>{pendingOrders}</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>awaiting action</p>
+          </div>
+        </Link>
+
+        <Link href="/khanadmin/orders?status=delivered" style={quickStatCardStyle} className="hover:scale-[1.02] hover:shadow-md">
+          <div style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#10B981',
+            fontSize: '18px',
+          }}>
+            ✅
+          </div>
+          <div>
+            <p style={{ fontSize: '12px', color: '#666' }}>Delivered</p>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#2c3e50' }}>{deliveredOrders}</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>completed</p>
+          </div>
+        </Link>
       </div>
 
       {/* Recent Orders & Products Grid */}
@@ -376,7 +556,12 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '15px', fontWeight: '600', color: '#10B981' }}>{order.total.toFixed(2)} PKR</p>
+                  <AdminPkrAmount
+                    amount={order.total}
+                    size="inline"
+                    decimals={2}
+                    style={{ color: '#10B981' }}
+                  />
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -449,9 +634,11 @@ export default function AdminDashboard() {
                     {getProductTitle(product)}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <span style={{ color: '#10B981', fontWeight: '600', fontSize: '14px' }}>
-                      {product.currentPrice} PKR
-                    </span>
+                    <AdminPkrAmount
+                      amount={product.currentPrice}
+                      size="compact"
+                      style={{ color: '#10B981' }}
+                    />
                     <span style={{
                       backgroundColor: '#ffebee',
                       color: '#e53935',

@@ -7,9 +7,12 @@ export type AdminSessionResult =
   | { ok: false; response: NextResponse };
 
 /** Verify admin panel session cookie against the database. */
-export async function requireAdminSession(request: NextRequest): Promise<AdminSessionResult> {
+export async function requireAdminSession(
+  request: NextRequest,
+  options?: { touch?: boolean },
+): Promise<AdminSessionResult> {
   const token = request.cookies.get('admin_session')?.value;
-  const session = await validateAdminSession(token);
+  const session = await validateAdminSession(token, options);
 
   if (!session) {
     return {

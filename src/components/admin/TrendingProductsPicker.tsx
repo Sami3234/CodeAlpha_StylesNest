@@ -6,6 +6,7 @@ import type { Product } from '@/data/products';
 import { MAX_TRENDING_PRODUCTS } from '@/lib/trending-products';
 import { getProductTitle } from '@/utils/getProductText';
 import { formatPrice } from '@/utils/formatPrice';
+import AdminPkrAmount from '@/components/admin/AdminPkrAmount';
 import AdminLoading from '@/components/admin/AdminLoading';
 
 interface TrendingProductsPickerProps {
@@ -313,8 +314,8 @@ export default function TrendingProductsPicker({
                         ID {product.id} · {product.category}
                       </p>
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#c44569', flexShrink: 0 }}>
-                      {formatPrice(product.currentPrice)} PKR
+                    <span style={{ flexShrink: 0, color: '#c44569' }}>
+                      <AdminPkrAmount amount={product.currentPrice} size="compact" />
                     </span>
                   </label>
                 </li>

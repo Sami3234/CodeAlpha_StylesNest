@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use, useEffect, useRef, useCallback } from 'react';
+import { useState, use, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
@@ -21,12 +21,13 @@ import { getProductTitle, getProductDescription, getProductFeatures } from '@/ut
 import { formatPrice } from '@/utils/formatPrice';
 import ClothesStitchBadge, {
   ClothesColorSelector,
-  ClothesColorsLine,
   ClothesGenderNearPrice,
   ClothesSizeSelector,
   ClothesSizesLine,
+  ProductImageColorLine,
   ShoesGenderBadge,
 } from '@/components/ClothesImageBadges';
+import { getProductImageColorLabels } from '@/lib/product-colors';
 import ProductMetaDisplay from '@/components/ProductMetaDisplay';
 import { isClothesCategory } from '@/lib/clothes-options';
 import { isShoesCategory } from '@/lib/shoes-options';
@@ -73,6 +74,16 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   
+  type OrderFormData = {
+    fullName: string;
+    mobile: string;
+    quantity: string;
+    city: string;
+    address: string;
+    selectedSize: string;
+    selectedColor: string;
+  };
+
   // Type for recent orders
   type RecentOrder = {
     id: string;
@@ -102,7 +113,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     return [];
   });
   
-  const [formData, setFormData] = useState(() => {
+  const [formData, setFormData] = useState<OrderFormData>(() => {
     if (typeof window === 'undefined') {
       return {
         fullName: '',
@@ -190,12 +201,13 @@ export default function ProductPage({ params }: ProductPageProps) {
             
             if (matchingOrder) {
               // Restore form data from abandoned order
-              setFormData((prev: typeof formData) => ({
+              setFormData((prev: OrderFormData) => ({
+                ...prev,
                 fullName: matchingOrder.name || prev.fullName,
                 mobile: matchingOrder.phone || prev.mobile,
                 city: matchingOrder.city || prev.city,
                 address: matchingOrder.address || prev.address,
-                quantity: matchingOrder.quantity || prev.quantity
+                quantity: matchingOrder.quantity || prev.quantity,
               }));
               
               // Update sessionStorage
@@ -274,6 +286,11 @@ export default function ProductPage({ params }: ProductPageProps) {
     ? selectedImageIndex 
     : 0;
 
+  const imageColorsForSelection = useMemo(
+    () => (product ? getProductImageColorLabels(product, selectedImage) : []),
+    [product, selectedImage],
+  );
+
   // Update formDataRef when formData changes (MUST be before early returns)
   useEffect(() => {
     formDataRef.current = formData;
@@ -289,6 +306,17 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     return () => clearInterval(interval);
   }, [totalImages, product]);
+
+  // Keep order-form color in sync with the visible gallery image
+  useEffect(() => {
+    if (!product || imageColorsForSelection.length === 0) return;
+    setFormData((prev: OrderFormData) => {
+      if (imageColorsForSelection.includes(prev.selectedColor)) return prev;
+      const updated = { ...prev, selectedColor: imageColorsForSelection[0] };
+      formDataRef.current = updated;
+      return updated;
+    });
+  }, [product, imageColorsForSelection]);
 
   // Function to save abandoned order
   const handleSaveAbandonedOrder = useCallback(async () => {
@@ -459,6 +487,15 @@ export default function ProductPage({ params }: ProductPageProps) {
   const handleImageSelect = (index: number) => {
     if (index >= 0 && index < totalImages) {
       setSelectedImageIndex(index);
+      const labels = getProductImageColorLabels(product, index);
+      if (labels.length > 0) {
+        setFormData((prev: OrderFormData) => {
+          const nextColor = labels.includes(prev.selectedColor) ? prev.selectedColor : labels[0];
+          const updated = { ...prev, selectedColor: nextColor };
+          formDataRef.current = updated;
+          return updated;
+        });
+      }
     }
   };
 
@@ -1571,6 +1608,10 @@ export default function ProductPage({ params }: ProductPageProps) {
                 </div>
               )}
 
+              <div className="product-image-meta">
+                <ProductImageColorLine product={product} imageIndex={selectedImage} />
+              </div>
+
               {/* Price, sizes, gender, sold */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
@@ -1579,7 +1620,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                 className="product-price-block"
               >
                 <ClothesSizesLine product={product} />
-                <ClothesColorsLine product={product} />
                 <div
                   className="product-price-row"
                   style={{
@@ -1772,6 +1812,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                     />
                     <ClothesColorSelector
                       product={product}
+                      colorOptions={imageColorsForSelection}
                       value={formData.selectedColor}
                       onChange={(color) => {
                         setFormData((prev: typeof formData) => {

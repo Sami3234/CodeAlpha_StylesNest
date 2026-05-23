@@ -1,5 +1,4 @@
 import type { ClothesOptions } from '@/lib/clothes-options';
-import { categoryColorsRequired } from '@/lib/product-colors';
 import type { ShoesOptions } from '@/lib/shoes-options';
 import { isShoesCategory, validateShoesOptions } from '@/lib/shoes-options';
 
@@ -22,7 +21,6 @@ export function validateCategoryOptions(
   category: string,
   options: ClothesOptions | undefined,
   shoesOptions?: ShoesOptions | undefined,
-  productColors?: string[],
 ): { valid: boolean; error?: string } {
   if (categoryShowsShoesPanel(category)) {
     return validateShoesOptions(shoesOptions);
@@ -42,9 +40,6 @@ export function validateCategoryOptions(
     }
     if (options.stitch === 'stitched' && !options.sizes.length) {
       return { valid: false, error: 'Select at least one size (required for stitched items).' };
-    }
-    if (categoryColorsRequired(category) && !(productColors?.length ?? 0)) {
-      return { valid: false, error: 'Add at least one color for clothes.' };
     }
   }
 

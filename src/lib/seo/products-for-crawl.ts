@@ -23,8 +23,8 @@ export async function getProductsForCrawl(): Promise<CrawlProduct[]> {
       ORDER BY updated_at DESC NULLS LAST, id DESC
       LIMIT ${MAX_CRAWL_PRODUCTS}
     `;
-    const mapped = rows.map((row) => {
-      const p = mapProductRow(row as Record<string, unknown>);
+    const mapped = rows.map((row: Record<string, unknown>) => {
+      const p = mapProductRow(row);
       return {
         id: p.id,
         name: (p.title.en || p.title.ar || 'Product').trim(),

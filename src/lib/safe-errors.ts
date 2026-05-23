@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { DB_UNAVAILABLE_MESSAGE, isDbConnectionFailure } from '@/lib/db-errors';
 
 /** Shown to users when something fails and we must not leak internals. */
 export const GENERIC_CLIENT_ERROR = 'Something went wrong. Please try again.';
@@ -53,6 +54,7 @@ const ALLOWED_PUBLIC_PREFIXES = [
   'We could not',
   'Could not place',
   'Connection problem',
+  'Database connection',
   'Delivery details',
   'Trending',
   'Payment',
@@ -122,23 +124,51 @@ type ApiErrorOptions = {
 export function apiErrorResponse({ message, status, cause, trusted = true }: ApiErrorOptions): NextResponse {
   if (cause) logApiError(`API ${status}`, cause);
 
+  if (cause && isDbConnectionFailure(cause)) {
+    return NextResponse.json(
+      { error: DB_UNAVAILABLE_MESSAGE, code: 'db_unavailable' },
+      { status },
+    );
+  }
+
   let clientMessage = message;
   if (isProductionEnv()) {
-    clientMessage = trusted && isAllowedPublicMessage(message) ? message : GENERIC_CLIENT_ERROR;
+    clientMessage =
+      trusted && isAllowedPublicMessage(clientMessage) ? clientMessage : GENERIC_CLIENT_ERROR;
   } else {
-    clientMessage = sanitizeClientMessage(message, GENERIC_CLIENT_ERROR);
+    clientMessage = sanitizeClientMessage(clientMessage, GENERIC_CLIENT_ERROR);
   }
 
   return NextResponse.json({ error: clientMessage }, { status });
+}
+
+/** Parse JSON error bodies from failed fetch responses (avoids silent `{}`). */
+export async function readApiErrorBody(
+  response: Response,
+): Promise<{ error?: string; message?: string; code?: string }> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return { error: `Request failed (${response.status})` };
+  }
+  try {
+    const data = JSON.parse(text) as { error?: string; message?: string; code?: string };
+    if (data && typeof data === 'object') return data;
+    return { error: `Request failed (${response.status})` };
+  } catch {
+    return { error: `Request failed (${response.status})` };
+  }
 }
 
 /**
  * For client-side fetch handlers: prefer API `error` field, sanitized.
  */
 export function clientMessageFromApi(
-  data: { error?: string; message?: string } | null | undefined,
+  data: { error?: string; message?: string; code?: string } | null | undefined,
   fallback = GENERIC_CLIENT_ERROR
 ): string {
+  if (data?.code === 'db_unavailable') {
+    return DB_UNAVAILABLE_MESSAGE;
+  }
   const raw = data?.error ?? data?.message;
   return sanitizeClientMessage(raw, fallback);
 }

@@ -15,7 +15,7 @@ import {
   FORBIDDEN_TITLE,
 } from '@/lib/network-messages';
 
-export type ConnectionProblemVariant = 'page' | 'section' | 'fullscreen';
+export type ConnectionProblemVariant = 'page' | 'section' | 'fullscreen' | 'overlay';
 export type ConnectionProblemKind = 'offline' | 'network' | 'generic' | 'not-found' | 'forbidden';
 
 type ConnectionProblemProps = {

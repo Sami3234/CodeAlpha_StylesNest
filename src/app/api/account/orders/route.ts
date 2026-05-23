@@ -114,7 +114,7 @@ export async function GET() {
       LIMIT 100
     `;
 
-    const orders = rows.map((row) => mapRow(row as Record<string, unknown>));
+    const orders = rows.map((row: Record<string, unknown>) => mapRow(row));
 
     return NextResponse.json({ orders, needsPhone: false });
   } catch (error) {

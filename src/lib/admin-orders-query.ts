@@ -1,3 +1,5 @@
+import { parseAdminLiveSince } from '@/lib/admin-live-sync';
+import { safeAmount, safeCount } from '@/lib/safe-number';
 import { sql } from '@/lib/db';
 import {
   normalizeOrderDate,
@@ -32,6 +34,23 @@ export type AdminOrderStats = {
   totalRevenue: number;
   todayOrders: number;
 };
+
+export function sanitizeAdminOrderStats(stats: AdminOrderStats): AdminOrderStats {
+  return {
+    total: safeCount(stats.total),
+    pending: safeCount(stats.pending),
+    processing: safeCount(stats.processing),
+    shipped: safeCount(stats.shipped),
+    delivered: safeCount(stats.delivered),
+    cancelled: safeCount(stats.cancelled),
+    pendingAmount: safeAmount(stats.pendingAmount),
+    processingAmount: safeAmount(stats.processingAmount),
+    completedAmount: safeAmount(stats.completedAmount),
+    cancelledAmount: safeAmount(stats.cancelledAmount),
+    totalRevenue: safeAmount(stats.totalRevenue),
+    todayOrders: safeCount(stats.todayOrders),
+  };
+}
 
 function mapOrderRow(row: Record<string, unknown>): Order {
   return {
@@ -128,7 +147,7 @@ export async function queryAdminOrdersList(params: AdminOrdersListParams): Promi
     OFFSET ${offset}
   `;
 
-  const orders = rows.map((row) => mapOrderRow(row as Record<string, unknown>));
+  const orders = rows.map((row: Record<string, unknown>) => mapOrderRow(row));
 
   return {
     orders,
@@ -161,7 +180,7 @@ export async function queryAdminOrderStats(): Promise<AdminOrderStats> {
   `;
 
   const r = rows[0] as Record<string, unknown>;
-  return {
+  return sanitizeAdminOrderStats({
     total: Number(r.total ?? 0),
     pending: Number(r.pending ?? 0),
     processing: Number(r.processing ?? 0),
@@ -174,14 +193,12 @@ export async function queryAdminOrderStats(): Promise<AdminOrderStats> {
     cancelledAmount: Number(r.cancelled_amount ?? 0),
     totalRevenue: Number(r.total_revenue ?? 0),
     todayOrders: Number(r.today_orders ?? 0),
-  };
+  });
 }
-
-/** Overlap so orders created during a poll are not skipped by serverTime watermark. */
-export const LIVE_SYNC_LOOKBACK_SECONDS = 15;
 
 export async function queryOrdersChangedSince(since: string): Promise<Order[]> {
   await ensureOrdersAdminColumns();
+  const sinceAt = parseAdminLiveSince(since);
   const rows = await sql`
     SELECT
       id,
@@ -199,12 +216,12 @@ export async function queryOrdersChangedSince(since: string): Promise<Order[]> {
       created_at,
       updated_at
     FROM orders
-    WHERE updated_at > (${since}::timestamptz - (${LIVE_SYNC_LOOKBACK_SECONDS}::int * INTERVAL '1 second'))
-       OR created_at > (${since}::timestamptz - (${LIVE_SYNC_LOOKBACK_SECONDS}::int * INTERVAL '1 second'))
+    WHERE updated_at > ${sinceAt}
+       OR created_at > ${sinceAt}
     ORDER BY updated_at DESC
     LIMIT 200
   `;
-  return rows.map((row) => mapOrderRow(row as Record<string, unknown>));
+  return rows.map((row: Record<string, unknown>) => mapOrderRow(row));
 }
 
 export async function queryRecentOrders(limit = 8): Promise<Order[]> {
@@ -229,7 +246,7 @@ export async function queryRecentOrders(limit = 8): Promise<Order[]> {
     ORDER BY updated_at DESC, date DESC, time DESC
     LIMIT ${limit}
   `;
-  return rows.map((row) => mapOrderRow(row as Record<string, unknown>));
+  return rows.map((row: Record<string, unknown>) => mapOrderRow(row));
 }
 
 export async function queryAbandonedCount(): Promise<number> {

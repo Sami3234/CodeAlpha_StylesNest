@@ -17,7 +17,6 @@ import {
 import { isShoesCategory } from '@/lib/shoes-options';
 import { DEFAULT_SHOES_OPTIONS, type ShoesOptions } from '@/lib/shoes-options';
 import { adminProductT, type AdminProductTFunction, isValidProductImageUrl } from '@/lib/admin/product-form-shared';
-import ColorListEditor from '@/components/admin/ColorListEditor';
 import ProductFormMetaFields from '@/components/admin/ProductFormMetaFields';
 import ProductFormCategoryPanel from '@/components/admin/ProductFormCategoryPanel';
 import ProductFormImages, {
@@ -32,9 +31,10 @@ import {
   type ProductMeta,
 } from '@/lib/product-meta';
 import {
-  categoryColorsRequired,
+  aggregateImageColors,
   getInitialProductColors,
   normalizeColorList,
+  validateProductImageColors,
 } from '@/lib/product-colors';
 import './product-form.css';
 
@@ -104,8 +104,20 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
       : product?.image
         ? [product.image]
         : [];
-    return urls.map((url, i) => ({ id: `existing-${i}-${url.slice(-8)}`, url }));
+    const metaImageColors = product?.productMeta?.imageColors;
+    const initialColors = getInitialProductColors(product);
+    return urls.map((url, i) => ({
+      id: `existing-${i}-${url.slice(-8)}`,
+      url,
+      colors:
+        metaImageColors?.[i]?.length
+          ? [...metaImageColors[i]]
+          : i === 0 && initialColors.length
+            ? [...initialColors]
+            : [],
+    }));
   });
+  const [imageColorErrors, setImageColorErrors] = useState<Record<string, string>>({});
   
   const [errors, setErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -144,29 +156,7 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
     ...product?.productMeta,
   }));
   const [tagsInput, setTagsInput] = useState(() => tagsToInput(product?.productMeta?.tags));
-  const [productColors, setProductColors] = useState<string[]>(() =>
-    getInitialProductColors(product),
-  );
-
   const t = tProp ?? adminProductT;
-
-  const updateProductColors = (colors: string[]) => {
-    const normalized = normalizeColorList(colors);
-    setProductColors(normalized);
-    setProductMeta((prev) => ({
-      ...prev,
-      availableColors: normalized.length ? normalized : undefined,
-    }));
-    if (isClothesCategory(formData.category)) {
-      setClothesOptions((prev) => ({ ...prev, colors: normalized }));
-    }
-    if (isShoesCategory(formData.category)) {
-      setShoesOptions((prev) => ({ ...prev, colors: normalized }));
-    }
-    if (fieldErrors.productColors) {
-      setFieldErrors((prev) => ({ ...prev, productColors: '' }));
-    }
-  };
 
   const toggleClothesSize = (size: string) => {
     setClothesOptions((prev) => {
@@ -234,28 +224,11 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
       isClothesCategory(formData.category) ||
       isShoesCategory(formData.category)
     ) {
-      const catCheck = validateCategoryOptions(
-        formData.category,
-        clothesOptions,
-        shoesOptions,
-        productColors,
-      );
+      const catCheck = validateCategoryOptions(formData.category, clothesOptions, shoesOptions);
       if (!catCheck.valid) {
         newErrors.push(catCheck.error || 'Complete category options');
         newFieldErrors.clothesOptions = catCheck.error || 'Required';
-        if (catCheck.error?.toLowerCase().includes('color')) {
-          newFieldErrors.productColors = catCheck.error;
-        }
       }
-    }
-
-    if (
-      categoryColorsRequired(formData.category) &&
-      normalizeColorList(productColors).length === 0
-    ) {
-      const errorMsg = 'Add at least one color.';
-      newErrors.push(errorMsg);
-      newFieldErrors.productColors = errorMsg;
     }
 
     setErrors(newErrors);
@@ -268,11 +241,23 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
 
   const validateStep3 = () => {
     const newErrors: string[] = [];
+    const newFieldErrors: Record<string, string> = {};
     const mainUrl = productImages[0]?.url?.trim() ?? '';
     if (!mainUrl || !isValidProductImageUrl(mainUrl)) {
       newErrors.push(t('admin.form.errors.mainImageRequired'));
     }
+    const colorCheck = validateProductImageColors(productImages, formData.category);
+    if (!colorCheck.valid) {
+      if (colorCheck.error) newErrors.push(colorCheck.error);
+      setImageColorErrors(colorCheck.imageErrors);
+    } else {
+      setImageColorErrors({});
+    }
     setErrors(newErrors);
+    setFieldErrors(newFieldErrors);
+    if (newErrors.length > 0) {
+      showToast(newErrors[0], 'error');
+    }
     return newErrors.length === 0;
   };
 
@@ -304,7 +289,14 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
         .map((entry) => entry.url.trim())
         .filter((url) => url && isValidProductImageUrl(url))
         .slice(0, MAX_PRODUCT_IMAGES);
-      const savedColors = normalizeColorList(productColors);
+      const savedColors = aggregateImageColors(productImages);
+      const savedImageColors = productImages
+        .filter((entry) => {
+          const url = entry.url.trim();
+          return url && isValidProductImageUrl(url);
+        })
+        .slice(0, MAX_PRODUCT_IMAGES)
+        .map((entry) => normalizeColorList(entry.colors));
 
       const productData: Partial<Product> = {
         currentPrice: formData.currentPrice,
@@ -320,6 +312,7 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
           ...productMeta,
           tags: parseTagsInput(tagsInput),
           availableColors: savedColors.length ? savedColors : undefined,
+          imageColors: savedImageColors.some((list) => list.length > 0) ? savedImageColors : undefined,
         }),
       };
       if (isShoesCategory(formData.category)) {
@@ -471,21 +464,6 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
                   setFieldErrors((prev) => ({ ...prev, clothesOptions: '' }))
                 }
                 t={t}
-              />
-
-              <ColorListEditor
-                colors={productColors}
-                onChange={updateProductColors}
-                required={categoryColorsRequired(formData.category)}
-                label={t('admin.form.productColors', { defaultValue: 'Product colors' })}
-                hint={t('admin.form.productColorsHint', {
-                  defaultValue:
-                    'Type each color name and press Add. Required for clothes and shoes; optional for other categories.',
-                })}
-                error={fieldErrors.productColors}
-                onClearError={() =>
-                  setFieldErrors((prev) => ({ ...prev, productColors: '' }))
-                }
               />
 
               {/* Prices Row */}
@@ -1019,6 +997,15 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
                 'product'
               }
               t={t}
+              imageColorErrors={imageColorErrors}
+              onClearImageColorError={(imageId) =>
+                setImageColorErrors((prev) => {
+                  if (!prev[imageId]) return prev;
+                  const next = { ...prev };
+                  delete next[imageId];
+                  return next;
+                })
+              }
             />
           )}
 

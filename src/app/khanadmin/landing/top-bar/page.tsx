@@ -33,8 +33,7 @@ export default function LandingTopBarPage() {
       <header className="alp-head">
         <h1>Top announcement bar</h1>
         <p>
-          Marquee text, customer care, and 4 social icons (WhatsApp, Facebook, Daraz, Shopify). TikTok
-          and more are on{' '}
+          Marquee text and 4 social icons (WhatsApp, Facebook, Daraz, Shopify). TikTok and more are on{' '}
           <Link href="/khanadmin/landing/footer" style={{ color: '#3498db', fontWeight: 600 }}>
             Footer &amp; links
           </Link>
@@ -57,20 +56,6 @@ export default function LandingTopBarPage() {
             onChange={(e) => setSettings({ ...settings, announcement_text: e.target.value })}
             placeholder="STORE | FREE DELIVERY — Shop now."
             rows={3}
-          />
-        </div>
-
-        <div className="alp-section">
-          <label className="alp-label" htmlFor="customer-care">
-            Customer care link
-          </label>
-          <input
-            id="customer-care"
-            type="text"
-            className="alp-input"
-            value={settings.customer_care_url}
-            onChange={(e) => setSettings({ ...settings, customer_care_url: e.target.value })}
-            placeholder="/about or https://..."
           />
         </div>
 

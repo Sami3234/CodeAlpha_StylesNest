@@ -589,6 +589,52 @@
   border-color: #e53935;
 }
 
+.pf-color-editor--compact {
+  margin: 0;
+  gap: 8px;
+}
+
+.pf-color-editor--compact .pf-form-label {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.pf-color-editor--compact .pf-category-hint {
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.pf-color-editor--compact .pf-color-editor__row .pf-form-input {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.pf-color-editor--compact .pf-color-editor__add {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.pf-color-editor--compact .pf-color-editor__chip {
+  font-size: 11px;
+}
+
+.pf-images__colors {
+  margin-top: 2px;
+}
+
+.pf-images__colors-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b45309;
+  line-height: 1.45;
+}
+
+.pf-images__colors-note--optional {
+  color: #64748b;
+  font-weight: 500;
+}
+
 .pf-section-divider {
   height: 1px;
   background: #e2e8f0;

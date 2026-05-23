@@ -14,6 +14,8 @@ import {
 import {
   categoryColorsRequired,
   getProductAvailableColors,
+  getProductImageColorDisplay,
+  normalizeColorList,
   productColorsDisplayLabel,
 } from '@/lib/product-colors';
 import {
@@ -182,8 +184,33 @@ export function ClothesGenderNearPrice({ product }: { product: Product }) {
   );
 }
 
+/** Color for the currently selected product image (product page gallery). */
+export function ProductImageColorLine({
+  product,
+  imageIndex,
+}: {
+  product: Product;
+  imageIndex: number;
+}) {
+  const display = getProductImageColorDisplay(product, imageIndex);
+  if (!display) return null;
+
+  return (
+    <p className="pc-meta-line product-image-color-line">
+      <span className="pc-meta-label">{display.label}: </span>
+      {display.value}
+    </p>
+  );
+}
+
 /** Sizes left, gender right — below title / near price */
-export function ClothesMetaRow({ product }: { product: Product }) {
+export function ClothesMetaRow({
+  product,
+  showColor = false,
+}: {
+  product: Product;
+  showColor?: boolean;
+}) {
   const hasShoes = isShoesCategory(product.category) && product.shoesOptions;
   const hasClothes = isClothesCategory(product.category) && product.clothesOptions;
   if (!hasShoes && !hasClothes) {
@@ -206,17 +233,19 @@ export function ClothesMetaRow({ product }: { product: Product }) {
     >
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
         <ClothesSizesLine product={product} />
-        <div
-          style={{
-            marginTop:
-              (hasClothes && product.clothesOptions?.colors?.length) ||
-              (hasShoes && product.shoesOptions?.colors?.length)
-                ? 4
-                : 0,
-          }}
-        >
-          <ClothesColorsLine product={product} />
-        </div>
+        {showColor ? (
+          <div
+            style={{
+              marginTop:
+                (hasClothes && product.clothesOptions?.colors?.length) ||
+                (hasShoes && product.shoesOptions?.colors?.length)
+                  ? 4
+                  : 0,
+            }}
+          >
+            <ClothesColorsLine product={product} />
+          </div>
+        ) : null}
       </div>
       <ClothesGenderNearPrice product={product} />
     </motion.div>
@@ -314,12 +343,15 @@ export function ClothesColorSelector({
   product,
   value,
   onChange,
+  colorOptions,
 }: {
   product: Product;
   value: string;
   onChange: (color: string) => void;
+  /** When set (e.g. colors for the active gallery image), only these are selectable. */
+  colorOptions?: string[];
 }) {
-  const colors = getProductAvailableColors(product);
+  const colors = colorOptions?.length ? normalizeColorList(colorOptions) : getProductAvailableColors(product);
 
   if (colors.length === 0) {
     return null;

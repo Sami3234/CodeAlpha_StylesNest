@@ -4,8 +4,10 @@ import { useRef, useState } from 'react';
 import Image from 'next/image';
 import ImageCropper from '@/components/ImageCropper';
 import { useToast } from '@/components/Toast';
+import ColorListEditor from '@/components/admin/ColorListEditor';
 import type { AdminProductTFunction } from '@/lib/admin/product-form-shared';
 import { isValidProductImageUrl } from '@/lib/admin/product-form-shared';
+import { categoryColorsRequired } from '@/lib/product-colors';
 import { uploadFormDataWithProgress } from '@/lib/upload-with-progress';
 
 export const MAX_PRODUCT_IMAGES = 12;
@@ -13,6 +15,7 @@ export const MAX_PRODUCT_IMAGES = 12;
 export type ProductImageEntry = {
   id: string;
   url: string;
+  colors?: string[];
   pendingFile?: File;
 };
 
@@ -24,6 +27,8 @@ type Props = {
   category: string;
   productTitle: string;
   t: AdminProductTFunction;
+  imageColorErrors?: Record<string, string>;
+  onClearImageColorError?: (imageId: string) => void;
 };
 
 function newImageId() {
@@ -56,7 +61,10 @@ export default function ProductFormImages({
   category,
   productTitle,
   t,
+  imageColorErrors = {},
+  onClearImageColorError,
 }: Props) {
+  const colorsRequired = categoryColorsRequired(category);
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
@@ -137,7 +145,7 @@ export default function ProductFormImages({
         );
         showToast('Image updated', 'success');
       } else {
-        onChange([...images, { id: newImageId(), url }]);
+        onChange([...images, { id: newImageId(), url, colors: [] }]);
         showToast('Image added', 'success');
       }
 
@@ -182,13 +190,18 @@ export default function ProductFormImages({
       showToast(`Maximum ${MAX_PRODUCT_IMAGES} images allowed`, 'error');
       return;
     }
-    onChange([...images, { id: newImageId(), url: trimmed }]);
+    onChange([...images, { id: newImageId(), url: trimmed, colors: [] }]);
     setUrlDraft('');
     showToast('Image URL added', 'success');
   };
 
   const updateUrl = (id: string, url: string) => {
     onChange(images.map((img) => (img.id === id ? { ...img, url, pendingFile: undefined } : img)));
+  };
+
+  const updateImageColors = (id: string, colors: string[]) => {
+    onChange(images.map((img) => (img.id === id ? { ...img, colors } : img)));
+    onClearImageColorError?.(id);
   };
 
   return (
@@ -204,6 +217,20 @@ export default function ProductFormImages({
               'Pick images → adjust crop → Apply crop. Upload runs automatically with a progress bar. Up to 12 images.',
           })}
         </p>
+        {colorsRequired ? (
+          <p className="pf-images__colors-note">
+            {t('admin.form.imageColorsRequiredNote', {
+              defaultValue:
+                'Clothes & shoes: add at least one color under each image (required).',
+            })}
+          </p>
+        ) : (
+          <p className="pf-images__colors-note pf-images__colors-note--optional">
+            {t('admin.form.imageColorsOptionalNote', {
+              defaultValue: 'Colors under each image are optional for this category.',
+            })}
+          </p>
+        )}
         <p className="pf-images__count">
           {images.length} / {MAX_PRODUCT_IMAGES}{' '}
           {t('admin.form.imagesAdded', { defaultValue: 'images' })}
@@ -231,6 +258,21 @@ export default function ProductFormImages({
                   <span className="pf-images__placeholder">?</span>
                 )}
                 {index === 0 ? <span className="pf-images__badge">Main</span> : null}
+              </div>
+
+              <div className="pf-images__colors">
+                <ColorListEditor
+                  compact
+                  colors={entry.colors ?? []}
+                  onChange={(colors) => updateImageColors(entry.id, colors)}
+                  required={colorsRequired}
+                  label={t('admin.form.imageColors', { defaultValue: 'Colors for this image' })}
+                  hint={t('admin.form.imageColorsHint', {
+                    defaultValue: 'e.g. Black, Maroon, Peach — shown when customers pick this photo.',
+                  })}
+                  error={imageColorErrors[entry.id]}
+                  onClearError={() => onClearImageColorError?.(entry.id)}
+                />
               </div>
 
               <input

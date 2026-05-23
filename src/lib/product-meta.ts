@@ -5,6 +5,8 @@ export interface ProductMeta {
   tags?: string[];
   /** Custom color names customers can choose (all categories). */
   availableColors?: string[];
+  /** Color names per product image; index matches `images` array. */
+  imageColors?: string[][];
   brand?: string;
   fabric?: string;
   weightGrams?: number;
@@ -39,6 +41,14 @@ export function parseProductMeta(raw: unknown): ProductMeta | undefined {
     .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
     .map((c) => c.trim());
 
+  const imageColorsRaw = Array.isArray(o.imageColors) ? o.imageColors : [];
+  const imageColors = imageColorsRaw.map((entry) => {
+    if (!Array.isArray(entry)) return [];
+    return entry
+      .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+      .map((c) => c.trim());
+  });
+
   let stockQuantity: number | undefined;
   if ('stockQuantity' in o && o.stockQuantity != null && o.stockQuantity !== '') {
     if (typeof o.stockQuantity === 'number' && !Number.isNaN(o.stockQuantity)) {
@@ -59,6 +69,7 @@ export function parseProductMeta(raw: unknown): ProductMeta | undefined {
     shortSummary: typeof o.shortSummary === 'string' ? o.shortSummary.trim() : '',
     tags,
     availableColors: availableColors.length ? availableColors : undefined,
+    imageColors: imageColors.some((list) => list.length > 0) ? imageColors : undefined,
     brand: typeof o.brand === 'string' ? o.brand.trim() : '',
     fabric: typeof o.fabric === 'string' ? o.fabric.trim() : '',
     weightGrams,
@@ -90,6 +101,9 @@ export function normalizeProductMetaForSave(meta: ProductMeta): ProductMeta {
     tags: meta.tags?.length ? meta.tags.map((t) => t.trim()).filter(Boolean) : undefined,
     availableColors: meta.availableColors?.length
       ? meta.availableColors.map((c) => c.trim()).filter(Boolean)
+      : undefined,
+    imageColors: meta.imageColors?.some((list) => list.length > 0)
+      ? meta.imageColors.map((list) => list.map((c) => c.trim()).filter(Boolean))
       : undefined,
     brand: meta.brand?.trim() || undefined,
     fabric: meta.fabric?.trim() || undefined,

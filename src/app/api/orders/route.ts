@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       `;
     }
 
-    const orders = rows.map((row) => mapOrderRow(row as Record<string, unknown>));
+    const orders = rows.map((row: Record<string, unknown>) => mapOrderRow(row));
 
     return NextResponse.json(
       { orders },

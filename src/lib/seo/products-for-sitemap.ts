@@ -13,7 +13,7 @@ export async function getActiveProductsForSitemap(): Promise<SitemapProduct[]> {
       WHERE COALESCE(LOWER(TRIM(status)), 'active') != 'inactive'
       ORDER BY updated_at DESC NULLS LAST
     `;
-    return rows.map((row) => ({
+    return rows.map((row: Record<string, unknown>) => ({
       id: Number(row.id),
       updated_at: row.updated_at as Date | string | null,
     }));

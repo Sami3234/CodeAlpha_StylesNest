@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { clientFetch } from '@/lib/client-fetch';
-import { fetchAdminAuthenticated } from '@/lib/admin-auth-client';
+import { clearAdminAuthCache, fetchAdminAuthenticated, writeAdminAuthCache } from '@/lib/admin-auth-client';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -19,9 +19,11 @@ export default function AdminLogin() {
       const response = await clientFetch('/api/admin/auth', { cache: 'no-store' });
       const data = (await response.json()) as { authenticated?: boolean };
       if (data.authenticated) {
+        writeAdminAuthCache(true);
         router.push('/khanadmin');
         return;
       }
+      clearAdminAuthCache();
       await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
       setIsCheckingAuth(false);
     } catch {
@@ -52,6 +54,7 @@ export default function AdminLogin() {
       if (response.ok) {
         const authed = await fetchAdminAuthenticated();
         if (authed) {
+          writeAdminAuthCache(true);
           router.push('/khanadmin');
           router.refresh();
         } else {

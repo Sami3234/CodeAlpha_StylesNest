@@ -3,8 +3,16 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Product } from '@/data/products';
-import { clientMessageFromApi, GENERIC_CLIENT_ERROR, sanitizeClientMessage } from '@/lib/safe-errors';
+import {
+  clientMessageFromApi,
+  GENERIC_CLIENT_ERROR,
+  readApiErrorBody,
+  sanitizeClientMessage,
+} from '@/lib/safe-errors';
+import { classifyFetchError } from '@/lib/is-network-error';
+import { clientFetchWithDbRetry } from '@/lib/client-fetch-retry';
 import { clientFetch, NetworkError } from '@/lib/client-fetch';
+import { ADMIN_BOOTSTRAP_EVENT, type AdminBootstrapPayload } from '@/lib/admin-bootstrap';
 import type { FetchErrorKind } from '@/lib/is-network-error';
 import { isProtectedAdminPanelPath } from '@/lib/admin-path';
 import { ADMIN_LIVE_POLL_MS } from '@/lib/admin-live-sync';
@@ -36,7 +44,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     const silent = options?.silent ?? false;
     try {
       if (!silent) setFetchError(null);
-      const response = await clientFetch('/api/products', {
+      const response = await clientFetchWithDbRetry('/api/products', {
         cache: 'no-store',
         credentials: 'same-origin',
       });
@@ -46,12 +54,20 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         setProducts(Array.isArray(data.products) ? data.products : []);
         setFetchError(null);
       } else {
-        const errBody = await response.json().catch(() => ({}));
-        console.error('Failed to fetch products from API:', errBody);
+        const errBody = await readApiErrorBody(response);
+        const message = clientMessageFromApi(errBody);
+        if (!silent) {
+          setFetchError(classifyFetchError());
+          console.error(
+            `Failed to fetch products (${response.status}):`,
+            message,
+            errBody.code ? `[${errBody.code}]` : '',
+          );
+        }
         setProducts((prev) => (prev.length > 0 ? prev : []));
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
+      if (!silent) console.error('Error fetching products:', error);
       if (error instanceof NetworkError) {
         setFetchError(error.kind);
         setProducts((prev) => prev);
@@ -64,11 +80,37 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (adminPanel) return;
     void fetchProducts();
-  }, [fetchProducts]);
+  }, [adminPanel, fetchProducts]);
 
   useEffect(() => {
     if (!adminPanel) return;
+
+    let handled = false;
+    const onBootstrap = (event: Event) => {
+      const detail = (event as CustomEvent<AdminBootstrapPayload>).detail;
+      if (Array.isArray(detail?.products)) {
+        setProducts(detail.products);
+        setFetchError(null);
+        handled = true;
+      }
+      setLoading(false);
+    };
+
+    window.addEventListener(ADMIN_BOOTSTRAP_EVENT, onBootstrap);
+    const fallbackTimer = window.setTimeout(() => {
+      if (!handled) void fetchProducts();
+    }, 10_000);
+
+    return () => {
+      window.removeEventListener(ADMIN_BOOTSTRAP_EVENT, onBootstrap);
+      window.clearTimeout(fallbackTimer);
+    };
+  }, [adminPanel, fetchProducts]);
+
+  useEffect(() => {
+    if (!adminPanel || !pathname.startsWith('/khanadmin/products')) return;
 
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {

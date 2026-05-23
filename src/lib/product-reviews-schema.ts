@@ -53,7 +53,10 @@ export async function ensureProductReviewsTable(): Promise<void> {
         ALTER TABLE product_reviews
         ADD COLUMN IF NOT EXISTS images JSONB NOT NULL DEFAULT '[]'::jsonb
       `;
-    })();
+    })().catch((error) => {
+      ready = null;
+      throw error;
+    });
   }
   await ready;
 }

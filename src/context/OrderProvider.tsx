@@ -12,13 +12,17 @@ import {
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { friendlyErrorMessage } from '@/lib/notify';
-import { clientMessageFromApi } from '@/lib/safe-errors';
+import { clientMessageFromApi, readApiErrorBody } from '@/lib/safe-errors';
+import { classifyFetchError } from '@/lib/is-network-error';
 import type { Order } from '@/types/order';
-import type { AdminOrderStats } from '@/lib/admin-orders-query';
+import { sanitizeAdminOrderStats, type AdminOrderStats } from '@/lib/admin-orders-query';
+import { safeCount } from '@/lib/safe-number';
 import type { FetchErrorKind } from '@/lib/is-network-error';
+import { clientFetchWithDbRetry } from '@/lib/client-fetch-retry';
 import { clientFetch, NetworkError } from '@/lib/client-fetch';
+import { dispatchAdminBootstrap, type AdminBootstrapPayload } from '@/lib/admin-bootstrap';
 import { isProtectedAdminPanelPath, adminPath } from '@/lib/admin-path';
-import { fetchAdminAuthenticated } from '@/lib/admin-auth-client';
+import { ensureAdminAuthenticated } from '@/lib/admin-auth-client';
 import { ADMIN_LIVE_POLL_MS } from '@/lib/admin-live-sync';
 import type { AdminReviewAlert } from '@/lib/product-reviews';
 import type { AdminSupportAlert } from '@/lib/support-tickets';
@@ -66,6 +70,15 @@ interface OrderContextType {
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
+
+const defer = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function markFetchFailure(
+  setFetchError: (k: FetchErrorKind | null) => void,
+  silent: boolean,
+): void {
+  if (!silent) setFetchError(classifyFetchError());
+}
 
 const getTodayDate = () => getTodayDateInTimezone();
 const getCurrentTime = () => getCurrentTimeInTimezone().slice(0, 5);
@@ -315,8 +328,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       recentOrders?: Order[];
       abandonedCount: number;
     }, options?: { notify?: boolean }) => {
-      setServerStats(payload.stats);
-      setAbandonedCount(payload.abandonedCount);
+      setServerStats(sanitizeAdminOrderStats(payload.stats));
+      setAbandonedCount(Number(payload.abandonedCount) || 0);
       setLastRefreshedAt(payload.serverTime);
       lastSyncRef.current = payload.serverTime;
 
@@ -349,38 +362,89 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     [protectedAdmin, notifyNewOrders],
   );
 
-  const fetchFullOrders = useCallback(async (): Promise<boolean> => {
+  const loadAdminBootstrap = useCallback(async (): Promise<boolean> => {
     if (!isProtectedAdminPanelPath(pathname)) return false;
-    if (!(await fetchAdminAuthenticated())) return false;
-    const response = await clientFetch('/api/orders', { cache: 'no-store' });
-    if (response.status === 401) return false;
-    if (!response.ok) {
-      const fallback = await clientFetch('/api/admin/orders/list?limit=500&page=1', {
+    if (!(await ensureAdminAuthenticated())) return false;
+    try {
+      const response = await clientFetchWithDbRetry('/api/admin/bootstrap', {
         cache: 'no-store',
       });
-      if (!fallback.ok) {
-        console.error('Failed to fetch orders', response.status, fallback.status);
+      if (response.status === 401) return false;
+      if (!response.ok) {
+        const errBody = await readApiErrorBody(response);
+        console.error(
+          'Failed to load admin data:',
+          response.status,
+          clientMessageFromApi(errBody),
+          errBody.code ?? '',
+        );
+        setFetchError(classifyFetchError());
         return false;
       }
-      const data = await fallback.json();
+      const data = (await response.json()) as AdminBootstrapPayload;
       const incoming: Order[] = data.orders ?? [];
       incoming.forEach((o) => knownOrderIdsRef.current.add(o.id));
       setOrders(incoming);
       pollInitializedRef.current = true;
+      applyLivePayload(
+        {
+          serverTime: data.serverTime,
+          stats: data.stats,
+          changedOrders: [],
+          recentOrders: data.recentOrders ?? [],
+          abandonedCount: data.abandonedCount ?? 0,
+        },
+        { notify: false },
+      );
+      dispatchAdminBootstrap(data);
+      setFetchError(null);
       return true;
+    } catch (error) {
+      if (error instanceof NetworkError) setFetchError(error.kind);
+      else setFetchError(classifyFetchError());
+      console.error('Failed to load admin bootstrap:', error);
+      return false;
     }
-    const data = await response.json();
-    const incoming: Order[] = data.orders ?? [];
-    incoming.forEach((o) => knownOrderIdsRef.current.add(o.id));
-    setOrders(incoming);
-    pollInitializedRef.current = true;
-    return true;
+  }, [pathname, applyLivePayload]);
+
+  const fetchFullOrders = useCallback(async (): Promise<boolean> => {
+    if (!isProtectedAdminPanelPath(pathname)) return false;
+    if (!(await ensureAdminAuthenticated())) return false;
+    try {
+      const response = await clientFetchWithDbRetry('/api/admin/orders/list?limit=500&page=1', {
+        cache: 'no-store',
+      });
+      if (response.status === 401) return false;
+      if (!response.ok) {
+        const errBody = await readApiErrorBody(response);
+        console.error(
+          'Failed to fetch orders:',
+          response.status,
+          clientMessageFromApi(errBody),
+          errBody.code ?? '',
+        );
+        setFetchError(classifyFetchError());
+        return false;
+      }
+      const data = await response.json();
+      const incoming: Order[] = data.orders ?? [];
+      incoming.forEach((o) => knownOrderIdsRef.current.add(o.id));
+      setOrders(incoming);
+      pollInitializedRef.current = true;
+      setFetchError(null);
+      return true;
+    } catch (error) {
+      if (error instanceof NetworkError) setFetchError(error.kind);
+      else setFetchError(classifyFetchError());
+      console.error('Failed to fetch orders:', error);
+      return false;
+    }
   }, [pathname]);
 
   const fetchReviewLive = useCallback(
     async (options?: { silent?: boolean; notify?: boolean }) => {
       if (!isProtectedAdminPanelPath(pathname)) return;
-      if (!(await fetchAdminAuthenticated())) return;
+      if (!(await ensureAdminAuthenticated())) return;
       const silent = options?.silent ?? false;
       const notify = options?.notify ?? false;
 
@@ -392,7 +456,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
         const response = await clientFetch(url, { cache: 'no-store' });
         if (!response.ok) {
-          if (!silent) console.error('Review live sync failed');
+          if (!silent) {
+            const errBody = await readApiErrorBody(response);
+            console.error('Review live sync failed:', response.status, clientMessageFromApi(errBody));
+            markFetchFailure(setFetchError, silent);
+          }
           return;
         }
 
@@ -419,7 +487,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const fetchSupportLive = useCallback(
     async (options?: { silent?: boolean; notify?: boolean }) => {
       if (!isProtectedAdminPanelPath(pathname)) return;
-      if (!(await fetchAdminAuthenticated())) return;
+      if (!(await ensureAdminAuthenticated())) return;
       const silent = options?.silent ?? false;
       const notify = options?.notify ?? false;
 
@@ -431,7 +499,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
         const response = await clientFetch(url, { cache: 'no-store' });
         if (!response.ok) {
-          if (!silent) console.error('Support live sync failed');
+          if (!silent) {
+            const errBody = await readApiErrorBody(response);
+            console.error('Support live sync failed:', response.status, clientMessageFromApi(errBody));
+            markFetchFailure(setFetchError, silent);
+          }
           return;
         }
 
@@ -458,7 +530,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const fetchUserLive = useCallback(
     async (options?: { silent?: boolean; notify?: boolean }) => {
       if (!isProtectedAdminPanelPath(pathname)) return;
-      if (!(await fetchAdminAuthenticated())) return;
+      if (!(await ensureAdminAuthenticated())) return;
       const silent = options?.silent ?? false;
       const notify = options?.notify ?? false;
 
@@ -470,7 +542,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
         const response = await clientFetch(url, { cache: 'no-store' });
         if (!response.ok) {
-          if (!silent) console.error('Users live sync failed');
+          if (!silent) {
+            const errBody = await readApiErrorBody(response);
+            console.error('Users live sync failed:', response.status, clientMessageFromApi(errBody));
+            markFetchFailure(setFetchError, silent);
+          }
           return;
         }
 
@@ -497,7 +573,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const fetchLive = useCallback(
     async (options?: { silent?: boolean; notify?: boolean }) => {
       if (!isProtectedAdminPanelPath(pathname)) return;
-      if (!(await fetchAdminAuthenticated())) return;
+      if (!(await ensureAdminAuthenticated())) return;
       const silent = options?.silent ?? false;
       const notify = options?.notify ?? false;
 
@@ -523,11 +599,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           );
           setFetchError(null);
         } else if (!silent) {
-          console.error('Live sync failed');
+          const errBody = await readApiErrorBody(response);
+          console.error('Live sync failed:', response.status, clientMessageFromApi(errBody));
+          markFetchFailure(setFetchError, silent);
         }
       } catch (error) {
         if (!silent) {
           if (error instanceof NetworkError) setFetchError(error.kind);
+          else setFetchError(classifyFetchError());
           console.error('Live sync error:', error);
         }
       }
@@ -537,12 +616,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const reloadOrders = useCallback(async () => {
     try {
-      await fetchFullOrders();
-      await fetchLive({ silent: true, notify: false });
+      setFetchError(null);
+      const ok = await loadAdminBootstrap();
+      if (!ok) return;
+      await fetchReviewLive({ silent: true, notify: false });
+      await fetchSupportLive({ silent: true, notify: false });
+      await fetchUserLive({ silent: true, notify: false });
     } catch (error) {
       console.error('reloadOrders:', error);
     }
-  }, [fetchFullOrders, fetchLive]);
+  }, [loadAdminBootstrap, fetchReviewLive, fetchSupportLive, fetchUserLive]);
 
   useEffect(() => {
     if (!protectedAdmin) {
@@ -572,43 +655,43 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         setFetchError(null);
-        await fetchFullOrders();
+        await loadAdminBootstrap();
         if (!cancelled) {
-          await fetchLive({ silent: true, notify: false });
-          await fetchReviewLive({ silent: true, notify: false });
-          await fetchSupportLive({ silent: true, notify: false });
-          await fetchUserLive({ silent: true, notify: false });
+          await defer(2000);
+          if (!cancelled) await fetchReviewLive({ silent: true, notify: false });
+          if (!cancelled) await fetchSupportLive({ silent: true, notify: false });
+          if (!cancelled) await fetchUserLive({ silent: true, notify: false });
         }
       } catch (error) {
         if (error instanceof NetworkError) setFetchError(error.kind);
+        else setFetchError(classifyFetchError());
         console.error('Initial admin orders load:', error);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
 
+    const runAllLivePolls = async (notify: boolean) => {
+      if (!(await ensureAdminAuthenticated())) return;
+      await fetchLive({ silent: true, notify });
+      await fetchReviewLive({ silent: true, notify });
+      await fetchSupportLive({ silent: true, notify });
+      await fetchUserLive({ silent: true, notify });
+    };
+
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        void fetchLive({ silent: true, notify: true });
-        void fetchReviewLive({ silent: true, notify: true });
-        void fetchSupportLive({ silent: true, notify: true });
-        void fetchUserLive({ silent: true, notify: true });
+        void runAllLivePolls(true);
       }
     }, ADMIN_LIVE_POLL_MS);
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        void fetchLive({ silent: true, notify: true });
-        void fetchReviewLive({ silent: true, notify: true });
-        void fetchSupportLive({ silent: true, notify: true });
-        void fetchUserLive({ silent: true, notify: true });
+        void runAllLivePolls(true);
       }
     };
     const onFocus = () => {
-      void fetchLive({ silent: true, notify: true });
-      void fetchReviewLive({ silent: true, notify: true });
-      void fetchSupportLive({ silent: true, notify: true });
-      void fetchUserLive({ silent: true, notify: true });
+      void runAllLivePolls(true);
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onFocus);
@@ -621,7 +704,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     };
   }, [
     protectedAdmin,
-    fetchFullOrders,
+    loadAdminBootstrap,
     fetchLive,
     fetchReviewLive,
     fetchSupportLive,
@@ -794,11 +877,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const getOrderStats = () => {
     if (serverStats) {
-      return { ...serverStats, todayOrders: serverStats.todayOrders };
+      return sanitizeAdminOrderStats(serverStats);
     }
     const today = getTodayDateInTimezone();
     const base = defaultStats();
-    return {
+    return sanitizeAdminOrderStats({
       ...base,
       total: orders.length,
       pending: orders.filter((o) => o.status === 'pending').length,
@@ -806,29 +889,29 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       shipped: orders.filter((o) => o.status === 'shipped').length,
       delivered: orders.filter((o) => o.status === 'delivered').length,
       cancelled: orders.filter((o) => o.status === 'cancelled').length,
-      pendingAmount: orders.filter((o) => o.status === 'pending').reduce((s, o) => s + o.total, 0),
+      pendingAmount: orders.filter((o) => o.status === 'pending').reduce((s, o) => s + safeCount(o.total), 0),
       processingAmount: orders
         .filter((o) => o.status === 'processing' || o.status === 'shipped')
-        .reduce((s, o) => s + o.total, 0),
+        .reduce((s, o) => s + safeCount(o.total), 0),
       completedAmount: orders
         .filter((o) => o.status === 'delivered')
-        .reduce((s, o) => s + o.total, 0),
+        .reduce((s, o) => s + safeCount(o.total), 0),
       cancelledAmount: orders
         .filter((o) => o.status === 'cancelled')
-        .reduce((s, o) => s + o.total, 0),
+        .reduce((s, o) => s + safeCount(o.total), 0),
       totalRevenue: orders
         .filter((o) => o.status !== 'cancelled')
-        .reduce((s, o) => s + o.total, 0),
+        .reduce((s, o) => s + safeCount(o.total), 0),
       todayOrders: orders.filter((o) => isOrderToday(o.date, today)).length,
-    };
+    });
   };
 
   const stats = serverStats ?? defaultStats();
   const orderNotifications: OrderNotificationCounts = {
-    pending: stats.pending,
-    today: stats.todayOrders,
-    unseenNew,
-    abandoned: abandonedCount,
+    pending: safeCount(stats.pending),
+    today: safeCount(stats.todayOrders),
+    unseenNew: safeCount(unseenNew),
+    abandoned: safeCount(abandonedCount),
   };
 
   return (

@@ -97,6 +97,11 @@ export const adminProductTranslations: Record<string, string> = {
   'admin.form.clothesStitchHint': 'Stitched items require at least one size.',
   'admin.form.clothesColors': 'Available colors',
   'admin.form.clothesColorsHint': 'Optional — shown in product details when selected.',
+  'admin.form.imageColors': 'Colors for this image',
+  'admin.form.imageColorsHint': 'e.g. Black, Maroon, Peach — shown when customers pick this photo.',
+  'admin.form.imageColorsRequiredNote':
+    'Clothes & shoes: add at least one color under each image (required).',
+  'admin.form.imageColorsOptionalNote': 'Colors under each image are optional for this category.',
   'categories.all': 'All',
   'categories.cosmetics': 'Cosmetics',
   'categories.jewelry': 'Jewelry',

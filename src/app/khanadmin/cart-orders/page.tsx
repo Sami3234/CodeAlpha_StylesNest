@@ -6,6 +6,7 @@ import { useOrders } from '@/context/OrderContext';
 import type { Order } from '@/context/OrderContext';
 import './admin-cart-orders.css';
 import AdminLoading from '@/components/admin/AdminLoading';
+import AdminPkrAmount from '@/components/admin/AdminPkrAmount';
 
 const STATUS_OPTIONS: Order['status'][] = [
   'pending',
@@ -138,7 +139,9 @@ export default function AdminCartOrdersPage() {
                 </div>
                 <div className="aco-total-col">
                   <span className="aco-label">Order total</span>
-                  <div className="aco-total-amt">{Number(order.total).toFixed(2)} PKR</div>
+                  <div className="aco-total-amt">
+                    <AdminPkrAmount amount={Number(order.total)} size="stat" decimals={2} />
+                  </div>
                   <div className="aco-status-field">
                     <label htmlFor={`status-${order.id}`}>Order status</label>
                     <select
@@ -179,9 +182,15 @@ export default function AdminCartOrdersPage() {
                             <td className="aco-td-num">{idx + 1}</td>
                             <td className="aco-td-product">{p.name}</td>
                             <td className="aco-td-qty">{p.quantity}</td>
-                            <td className="aco-td-price">{Number(p.price).toFixed(2)} PKR</td>
+                            <td className="aco-td-price">
+                              <AdminPkrAmount amount={Number(p.price)} size="compact" decimals={2} />
+                            </td>
                             <td className="aco-td-line">
-                              {(Number(p.price) * p.quantity).toFixed(2)} PKR
+                              <AdminPkrAmount
+                                amount={Number(p.price) * p.quantity}
+                                size="compact"
+                                decimals={2}
+                              />
                             </td>
                           </tr>
                         ))}

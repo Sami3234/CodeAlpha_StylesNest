@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
           ORDER BY created_at DESC
         `;
 
-    const mapped = rows.map((row) => mapProductRow(row as Record<string, unknown>));
+    const mapped = rows.map((row: Record<string, unknown>) => mapProductRow(row));
 
     // Storefront: real sold counts from orders. Admin list: use DB values (faster).
     const products = includeInactive

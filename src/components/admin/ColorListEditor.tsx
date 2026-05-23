@@ -11,6 +11,7 @@ type Props = {
   placeholder?: string;
   error?: string;
   onClearError?: () => void;
+  compact?: boolean;
 };
 
 export default function ColorListEditor({
@@ -22,6 +23,7 @@ export default function ColorListEditor({
   placeholder = 'e.g. Black, White, Peach…',
   error,
   onClearError,
+  compact = false,
 }: Props) {
   const [draft, setDraft] = useState('');
 
@@ -51,7 +53,9 @@ export default function ColorListEditor({
   };
 
   return (
-    <div className={`pf-form-block pf-color-editor${error ? ' pf-color-editor--error' : ''}`}>
+    <div
+      className={`pf-form-block pf-color-editor${compact ? ' pf-color-editor--compact' : ''}${error ? ' pf-color-editor--error' : ''}`}
+    >
       <label className="pf-form-label">
         {label}
         {required ? <span className="pf-label-required"> *</span> : null}

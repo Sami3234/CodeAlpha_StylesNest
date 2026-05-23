@@ -40,7 +40,10 @@ export async function ensureSupportTicketsTable(): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_support_tickets_status_created
         ON support_tickets (status, created_at DESC)
       `;
-    })();
+    })().catch((error) => {
+      ready = null;
+      throw error;
+    });
   }
   await ready;
 }

@@ -75,6 +75,25 @@
   padding: 32px 16px;
 }
 
+/* Centered modal over admin main content (not a strip at the top). */
+.connection-problem--overlay {
+  position: fixed;
+  top: 90px;
+  right: 0;
+  bottom: 0;
+  left: 260px;
+  z-index: 200;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(4px);
+}
+
+@media (max-width: 1023px) {
+  .connection-problem--overlay {
+    left: 0;
+  }
+}
+
 .connection-problem__card {
   display: flex;
   flex-direction: column;

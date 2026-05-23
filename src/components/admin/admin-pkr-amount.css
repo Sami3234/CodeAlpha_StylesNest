@@ -1,0 +1,107 @@
+.admin-pkr {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  gap: 0.25em;
+  max-width: 100%;
+  line-height: 1.15;
+}
+
+.admin-pkr__amount {
+  font-weight: inherit;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-pkr__currency {
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  opacity: 0.88;
+}
+
+/* —— size presets —— */
+.admin-pkr--hero .admin-pkr__amount {
+  font-size: 32px;
+  font-weight: 700;
+}
+.admin-pkr--hero .admin-pkr__currency {
+  font-size: 11px;
+}
+
+.admin-pkr--summary .admin-pkr__amount {
+  font-size: 28px;
+  font-weight: 700;
+}
+.admin-pkr--summary .admin-pkr__currency {
+  font-size: 10px;
+}
+
+.admin-pkr--stat .admin-pkr__amount {
+  font-size: 20px;
+  font-weight: 700;
+}
+.admin-pkr--stat .admin-pkr__currency {
+  font-size: 9px;
+}
+
+.admin-pkr--inline .admin-pkr__amount {
+  font-size: 15px;
+  font-weight: 600;
+}
+.admin-pkr--inline .admin-pkr__currency {
+  font-size: 9px;
+}
+
+.admin-pkr--compact .admin-pkr__amount {
+  font-size: 14px;
+  font-weight: 600;
+}
+.admin-pkr--compact .admin-pkr__currency {
+  font-size: 8px;
+}
+
+/* —— auto-shrink as digit count grows —— */
+.admin-pkr--scale-2.admin-pkr--hero .admin-pkr__amount {
+  font-size: 26px;
+}
+.admin-pkr--scale-3.admin-pkr--hero .admin-pkr__amount {
+  font-size: 22px;
+}
+.admin-pkr--scale-4.admin-pkr--hero .admin-pkr__amount {
+  font-size: 18px;
+}
+
+.admin-pkr--scale-2.admin-pkr--summary .admin-pkr__amount {
+  font-size: 24px;
+}
+.admin-pkr--scale-3.admin-pkr--summary .admin-pkr__amount {
+  font-size: 20px;
+}
+.admin-pkr--scale-4.admin-pkr--summary .admin-pkr__amount {
+  font-size: 17px;
+}
+
+.admin-pkr--scale-2.admin-pkr--stat .admin-pkr__amount {
+  font-size: 17px;
+}
+.admin-pkr--scale-3.admin-pkr--stat .admin-pkr__amount {
+  font-size: 15px;
+}
+.admin-pkr--scale-4.admin-pkr--stat .admin-pkr__amount {
+  font-size: 13px;
+}
+
+.admin-pkr--scale-2.admin-pkr--inline .admin-pkr__amount {
+  font-size: 14px;
+}
+.admin-pkr--scale-3.admin-pkr--inline .admin-pkr__amount {
+  font-size: 13px;
+}
+.admin-pkr--scale-4.admin-pkr--inline .admin-pkr__amount {
+  font-size: 12px;
+}
+
+.admin-pkr--on-dark .admin-pkr__currency {
+  opacity: 0.75;
+}

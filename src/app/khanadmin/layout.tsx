@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import AdminSidebar from '@/components/AdminSidebar';
@@ -8,15 +8,17 @@ import { ToastProvider } from '@/components/Toast';
 import AppToaster from '@/components/ui/AppToaster';
 import AdminLoading from '@/components/admin/AdminLoading';
 import ConnectionProblem from '@/components/network/ConnectionProblem';
-import { clientFetch, isLikelyNetworkError, NetworkError } from '@/lib/client-fetch';
+import { isLikelyNetworkError, NetworkError } from '@/lib/client-fetch';
+import {
+  canTrustAdminSessionLocally,
+  clearAdminAuthCache,
+  ensureAdminAuthenticated,
+  writeAdminAuthCache,
+} from '@/lib/admin-auth-client';
 import { adminPath, isPublicAdminPath } from '@/lib/admin-path';
-
-async function fetchAdminAuth(): Promise<boolean> {
-  const response = await clientFetch('/api/admin/auth', { cache: 'no-store' });
-  if (!response.ok) return false;
-  const data = (await response.json()) as { authenticated?: boolean };
-  return Boolean(data.authenticated);
-}
+import { useOrders } from '@/context/OrderContext';
+import { useProducts } from '@/context/ProductContext';
+import { DB_UNAVAILABLE_MESSAGE } from '@/lib/db-errors';
 
 export default function AdminLayout({
   children,
@@ -26,27 +28,25 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isPublicRoute = isPublicAdminPath(pathname);
+  const verifyStartedRef = useRef(false);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  /** Same on server + client first paint — cookie/cache only read after mount (avoids hydration mismatch). */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(!isPublicRoute);
   const [authNetworkError, setAuthNetworkError] = useState(false);
-  const [trackedPublicRoute, setTrackedPublicRoute] = useState(isPublicRoute);
-  const [lastAuthPath, setLastAuthPath] = useState<string | null>(null);
+  const { fetchError: ordersFetchError, reloadOrders, loading: ordersLoading } = useOrders();
+  const { fetchError: productsFetchError, reloadProducts, loading: productsLoading } =
+    useProducts();
 
-  if (isPublicRoute !== trackedPublicRoute) {
-    setTrackedPublicRoute(isPublicRoute);
-    if (isPublicRoute) {
-      setIsCheckingAuth(false);
-      setIsAuthenticated(false);
-      setLastAuthPath(null);
-    }
-  }
+  const adminDataLoading = ordersLoading || productsLoading;
+  const adminDataError = ordersFetchError || productsFetchError;
 
-  if (!isPublicRoute && pathname !== lastAuthPath) {
-    setLastAuthPath(pathname);
-    setIsCheckingAuth(true);
-  }
+  const retryAdminData = useCallback(() => {
+    void reloadOrders();
+    void reloadProducts();
+  }, [reloadOrders, reloadProducts]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -58,16 +58,19 @@ export default function AdminLayout({
   const runAuthCheck = useCallback(async (): Promise<boolean> => {
     setAuthNetworkError(false);
     try {
-      const ok = await fetchAdminAuth();
+      const ok = await ensureAdminAuthenticated();
       if (ok) {
         setIsAuthenticated(true);
+        writeAdminAuthCache(true);
         return true;
       }
       setIsAuthenticated(false);
+      clearAdminAuthCache();
       router.replace(adminPath('/login'));
       return false;
     } catch (error) {
       setIsAuthenticated(false);
+      clearAdminAuthCache();
       if (error instanceof NetworkError || isLikelyNetworkError(error)) {
         setAuthNetworkError(true);
       } else {
@@ -78,13 +81,32 @@ export default function AdminLayout({
   }, [router]);
 
   useEffect(() => {
-    if (isPublicRoute) return;
+    if (isPublicRoute) {
+      verifyStartedRef.current = false;
+      setIsCheckingAuth(false);
+      setIsAuthenticated(false);
+      return;
+    }
+
+    if (verifyStartedRef.current) {
+      return;
+    }
+    verifyStartedRef.current = true;
+
+    if (canTrustAdminSessionLocally()) {
+      setIsAuthenticated(true);
+      setIsCheckingAuth(false);
+    } else {
+      setIsCheckingAuth(true);
+    }
 
     let cancelled = false;
 
     void (async () => {
-      await runAuthCheck();
-      if (!cancelled) setIsCheckingAuth(false);
+      const ok = await runAuthCheck();
+      if (cancelled) return;
+      setIsAuthenticated(ok);
+      setIsCheckingAuth(false);
     })();
 
     return () => {
@@ -94,7 +116,9 @@ export default function AdminLayout({
 
   const retryAuthCheck = useCallback(async () => {
     setIsCheckingAuth(true);
-    await runAuthCheck();
+    setAuthNetworkError(false);
+    const ok = await runAuthCheck();
+    setIsAuthenticated(ok);
     setIsCheckingAuth(false);
   }, [runAuthCheck]);
 
@@ -185,7 +209,21 @@ export default function AdminLayout({
               transition: 'margin-left 0.3s ease',
             }}
           >
-            {children}
+            {adminDataError && !adminDataLoading ? (
+              <ConnectionProblem
+                variant="overlay"
+                theme="admin"
+                kind={adminDataError}
+                title="Connection problem"
+                message={DB_UNAVAILABLE_MESSAGE}
+                onRetry={retryAdminData}
+                retryLabel="Try again"
+                homeHref={adminPath('/')}
+                homeLabel="Dashboard"
+              />
+            ) : (
+              children
+            )}
           </main>
         </div>
       </div>

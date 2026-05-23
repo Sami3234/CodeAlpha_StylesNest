@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import './admin/admin-sidebar.css';
+import { clearAdminAuthCache } from '@/lib/admin-auth-client';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { 
@@ -1062,6 +1063,7 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
             className="admin-sidebar__logout"
             onClick={async () => {
               try {
+                clearAdminAuthCache();
                 await fetch('/api/admin/logout', { method: 'POST' });
                 router.push('/khanadmin/login');
                 router.refresh();

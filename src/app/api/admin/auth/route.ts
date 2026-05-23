@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('admin_session')?.value;
-    const session = await validateAdminSession(token);
+    const session = await validateAdminSession(token, { touch: false });
 
     if (!session) {
       return NextResponse.json(

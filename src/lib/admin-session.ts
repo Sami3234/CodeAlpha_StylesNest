@@ -2,6 +2,17 @@ import crypto from 'crypto';
 import { sql } from '@/lib/db';
 
 const SESSION_DAYS = 7;
+/** Avoid a DB round-trip on every parallel admin API call during dashboard load. */
+const SESSION_VALIDATION_CACHE_MS = 25_000;
+
+type CachedValidation = {
+  adminId: number;
+  email: string;
+  validUntil: number;
+};
+
+const validationCache = new Map<string, CachedValidation>();
+let lastTouchAt = 0;
 
 let tableReady: Promise<void> | null = null;
 
@@ -54,6 +65,15 @@ export async function validateAdminSession(
 ): Promise<{ adminId: number; email: string } | null> {
   if (!token?.trim()) return null;
 
+  const cacheKey = token.trim();
+  const cached = validationCache.get(cacheKey);
+  if (cached && cached.validUntil > Date.now()) {
+    if (options?.touch !== false) {
+      void touchSessionIfDue(cacheKey);
+    }
+    return { adminId: cached.adminId, email: cached.email };
+  }
+
   await ensureAdminSessionsTable();
 
   const rows = await sql`
@@ -70,30 +90,54 @@ export async function validateAdminSession(
   `;
 
   if (rows.length === 0) {
+    validationCache.delete(cacheKey);
     await sql`DELETE FROM admin_sessions WHERE token = ${token}`;
     return null;
   }
 
-  if (options?.touch !== false) {
-    try {
-      await sql`
-        UPDATE admin_sessions
-        SET last_activity_at = CURRENT_TIMESTAMP
-        WHERE token = ${token}
-      `;
-    } catch {
-      /* column may be missing on very old DBs */
-    }
-  }
-
-  return {
+  const session = {
     adminId: Number(rows[0].admin_id),
     email: String(rows[0].email),
   };
+
+  validationCache.set(cacheKey, {
+    ...session,
+    validUntil: Date.now() + SESSION_VALIDATION_CACHE_MS,
+  });
+
+  if (options?.touch !== false) {
+    void touchSessionIfDue(cacheKey);
+  }
+
+  return session;
+}
+
+async function touchSessionIfDue(token: string): Promise<void> {
+  const now = Date.now();
+  if (now - lastTouchAt < 60_000) return;
+  lastTouchAt = now;
+  try {
+    await sql`
+      UPDATE admin_sessions
+      SET last_activity_at = CURRENT_TIMESTAMP
+      WHERE token = ${token}
+    `;
+  } catch {
+    /* column may be missing on very old DBs */
+  }
+}
+
+export function clearAdminSessionValidationCache(token?: string | null): void {
+  if (token?.trim()) {
+    validationCache.delete(token.trim());
+    return;
+  }
+  validationCache.clear();
 }
 
 export async function revokeAdminSession(token: string | undefined | null): Promise<void> {
   if (!token?.trim()) return;
+  clearAdminSessionValidationCache(token);
   await ensureAdminSessionsTable();
   await sql`DELETE FROM admin_sessions WHERE token = ${token}`;
 }

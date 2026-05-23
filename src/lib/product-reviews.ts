@@ -1,3 +1,4 @@
+import { parseAdminLiveSince } from '@/lib/admin-live-sync';
 import { sql } from '@/lib/db';
 import { normalizePhoneDigits } from '@/lib/phone-normalize';
 import { getShopUserProfile } from '@/lib/shop-users';
@@ -338,7 +339,7 @@ export async function listAdminReviews(
           LIMIT 500
         `;
 
-  return rows.map((row) => {
+  return rows.map((row: Record<string, unknown>) => {
     const r = row as ProductReviewRow & { product_title?: string | null };
     return {
       id: r.id,
@@ -394,6 +395,20 @@ export async function countPendingReviews(): Promise<number> {
   return Number(rows[0]?.c ?? 0);
 }
 
+export async function countProductReviews(): Promise<number> {
+  await ensureProductReviewsTable();
+  const rows = await sql`SELECT COUNT(*)::int AS c FROM product_reviews`;
+  return Number((rows[0] as { c?: number })?.c ?? 0);
+}
+
+export async function countApprovedReviews(): Promise<number> {
+  await ensureProductReviewsTable();
+  const rows = await sql`
+    SELECT COUNT(*)::int AS c FROM product_reviews WHERE status = 'approved'
+  `;
+  return Number((rows[0] as { c?: number })?.c ?? 0);
+}
+
 export type AdminReviewAlert = {
   id: number;
   productId: number;
@@ -409,7 +424,9 @@ export async function listNewPendingReviewsSince(
 ): Promise<AdminReviewAlert[]> {
   await ensureProductReviewsTable();
 
-  const rows = since
+  const sinceAt = parseAdminLiveSince(since);
+
+  const rows = sinceAt
     ? await sql`
         SELECT
           r.id,
@@ -422,7 +439,7 @@ export async function listNewPendingReviewsSince(
         FROM product_reviews r
         LEFT JOIN products p ON p.id = r.product_id
         WHERE r.status = 'pending'
-          AND r.created_at > (${since}::timestamptz - INTERVAL '15 seconds')
+          AND r.created_at > ${sinceAt}
         ORDER BY r.created_at DESC
         LIMIT 50
       `
@@ -442,7 +459,7 @@ export async function listNewPendingReviewsSince(
         LIMIT 20
       `;
 
-  return rows.map((row) => {
+  return rows.map((row: Record<string, unknown>) => {
     const r = row as {
       id: number;
       product_id: number;
