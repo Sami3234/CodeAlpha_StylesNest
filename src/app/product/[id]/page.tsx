@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, use, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
@@ -27,8 +27,9 @@ import ClothesStitchBadge, {
   ProductImageColorLine,
   ShoesGenderBadge,
 } from '@/components/ClothesImageBadges';
-import { getProductImageColorLabels } from '@/lib/product-colors';
+import ProductCardRating from '@/components/ProductCardRating';
 import ProductMetaDisplay from '@/components/ProductMetaDisplay';
+import { hasCustomerProductMeta } from '@/lib/product-meta-display';
 import { isClothesCategory } from '@/lib/clothes-options';
 import { isShoesCategory } from '@/lib/shoes-options';
 import {
@@ -46,6 +47,7 @@ import {
   type PaymentMethod,
 } from '@/lib/payment-methods';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import { getProductCode } from '@/lib/product-code';
 import { notifyError, notifySuccess } from '@/lib/notify';
 import '@/components/product-page.css';
 
@@ -286,11 +288,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     ? selectedImageIndex 
     : 0;
 
-  const imageColorsForSelection = useMemo(
-    () => (product ? getProductImageColorLabels(product, selectedImage) : []),
-    [product, selectedImage],
-  );
-
   // Update formDataRef when formData changes (MUST be before early returns)
   useEffect(() => {
     formDataRef.current = formData;
@@ -306,17 +303,6 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     return () => clearInterval(interval);
   }, [totalImages, product]);
-
-  // Keep order-form color in sync with the visible gallery image
-  useEffect(() => {
-    if (!product || imageColorsForSelection.length === 0) return;
-    setFormData((prev: OrderFormData) => {
-      if (imageColorsForSelection.includes(prev.selectedColor)) return prev;
-      const updated = { ...prev, selectedColor: imageColorsForSelection[0] };
-      formDataRef.current = updated;
-      return updated;
-    });
-  }, [product, imageColorsForSelection]);
 
   // Function to save abandoned order
   const handleSaveAbandonedOrder = useCallback(async () => {
@@ -487,15 +473,6 @@ export default function ProductPage({ params }: ProductPageProps) {
   const handleImageSelect = (index: number) => {
     if (index >= 0 && index < totalImages) {
       setSelectedImageIndex(index);
-      const labels = getProductImageColorLabels(product, index);
-      if (labels.length > 0) {
-        setFormData((prev: OrderFormData) => {
-          const nextColor = labels.includes(prev.selectedColor) ? prev.selectedColor : labels[0];
-          const updated = { ...prev, selectedColor: nextColor };
-          formDataRef.current = updated;
-          return updated;
-        });
-      }
     }
   };
 
@@ -667,6 +644,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       customerName: formData.fullName,
       customerWhatsApp: formData.mobile,
       productName: orderProductName,
+      productCode: productCode || undefined,
       quantity,
       total: placedOrder.total,
       city: formData.city,
@@ -706,6 +684,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   // Get product title, description, and features (English only)
   const productTitle = getProductTitle(product);
+  const productCode = getProductCode(product);
   const productDescription = getProductDescription(product);
   const productFeatures = getProductFeatures(product);
 
@@ -772,20 +751,11 @@ export default function ProductPage({ params }: ProductPageProps) {
           )}
 
           {/* Product Title */}
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            style={{ 
-              fontSize: isArabic ? '28px' : '32px', 
-              fontWeight: '700', 
-              background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '8px',
-              lineHeight: '1.3'
-            }}
+            className="product-page-title"
           >
             {productTitle}
           </motion.h1>
@@ -911,7 +881,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                   <h3>Confirm on WhatsApp</h3>
                   <p>
                     Please confirm your order on WhatsApp so we can process it quickly.
-                    {lastOrderId ? ` Order ID: ${lastOrderId}.` : ''}
+                    {lastOrderId && productCode
+                      ? ` Use Order ID ${lastOrderId} and Product ID ${productCode}.`
+                      : lastOrderId
+                        ? ` Order ID: ${lastOrderId}.`
+                        : productCode
+                          ? ` Product ID: ${productCode}.`
+                          : ''}
                   </p>
                   {whatsappConfirmUrl ? (
                     <a href={whatsappConfirmUrl} target="_blank" rel="noopener noreferrer">
@@ -939,6 +915,18 @@ export default function ProductPage({ params }: ProductPageProps) {
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                    {lastOrderId ? (
+                      <div className="order-success-id-row">
+                        <span className="order-success-id-row__label">Order ID</span>
+                        <span className="order-success-id-row__value">{lastOrderId}</span>
+                      </div>
+                    ) : null}
+                    {productCode ? (
+                      <div className="order-success-id-row">
+                        <span className="order-success-id-row__label">Product ID</span>
+                        <span className="order-success-id-row__value">{productCode}</span>
+                      </div>
+                    ) : null}
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: '#666' }}>{isArabic ? 'المنتج:' : 'Product:'}</span>
                       <span style={{ fontWeight: '500', color: '#1a1a2e', fontSize: '12px', maxWidth: '60%', textAlign: 'right' }}>
@@ -1612,51 +1600,62 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <ProductImageColorLine product={product} imageIndex={selectedImage} />
               </div>
 
-              {/* Price, sizes, gender, sold */}
+              <div className="product-meta-row">
+                <div className="product-meta-row__left">
+                  <ClothesSizesLine product={product} />
+                </div>
+                <div className="product-meta-row__badges">
+                  <ClothesGenderNearPrice product={product} />
+                  {actualSoldCount > 0 ? (
+                    <span className="product-sold-badge">🔥 {actualSoldCount} Sold</span>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Price */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.5 }}
                 className="product-price-block"
               >
-                <ClothesSizesLine product={product} />
-                <div
-                  className="product-price-row"
-                  style={{
-                    marginTop:
-                      isClothesCategory(product.category) || isShoesCategory(product.category) ? 10 : 0,
-                  }}
-                >
+                <div className="product-price-row">
                   <div className="product-price-left">
-                    <div className="flex items-baseline" style={{ gap: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ 
-                        background: 'linear-gradient(135deg, #e53e3e 0%, #fc8181 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                        fontSize: '32px', 
-                        fontWeight: '700' 
-                      }}>
-                        {formatPrice(product.currentPrice)} PKR
-                      </span>
-                      <span style={{ color: '#a0aec0', fontSize: '16px', textDecoration: 'line-through', fontWeight: '500' }}>
-                        {formatPrice(product.originalPrice)} PKR
-                      </span>
+                    <div className="product-card-pricing product-view-pricing">
+                      <div className="product-card-pricing__left">
+                        <span className="product-card-price product-view-price">
+                          {formatPrice(product.currentPrice)}
+                          <span className="product-card-price__currency">PKR</span>
+                        </span>
+                        {product.originalPrice > product.currentPrice ? (
+                          <span className="product-card-price--old">
+                            {formatPrice(product.originalPrice)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <ProductCardRating product={product} />
                     </div>
-                  </div>
-                  <div className="product-price-right">
-                    <ClothesGenderNearPrice product={product} />
-                    {actualSoldCount > 0 ? (
-                      <span className="product-sold-badge">🔥 {actualSoldCount} Sold</span>
-                    ) : null}
                   </div>
                 </div>
               </motion.div>
 
-              <div className="product-details-card">
-                <h3 className="product-details-card__title">Product details</h3>
-                <ProductMetaDisplay product={product} variant="full" hideTitle />
-              </div>
+              {(productCode || hasCustomerProductMeta(product.productMeta)) ? (
+                <div className="product-details-card">
+                  <div className="product-details-card__head">
+                    <h3 className="product-details-card__title">Details</h3>
+                    {productCode ? (
+                      <span className="product-details-card__sku" title="Product ID">
+                        {productCode}
+                      </span>
+                    ) : null}
+                  </div>
+                  <ProductMetaDisplay
+                    product={product}
+                    variant="embedded"
+                    hideProductId
+                  />
+                </div>
+              ) : null}
 
             </motion.div>
 
@@ -1812,7 +1811,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                     />
                     <ClothesColorSelector
                       product={product}
-                      colorOptions={imageColorsForSelection}
                       value={formData.selectedColor}
                       onChange={(color) => {
                         setFormData((prev: typeof formData) => {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import StarRating from '@/components/reviews/StarRating';
 import './product-reviews.css';
 
@@ -22,11 +21,18 @@ type Summary = {
   distribution: Record<1 | 2 | 3 | 4 | 5, number>;
 };
 
-function initials(name: string): string {
+function maskName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  if (parts.length === 0) return 'Customer';
+  if (parts.length === 1) {
+    const p = parts[0];
+    return p.length <= 2 ? p : `${p[0]}${'*'.repeat(Math.min(p.length - 1, 4))}`;
+  }
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  const maskedLast =
+    last.length <= 1 ? last : `${last[0]}${'*'.repeat(Math.min(last.length - 1, 4))}`;
+  return `${first} ${maskedLast}`;
 }
 
 function formatReviewDate(iso: string): string {
@@ -85,100 +91,102 @@ export default function ProductReviews({ productId }: Props) {
 
   const total = summary?.totalCount ?? 0;
 
-  if (loading || total === 0) {
+  if (loading || total === 0 || !summary) {
     return null;
   }
 
   return (
-    <motion.section
-      className="pr-section"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.5 }}
-      aria-labelledby="product-reviews-heading"
-    >
-      <div className="pr-section__head">
-        <h2 id="product-reviews-heading" className="pr-section__title">
-          Customer reviews
+    <section className="dz-reviews" aria-labelledby="product-reviews-heading">
+      <header className="dz-reviews__header">
+        <h2 id="product-reviews-heading" className="dz-reviews__title">
+          Customer Reviews
         </h2>
-        {summary && total > 0 ? (
-          <div className="pr-summary">
-            <span className="pr-summary__score">{summary.averageRating.toFixed(1)}</span>
-            <div className="pr-summary__meta">
-              <StarRating value={summary.averageRating} size={20} />
-              <span className="pr-summary__count">
-                {total} review{total === 1 ? '' : 's'}
-              </span>
-            </div>
-          </div>
-        ) : null}
-      </div>
+        <span className="dz-reviews__count-pill">
+          {total} rating{total === 1 ? '' : 's'}
+        </span>
+      </header>
 
-      {summary && total > 0 ? (
-        <div className="pr-bars" aria-hidden>
+      <div className="dz-reviews__summary">
+        <div className="dz-reviews__score-block">
+          <span className="dz-reviews__score" aria-hidden>
+            {summary.averageRating.toFixed(1)}
+          </span>
+          <div className="dz-reviews__score-meta">
+            <StarRating value={summary.averageRating} size={15} />
+            <span className="dz-reviews__score-caption">out of 5 stars</span>
+          </div>
+        </div>
+        <div className="dz-reviews__summary-divider" aria-hidden />
+        <div className="dz-reviews__bars" aria-label="Rating breakdown">
           {([5, 4, 3, 2, 1] as const).map((star) => {
             const count = summary.distribution[star] ?? 0;
             const pct = total > 0 ? (count / total) * 100 : 0;
+            const active = count > 0;
             return (
-              <div key={star} className="pr-bar-row">
-                <span>{star}★</span>
-                <div className="pr-bar-track">
-                  <div className="pr-bar-fill" style={{ width: `${pct}%` }} />
+              <div
+                key={star}
+                className={`dz-reviews__bar-row${active ? ' dz-reviews__bar-row--active' : ''}`}
+              >
+                <span className="dz-reviews__bar-label">
+                  <span className="dz-reviews__bar-num">{star}</span>
+                  <span className="dz-reviews__bar-star" aria-hidden>
+                    ★
+                  </span>
+                </span>
+                <div className="dz-reviews__bar-track">
+                  <div
+                    className="dz-reviews__bar-fill"
+                    style={{ width: `${active ? Math.max(pct, 4) : 0}%` }}
+                  />
                 </div>
-                <span style={{ width: 24, textAlign: 'right' }}>{count}</span>
+                <span className="dz-reviews__bar-count">{count}</span>
               </div>
             );
           })}
         </div>
-      ) : null}
+      </div>
 
       {reviews.length > 0 ? (
-        <div className="pr-list">
-          {reviews.map((r, index) => (
-            <motion.article
-              key={r.id}
-              className="pr-card"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: index * 0.06 }}
-            >
-              <div className="pr-card__top">
-                <div className="pr-card__user">
-                  <div className="pr-avatar" aria-hidden>
-                    {initials(r.reviewerName)}
+        <ul className="dz-reviews__list">
+          {reviews.map((r) => {
+            const displayName = maskName(r.reviewerName);
+            const text = [r.title, r.body].filter(Boolean).join(' — ');
+            return (
+              <li key={r.id} className="dz-review">
+                <div className="dz-review__top">
+                  <span className="dz-review__name">{displayName}</span>
+                  <div className="dz-review__rating-line">
+                    <StarRating value={r.rating} size={14} />
+                    <span className="dz-review__sep" aria-hidden>
+                      |
+                    </span>
+                    <time className="dz-review__date" dateTime={r.createdAt}>
+                      {formatReviewDate(r.createdAt)}
+                    </time>
                   </div>
-                  <div>
-                    <div className="pr-card__name">{r.reviewerName}</div>
-                    <span className="pr-card__badge">✓ Verified purchase</span>
+                  <span className="dz-review__verified">Verified Purchase</span>
+                </div>
+                <p className="dz-review__text">{text}</p>
+                {r.images?.length > 0 ? (
+                  <div className="dz-review__photos">
+                    {r.images.map((src, pi) => (
+                      <a
+                        key={`${r.id}-img-${pi}`}
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dz-review__photo"
+                      >
+                        <Image src={src} alt="" fill sizes="72px" unoptimized />
+                      </a>
+                    ))}
                   </div>
-                </div>
-                <time className="pr-card__date" dateTime={r.createdAt}>
-                  {formatReviewDate(r.createdAt)}
-                </time>
-              </div>
-              <StarRating value={r.rating} size={16} />
-              {r.title ? <h3 className="pr-card__title">{r.title}</h3> : null}
-              <p className="pr-card__body">{r.body}</p>
-              {r.images?.length > 0 ? (
-                <div className="pr-card__photos">
-                  {r.images.map((src, pi) => (
-                    <a
-                      key={`${r.id}-img-${pi}`}
-                      href={src}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="pr-card__photo"
-                    >
-                      <Image src={src} alt="" fill sizes="100px" unoptimized />
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-            </motion.article>
-          ))}
-        </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
       ) : null}
-
-    </motion.section>
+    </section>
   );
 }

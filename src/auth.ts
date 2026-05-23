@@ -2,6 +2,7 @@ import NextAuth, { type NextAuthConfig } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Apple from 'next-auth/providers/apple';
 import Credentials from 'next-auth/providers/credentials';
+import { isShopUploadedProfileImage } from '@/lib/shop-profile-image';
 import {
   findCredentialsUser,
   isShopUserBlocked,
@@ -51,7 +52,7 @@ providers.push(
         id: String(user.id),
         email: user.email,
         name: user.name ?? email.split('@')[0],
-        image: user.image ?? undefined,
+        image: isShopUploadedProfileImage(user.image) ? user.image! : undefined,
       };
     },
   })
@@ -77,7 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         await upsertShopUser({
           email: dbUser.email,
           name: dbUser.name,
-          image: dbUser.image,
+          image: isShopUploadedProfileImage(dbUser.image) ? dbUser.image : null,
           provider: 'credentials',
           providerAccountId: dbUser.email,
         });
@@ -97,7 +98,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const id = await upsertShopUser({
         email: user.email,
         name: user.name,
-        image: user.image,
+        image: null,
         provider,
         providerAccountId: account.providerAccountId,
       });
@@ -118,14 +119,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       if (user?.email) token.email = user.email;
       if (user?.name) token.name = user.name;
-      if (user?.image) token.picture = user.image;
+      if (user?.image && isShopUploadedProfileImage(user.image)) {
+        token.picture = user.image;
+      } else if (user) {
+        token.picture = null;
+      }
 
       if (trigger === 'update' && session) {
         const nextName = session.name ?? session.user?.name;
         const nextImage = session.image ?? session.user?.image;
         if (typeof nextName === 'string') token.name = nextName;
-        if (typeof nextImage === 'string') token.picture = nextImage;
-        if (nextImage === null) token.picture = null;
+        if (isShopUploadedProfileImage(nextImage)) {
+          token.picture = nextImage as string;
+        } else if (nextImage === null) {
+          token.picture = null;
+        }
       }
 
       return token;
@@ -135,7 +143,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.shopUserId as string;
         session.user.authProvider = (token.authProvider as string) ?? 'credentials';
         session.user.name = (token.name as string | undefined) ?? session.user.name;
-        session.user.image = (token.picture as string | undefined) ?? session.user.image ?? null;
+        const picture = token.picture as string | undefined;
+        session.user.image = isShopUploadedProfileImage(picture) ? picture! : null;
         session.user.email = (token.email as string | undefined) ?? session.user.email;
       }
       return session;

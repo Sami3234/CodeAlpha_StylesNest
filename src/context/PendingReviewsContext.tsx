@@ -17,6 +17,7 @@ export type ReviewableItem = {
   orderId: string;
   productId: number;
   productName: string;
+  productCode: string;
   deliveredAt: string;
   existingReviewId: number | null;
   existingStatus: ReviewStatus | null;

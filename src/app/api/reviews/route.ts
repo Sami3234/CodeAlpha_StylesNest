@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         reviewId: result.reviewId,
+        productCode: result.productCode,
         message: 'Thank you! Your review will appear after admin approval.',
       },
       { status: 201 },

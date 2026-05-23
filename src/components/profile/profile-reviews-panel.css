@@ -93,6 +93,10 @@
   min-width: 0;
 }
 
+.prp-card__code {
+  margin: 6px 0 4px;
+}
+
 .prp-card__product {
   font-size: 15px;
   font-weight: 700;

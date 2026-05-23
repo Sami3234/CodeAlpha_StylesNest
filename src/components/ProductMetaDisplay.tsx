@@ -17,10 +17,12 @@ const valueColors = {
 
 type ProductMetaDisplayProps = {
   product: Product;
-  /** compact = inline under title; full = boxed section */
-  variant?: 'compact' | 'full';
+  /** compact = shop chips; full = boxed section; embedded = compact inside product-details-card */
+  variant?: 'compact' | 'full' | 'embedded';
   /** Hide inner heading when wrapped in an outer card title */
   hideTitle?: boolean;
+  /** Hide Product ID row when shown elsewhere on the page */
+  hideProductId?: boolean;
 };
 
 export function ProductShortSummary({
@@ -53,11 +55,14 @@ export default function ProductMetaDisplay({
   product,
   variant = 'full',
   hideTitle = false,
+  hideProductId = false,
 }: ProductMetaDisplayProps) {
   const meta = product.productMeta;
   if (!hasCustomerProductMeta(meta)) return null;
 
-  const rows = getProductMetaDisplayRows(meta);
+  const rows = getProductMetaDisplayRows(meta).filter(
+    (row) => !hideProductId || row.label !== 'Product ID',
+  );
   const tags = getProductMetaTags(meta);
 
   if (variant === 'compact' && rows.length === 0 && tags.length === 0) {
@@ -104,6 +109,43 @@ export default function ProductMetaDisplay({
             #{tag}
           </span>
         ))}
+      </div>
+    );
+  }
+
+  if (variant === 'embedded') {
+    if (rows.length === 0 && tags.length === 0) return null;
+
+    return (
+      <div className="product-details-body">
+        {rows.length > 0 ? (
+          <dl className="product-details-specs">
+            {rows.map((row) => (
+              <div key={row.label} className="product-details-spec">
+                <dt className="product-details-spec__label">{row.label}</dt>
+                <dd
+                  className={`product-details-spec__value${
+                    row.highlight ? ` product-details-spec__value--${row.highlight}` : ''
+                  }`}
+                >
+                  {row.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+        {tags.length > 0 ? (
+          <div className="product-details-tags-row">
+            <span className="product-details-tags__label">Tags</span>
+            <div className="product-details-tags" aria-label="Product tags">
+              {tags.map((tag) => (
+                <span key={tag} className="product-details-tag">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }

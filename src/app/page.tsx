@@ -1,18 +1,18 @@
 import HomePageClient from '@/components/HomePageClient';
 import HomeSeoContent from '@/components/seo/HomeSeoContent';
-import { getHeroBannerUrls } from '@/lib/landing-images-query';
-import { getHomeFallbackImages } from '@/lib/seo/home-fallback-images';
+import { getLandingImagesBySection } from '@/lib/landing-images-query';
 
 export default async function HomePage() {
-  const [fallbackImages, initialHeroSlides] = await Promise.all([
-    getHomeFallbackImages(),
-    getHeroBannerUrls(4),
-  ]);
+  const initialLandingImages = await getLandingImagesBySection();
+  const initialHeroSlides = (initialLandingImages.hero || [])
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, 4);
 
   return (
     <>
       <HomePageClient
-        fallbackImages={fallbackImages}
+        initialLandingImages={initialLandingImages}
         initialHeroSlides={initialHeroSlides}
       />
       <HomeSeoContent />

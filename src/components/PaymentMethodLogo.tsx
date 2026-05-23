@@ -19,17 +19,36 @@ type Props = {
 
 export default function PaymentMethodLogo({ type, size = 48 }: Props) {
   const src = LOGO_PATHS[type] ?? LOGO_PATHS.other;
+
+  if (type === 'cod') {
+    const dim = Math.max(size, 48);
+    return (
+      <span className="order-payment-logo-wrap order-payment-logo-wrap--cod">
+        <Image
+          src={src}
+          alt="Cash on delivery"
+          width={dim}
+          height={dim}
+          className="order-payment-logo-img order-payment-logo-img--cod"
+          unoptimized
+        />
+      </span>
+    );
+  }
+
   const h = size;
 
   return (
-    <Image
-      src={src}
-      alt=""
-      width={120}
-      height={h}
-      className="order-payment-logo-img"
-      unoptimized
-      style={{ objectFit: 'contain', width: 'auto', height: h, maxWidth: '100%' }}
-    />
+    <span className="order-payment-logo-wrap">
+      <Image
+        src={src}
+        alt=""
+        width={120}
+        height={h}
+        className="order-payment-logo-img"
+        unoptimized
+        style={{ objectFit: 'contain', width: 'auto', height: h, maxWidth: '100%' }}
+      />
+    </span>
   );
 }

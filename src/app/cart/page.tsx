@@ -20,6 +20,7 @@ import { getProductTitle } from '@/utils/getProductText';
 import { formatPrice } from '@/utils/formatPrice';
 import { getLineTotal } from '@/lib/product-pricing';
 import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
+import './cart-page.css';
 import {
   clearOrderWhatsAppConfirm,
   readOrderWhatsAppConfirm,
@@ -394,6 +395,7 @@ function CartPageContent() {
                             <p className="mt-1 text-sm font-medium text-[#4338ca]">{optionsSummary}</p>
                           ) : null}
                           <CartLineOptionsEditor
+                            lineKey={line.lineKey}
                             product={product}
                             value={{
                               selectedSize: line.selectedSize,
@@ -478,32 +480,21 @@ function CartPageContent() {
               <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '12px' }}>
                 Shipping and final total can be confirmed after we contact you.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="cart-actions">
                 <button
                   type="button"
                   disabled={selectedCount === 0}
-                  className="inline-flex flex-1 min-w-[160px] justify-center rounded-full px-6 py-3 text-center font-semibold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-45"
-                  style={{
-                    background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)',
-                  }}
+                  className="cart-actions__btn cart-actions__btn--primary"
                   onClick={goToCheckout}
                 >
                   Place order ({selectedCount})
                 </button>
-                <Link
-                  href="/shop"
-                  className="inline-flex flex-1 min-w-[140px] justify-center rounded-full border-2 border-[rgba(102,126,234,0.45)] px-6 py-3 text-center font-semibold text-[#4338ca] hover:bg-[rgba(102,126,234,0.06)]"
-                >
+                <Link href="/shop" className="cart-actions__btn cart-actions__btn--secondary">
                   Continue shopping
                 </Link>
                 <button
                   type="button"
-                  className="inline-flex flex-1 min-w-[140px] justify-center rounded-full px-6 py-3 text-center font-semibold text-white shadow-md transition hover:opacity-95"
-                  style={{
-                    background: '#dc2626',
-                    border: '2px solid #991b1b',
-                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
-                  }}
+                  className="cart-actions__btn cart-actions__btn--danger"
                   onClick={() => clearCart()}
                 >
                   Clear cart

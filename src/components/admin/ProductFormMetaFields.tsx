@@ -90,17 +90,27 @@ export default function ProductFormMetaFields({
         <p className="pf-section-desc">{t('admin.form.catalogSectionDesc')}</p>
         <div className="pf-grid-3">
           <Field
-            label={t('admin.form.sku')}
-            hint={t('admin.form.skuHint')}
+            label="Product ID"
+            required
+            hint="Auto-generated from category when you save (e.g. CS#12051, JY#13011). Shown on shop, orders, and reviews."
             visibility="storefront"
           >
-            <input
-              type="text"
-              className={inputClass('sku')}
-              value={meta.sku ?? ''}
-              onChange={(e) => set('sku', e.target.value)}
-              placeholder="SN-001234"
-            />
+            <div
+              className="pf-input"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: 42,
+                fontFamily: 'ui-monospace, monospace',
+                fontWeight: 700,
+                color: meta.sku?.trim() ? '#c2410c' : '#64748b',
+                background: '#f8fafc',
+                cursor: 'not-allowed',
+              }}
+              aria-readonly
+            >
+              {meta.sku?.trim() ? meta.sku.trim().toUpperCase() : 'Generated on save'}
+            </div>
           </Field>
           <Field
             label={t('admin.form.brand')}

@@ -9,52 +9,90 @@ import WhatsAppFab from '@/components/WhatsAppFab';
 import HomeProductStrip from '@/components/HomeProductStrip';
 import CosmeticsProductCarousel from '@/components/CosmeticsProductCarousel';
 import ElectronicsProductCarousel from '@/components/ElectronicsProductCarousel';
-import type { HomeFallbackImages } from '@/lib/seo/home-fallback-images';
 import '@/app/home-page.css';
 
-function pickImages(landing: string[] | undefined, fallback: string[] | undefined, max = 6): string[] {
-  const fromLanding = (landing || []).filter((u) => u?.trim());
-  if (fromLanding.length > 0) return fromLanding.slice(0, max);
-  return (fallback || []).filter((u) => u?.trim()).slice(0, max);
+function pickImages(landing: string[] | undefined, max = 6): string[] {
+  return (landing || []).map((u) => u.trim()).filter(Boolean).slice(0, max);
+}
+
+function mergeLandingApiPayload(
+  images: Array<Record<string, unknown>>,
+): Record<string, string[]> {
+  const grouped: Record<string, Array<{ url: string; order: number }>> = {};
+  images.forEach((img) => {
+    const rawUrl =
+      typeof img.image_url === 'string'
+        ? img.image_url
+        : typeof img.imageUrl === 'string'
+          ? img.imageUrl
+          : '';
+    const sectionKey = typeof img.section === 'string' ? img.section : '';
+    const order =
+      typeof img.display_order === 'number'
+        ? img.display_order
+        : Number(img.display_order) || 0;
+    const active =
+      img.is_active === undefined || img.is_active === null || img.is_active === true;
+    if (rawUrl.trim() !== '' && sectionKey && active) {
+      if (!grouped[sectionKey]) grouped[sectionKey] = [];
+      grouped[sectionKey].push({ url: rawUrl.trim(), order });
+    }
+  });
+
+  const finalGrouped: Record<string, string[]> = {};
+  Object.keys(grouped).forEach((section) => {
+    grouped[section].sort((a, b) => a.order - b.order);
+    finalGrouped[section] = grouped[section].map((item) => item.url);
+  });
+
+  const merged: Record<string, string[]> = { ...finalGrouped };
+  const legacyPurse = merged.purse || [];
+  const legacyLace = merged.lace || [];
+  delete merged.purse;
+  delete merged.lace;
+  merged.jewelry = [...(merged.jewelry || []), ...legacyPurse];
+  merged.clothes = [...(merged.clothes || []), ...legacyLace];
+  return merged;
 }
 
 type HomePageClientProps = {
-  fallbackImages?: HomeFallbackImages;
-  /** Hero banners from server — avoids flash of wrong images while client fetches */
+  /** Admin landing uploads from server — no product-image fallbacks */
+  initialLandingImages?: Record<string, string[]>;
   initialHeroSlides?: string[];
 };
 
 export default function HomePageClient({
-  fallbackImages = {},
+  initialLandingImages = {},
   initialHeroSlides = [],
 }: HomePageClientProps) {
-  const initialHero = (initialHeroSlides || [])
+  const initialHero = (initialHeroSlides || initialLandingImages.hero || [])
     .map((u) => u.trim())
     .filter(Boolean)
     .slice(0, 4);
 
-  // Landing images from database
-  const [landingImages, setLandingImages] = useState<Record<string, string[]>>(() => {
-    const images: Record<string, string[]> = {};
-    if (initialHero.length > 0) images.hero = initialHero;
-    return images;
-  });
-  const [loadingImages, setLoadingImages] = useState(() => initialHero.length === 0);
+  const serverLanding: Record<string, string[]> = { ...initialLandingImages };
+  if (initialHero.length > 0) serverLanding.hero = initialHero;
+
+  const [landingImages, setLandingImages] = useState<Record<string, string[]>>(serverLanding);
+  const [loadingImages, setLoadingImages] = useState(
+    () => Object.keys(serverLanding).length === 0,
+  );
 
   // Card flip carousel state for Garments section
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const garmentsImages = useMemo(
-    () => pickImages(landingImages['garments'], fallbackImages.garments, 5),
-    [landingImages, fallbackImages.garments],
+    () => pickImages(landingImages['garments'], 5),
+    [landingImages],
   );
 
   // Clothes section flip card state
   const [clothesFlipped, setClothesFlipped] = useState(false);
   const [clothesImageIndex, setClothesImageIndex] = useState(0);
   /** Local default `public/images/clothes.jpg`; admin uploads replace when present */
-  const clothesFromDb = pickImages(landingImages['clothes'], fallbackImages.garments, 4);
-  const clothesImages =
-    clothesFromDb.length > 0 ? clothesFromDb : ['/images/clothes.jpg'];
+  const clothesImages = useMemo(
+    () => pickImages(landingImages['clothes'], 4),
+    [landingImages],
+  );
 
   const handleClothesFlip = () => {
     if (!clothesFlipped && clothesImages.length > 0) {
@@ -68,27 +106,23 @@ export default function HomePageClient({
 
   // Jewelry collage images (merged purse + jewelry from API)
   const jewelryImages = useMemo(
-    () => pickImages(landingImages['jewelry'], fallbackImages.jewelry, 7),
-    [landingImages, fallbackImages.jewelry],
+    () => pickImages(landingImages['jewelry'], 7),
+    [landingImages],
   );
 
   const cosmeticsImages = useMemo(
-    () => pickImages(landingImages['cosmetics'], fallbackImages.cosmetics, 5),
-    [landingImages, fallbackImages.cosmetics],
+    () => pickImages(landingImages['cosmetics'], 5),
+    [landingImages],
   );
 
   const electronicsImages = useMemo(
     () =>
-      pickImages(
-        landingImages['electronics'] || landingImages['jewellery'],
-        fallbackImages.electronics,
-        4,
-      ),
-    [landingImages, fallbackImages.electronics],
+      pickImages(landingImages['electronics'] || landingImages['jewellery'], 4),
+    [landingImages],
   );
 
   const generalStoreImage =
-    pickImages(landingImages['general_store'], fallbackImages.general_store, 1)[0] || '';
+    pickImages(landingImages['general_store'], 1)[0] || '';
 
   /** Hero carousel: admin uploads only — never product fallbacks */
   const MAX_HERO_IMAGES = 4;
@@ -143,58 +177,12 @@ export default function HomePageClient({
         const data = await response.json();
         
         if (data.success && data.images && Array.isArray(data.images)) {
-          const grouped: Record<string, Array<{url: string, order: number}>> = {};
-          data.images.forEach((img: Record<string, unknown>) => {
-            const rawUrl =
-              typeof img.image_url === 'string'
-                ? img.image_url
-                : typeof img.imageUrl === 'string'
-                  ? img.imageUrl
-                  : '';
-            const sectionKey =
-              typeof img.section === 'string' ? img.section : '';
-            const order =
-              typeof img.display_order === 'number'
-                ? img.display_order
-                : Number(img.display_order) || 0;
-            const active =
-              img.is_active === undefined ||
-              img.is_active === null ||
-              img.is_active === true;
-            if (rawUrl.trim() !== '' && sectionKey && active) {
-              if (!grouped[sectionKey]) {
-                grouped[sectionKey] = [];
-              }
-              grouped[sectionKey].push({
-                url: rawUrl.trim(),
-                order,
-              });
-            }
-          });
-          
-          // Sort by display_order and extract URLs
-          const finalGrouped: Record<string, string[]> = {};
-          Object.keys(grouped).forEach(section => {
-            grouped[section].sort((a, b) => a.order - b.order);
-            finalGrouped[section] = grouped[section].map(item => item.url);
-          });
-
-          const merged: Record<string, string[]> = { ...finalGrouped };
-          const legacyPurse = merged.purse || [];
-          const legacyLace = merged.lace || [];
-          delete merged.purse;
-          delete merged.lace;
-          merged.jewelry = [...(merged.jewelry || []), ...legacyPurse];
-          merged.clothes = [...(merged.clothes || []), ...legacyLace];
-
-          setLandingImages(merged);
+          setLandingImages(mergeLandingApiPayload(data.images as Array<Record<string, unknown>>));
         } else {
           console.warn('No images found or invalid response:', data);
-          setLandingImages({});
         }
       } catch (error) {
         console.error('Error fetching landing images:', error);
-        setLandingImages({});
       } finally {
         setLoadingImages(false);
       }

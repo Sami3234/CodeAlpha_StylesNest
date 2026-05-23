@@ -27,7 +27,7 @@ export function getProductMetaDisplayRows(meta: ProductMeta | undefined): Produc
     rows.push({ label: 'Weight', value });
   }
   if (meta.sku?.trim()) {
-    rows.push({ label: 'Product code', value: meta.sku.trim() });
+    rows.push({ label: 'Product ID', value: meta.sku.trim().toUpperCase() });
   }
 
   if (meta.stockQuantity != null) {

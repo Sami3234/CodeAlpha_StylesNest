@@ -11,6 +11,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PasswordStrengthList from '@/components/auth/PasswordStrengthList';
 import { providerLabel } from '@/lib/shop-users-labels';
+import { isShopUploadedProfileImage } from '@/lib/shop-profile-image';
 import { writeCustomerDetailsToSession } from '@/lib/customer-details-storage';
 import { passwordsMatch, validatePasswordStrength } from '@/lib/password-policy';
 import { clientMessageFromApi } from '@/lib/safe-errors';
@@ -85,17 +86,18 @@ function ProfilePageContent() {
           city: data.profile.city ?? '',
           address: data.profile.address ?? '',
         });
-        setProfileImage(data.profile.image ?? session?.user?.image ?? null);
+        const img = data.profile.image as string | undefined;
+        setProfileImage(isShopUploadedProfileImage(img) ? img!.trim() : null);
       } else if (session?.user?.name) {
         setForm((f) => ({ ...f, fullName: session.user?.name ?? '' }));
-        setProfileImage(session?.user?.image ?? null);
+        setProfileImage(null);
       }
     } catch {
       setMessage({ type: 'err', text: 'Could not load profile' });
     } finally {
       setLoadingProfile(false);
     }
-  }, [session?.user?.name, session?.user?.image]);
+  }, [session?.user?.name]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {

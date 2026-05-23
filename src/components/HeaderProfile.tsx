@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useLoginModal } from '@/context/LoginModalContext';
 import { usePendingReviews } from '@/context/PendingReviewsContext';
+import { useNavbarProfile } from '@/hooks/useNavbarProfile';
 import { motion } from 'framer-motion';
 import { IoPersonCircleOutline } from 'react-icons/io5';
 import './header-profile.css';
@@ -28,6 +29,7 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
   const { openLogin } = useLoginModal();
   const isActive = pathname === '/profile';
   const { pendingCount } = usePendingReviews();
+  const { avatarUrl, initials, label, ready: profileReady } = useNavbarProfile();
   const profileHref = '/profile';
 
   if (status === 'loading') {
@@ -65,9 +67,6 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
     );
   }
 
-  const label = session.user.name?.split(' ')[0] || 'Profile';
-  const avatarUrl = session.user.image?.trim() || null;
-
   return (
     <Link
       href={profileHref}
@@ -87,14 +86,24 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
         }`}
       >
         <span className="header-profile-icon">
-          {avatarUrl ? (
-            <Image src={avatarUrl} alt="" fill sizes="32px" unoptimized />
-          ) : (
-            <IoPersonCircleOutline size={compact ? 20 : 20} aria-hidden />
-          )}
+          <span className="header-profile-avatar">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt="" fill sizes="32px" unoptimized />
+            ) : profileReady ? (
+              <span className="header-profile-initials" aria-hidden>
+                {initials}
+              </span>
+            ) : (
+              <IoPersonCircleOutline size={compact ? 20 : 20} aria-hidden />
+            )}
+          </span>
           <ProfileBadge count={pendingCount} />
         </span>
-        {!compact ? <span className="header-profile-label">{label}</span> : null}
+        {!compact && profileReady && label ? (
+          <span className="header-profile-label">{label}</span>
+        ) : !compact && !profileReady ? (
+          <span className="header-profile-label header-profile-label--placeholder" aria-hidden />
+        ) : null}
       </motion.span>
     </Link>
   );

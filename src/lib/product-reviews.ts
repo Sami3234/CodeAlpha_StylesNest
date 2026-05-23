@@ -7,6 +7,7 @@ import {
   type ProductReviewRow,
   type ReviewStatus,
 } from '@/lib/product-reviews-schema';
+import { getProductCodesByIds } from '@/lib/product-code';
 import { parseReviewImageUrls, validateReviewImages } from '@/lib/review-images';
 import type { Order, OrderProduct } from '@/types/order';
 
@@ -31,6 +32,7 @@ export type ReviewableItem = {
   orderId: string;
   productId: number;
   productName: string;
+  productCode: string;
   deliveredAt: string;
   existingReviewId: number | null;
   existingStatus: ReviewStatus | null;
@@ -40,6 +42,7 @@ export type AdminProductReview = {
   id: number;
   productId: number;
   productName: string | null;
+  productCode: string | null;
   shopUserId: number;
   orderId: string;
   rating: number;
@@ -101,6 +104,54 @@ export async function getProductReviewSummary(productId: number): Promise<Produc
     totalCount,
     distribution,
   };
+}
+
+export type ProductReviewSummaryCompact = {
+  averageRating: number;
+  reviewCount: number;
+};
+
+/** All approved review averages in one query (shop product cards). */
+export async function getProductReviewSummariesMap(): Promise<
+  Map<number, ProductReviewSummaryCompact>
+> {
+  await ensureProductReviewsTable();
+  const rows = await sql`
+    SELECT
+      product_id,
+      AVG(rating)::float AS avg_rating,
+      COUNT(*)::int AS review_count
+    FROM product_reviews
+    WHERE status = 'approved'
+    GROUP BY product_id
+  `;
+
+  const map = new Map<number, ProductReviewSummaryCompact>();
+  for (const row of rows) {
+    const r = row as {
+      product_id: number;
+      avg_rating: number | string;
+      review_count: number | string;
+    };
+    const reviewCount = Number(r.review_count);
+    if (reviewCount <= 0) continue;
+    map.set(Number(r.product_id), {
+      averageRating: Math.round(Number(r.avg_rating) * 10) / 10,
+      reviewCount,
+    });
+  }
+  return map;
+}
+
+export function attachReviewSummariesToProducts<T extends { id: number }>(
+  products: T[],
+  summaries: Map<number, ProductReviewSummaryCompact>,
+): (T & { reviewSummary?: ProductReviewSummaryCompact })[] {
+  return products.map((product) => {
+    const summary = summaries.get(Number(product.id));
+    if (!summary?.reviewCount) return product;
+    return { ...product, reviewSummary: summary };
+  });
 }
 
 export async function listApprovedProductReviews(
@@ -216,11 +267,18 @@ export async function getReviewableItemsForUser(userId: number): Promise<Reviewa
         orderId,
         productId,
         productName: p.name,
+        productCode: '',
         deliveredAt: formatReviewDeliveredAt(date, time),
         existingReviewId: existing?.id ?? null,
         existingStatus: existing?.status ?? null,
       });
     }
+  }
+
+  const productIds = items.map((i) => i.productId);
+  const codeMap = await getProductCodesByIds(productIds);
+  for (const item of items) {
+    item.productCode = codeMap.get(item.productId) ?? '';
   }
 
   return items;
@@ -234,7 +292,7 @@ export async function createProductReview(input: {
   title?: string;
   body: string;
   images: string[];
-}): Promise<{ ok: true; reviewId: number } | { ok: false; error: string }> {
+}): Promise<{ ok: true; reviewId: number; productCode: string } | { ok: false; error: string }> {
   const rating = Math.round(input.rating);
   if (rating < 1 || rating > 5) {
     return { ok: false, error: 'Rating must be between 1 and 5 stars' };
@@ -309,7 +367,10 @@ export async function createProductReview(input: {
     RETURNING id
   `;
 
-  return { ok: true, reviewId: inserted[0].id as number };
+  const codeMap = await getProductCodesByIds([input.productId]);
+  const productCode = codeMap.get(input.productId) ?? '';
+
+  return { ok: true, reviewId: inserted[0].id as number, productCode };
 }
 
 export async function listAdminReviews(
@@ -322,7 +383,8 @@ export async function listAdminReviews(
       ? await sql`
           SELECT
             r.*,
-            p.title_en AS product_title
+            p.title_en AS product_title,
+            p.product_meta->>'sku' AS product_code
           FROM product_reviews r
           LEFT JOIN products p ON p.id = r.product_id
           ORDER BY r.created_at DESC
@@ -331,7 +393,8 @@ export async function listAdminReviews(
       : await sql`
           SELECT
             r.*,
-            p.title_en AS product_title
+            p.title_en AS product_title,
+            p.product_meta->>'sku' AS product_code
           FROM product_reviews r
           LEFT JOIN products p ON p.id = r.product_id
           WHERE r.status = ${statusFilter}
@@ -340,11 +403,16 @@ export async function listAdminReviews(
         `;
 
   return rows.map((row: Record<string, unknown>) => {
-    const r = row as ProductReviewRow & { product_title?: string | null };
+    const r = row as ProductReviewRow & {
+      product_title?: string | null;
+      product_code?: string | null;
+    };
+    const code = r.product_code?.trim();
     return {
       id: r.id,
       productId: r.product_id,
       productName: r.product_title ?? null,
+      productCode: code ? code.toUpperCase() : null,
       shopUserId: r.shop_user_id,
       orderId: r.order_id,
       rating: r.rating,

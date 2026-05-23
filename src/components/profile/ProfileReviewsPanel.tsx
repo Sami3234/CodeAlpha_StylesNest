@@ -11,6 +11,7 @@ import {
   type ReviewPhotoSlots,
 } from '@/components/reviews/ReviewImagePicker';
 import { usePendingReviews } from '@/context/PendingReviewsContext';
+import ProductCodeChip from '@/components/ProductCodeChip';
 import { clientMessageFromApi } from '@/lib/safe-errors';
 import type { ReviewableItem } from '@/context/PendingReviewsContext';
 import type { ReviewStatus } from '@/lib/product-reviews-schema';
@@ -146,6 +147,11 @@ function ReviewFormCard({
       <div className="prp-card__head">
         <div className="prp-card__head-text">
           <h3 className="prp-card__product">{item.productName}</h3>
+          {item.productCode ? (
+            <div className="prp-card__code">
+              <ProductCodeChip code={item.productCode} showRequiredHint />
+            </div>
+          ) : null}
           <p className="prp-card__meta">
             Order {item.orderId} · Delivered {item.deliveredAt}
           </p>
@@ -220,6 +226,11 @@ function SubmittedReviewCard({ item }: { item: ReviewableItem }) {
       <div className="prp-card__head">
         <div className="prp-card__head-text">
           <h3 className="prp-card__product">{item.productName}</h3>
+          {item.productCode ? (
+            <div className="prp-card__code">
+              <ProductCodeChip code={item.productCode} showRequiredHint />
+            </div>
+          ) : null}
           <p className="prp-card__meta">Order {item.orderId}</p>
           <Link href={`/product/${item.productId}`} className="prp-card__link">
             View product →

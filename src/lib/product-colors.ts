@@ -28,22 +28,27 @@ export function normalizeColorList(colors: string[] | undefined): string[] {
   return out;
 }
 
-/** Read available colors from clothes/shoes options or product meta. */
+/** Read all colors customers can choose (aggregated from options + per-image lists). */
 export function getProductAvailableColors(product: {
   category: string;
   clothesOptions?: { colors?: string[] };
   shoesOptions?: { colors?: string[] };
-  productMeta?: { availableColors?: string[] };
+  productMeta?: { availableColors?: string[]; imageColors?: string[][] };
 }): string[] {
+  const merged: string[] = [];
   if (isShoesCategory(product.category)) {
-    const fromShoes = normalizeColorList(product.shoesOptions?.colors);
-    if (fromShoes.length) return fromShoes;
+    merged.push(...(product.shoesOptions?.colors ?? []));
   }
   if (isClothesCategory(product.category)) {
-    const fromClothes = normalizeColorList(product.clothesOptions?.colors);
-    if (fromClothes.length) return fromClothes;
+    merged.push(...(product.clothesOptions?.colors ?? []));
   }
-  return normalizeColorList(product.productMeta?.availableColors);
+  merged.push(...(product.productMeta?.availableColors ?? []));
+  if (product.productMeta?.imageColors?.length) {
+    for (const list of product.productMeta.imageColors) {
+      merged.push(...list);
+    }
+  }
+  return normalizeColorList(merged);
 }
 
 /** Initial colors when loading admin product form. */

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import AdminLoading from '@/components/admin/AdminLoading';
+import ProductCodeChip from '@/components/ProductCodeChip';
 import ConnectionProblem from '@/components/network/ConnectionProblem';
 import { clientFetch, NetworkError } from '@/lib/client-fetch';
 import type { FetchErrorKind } from '@/lib/is-network-error';
@@ -15,6 +16,7 @@ type AdminReview = {
   id: number;
   productId: number;
   productName: string | null;
+  productCode: string | null;
   shopUserId: number;
   orderId: string;
   rating: number;
@@ -164,6 +166,11 @@ export default function AdminReviewsPage() {
               <div className="ar-card__top">
                 <div>
                   <span className={`ar-badge ar-badge--${r.status}`}>{r.status}</span>
+                  {r.productCode ? (
+                    <div style={{ marginTop: 10 }}>
+                      <ProductCodeChip code={r.productCode} showRequiredHint />
+                    </div>
+                  ) : null}
                   <div className="ar-card__meta" style={{ marginTop: 8 }}>
                     <strong>{r.reviewerName}</strong> · Order {r.orderId}
                   </div>

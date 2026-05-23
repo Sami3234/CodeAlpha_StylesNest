@@ -15,7 +15,6 @@ import {
   categoryColorsRequired,
   getProductAvailableColors,
   getProductImageColorDisplay,
-  normalizeColorList,
   productColorsDisplayLabel,
 } from '@/lib/product-colors';
 import {
@@ -23,6 +22,7 @@ import {
   shoesGenderLabel,
   shoesSizesDisplayLabel,
 } from '@/lib/shoes-options';
+import ProductColorSelector from '@/components/ProductColorSelector';
 import {
   genderBadgeClass,
   genderImageBadgeClass,
@@ -257,10 +257,12 @@ export function ClothesSizeSelector({
   product,
   value,
   onChange,
+  embedded = false,
 }: {
   product: Product;
   value: string;
   onChange: (size: string) => void;
+  embedded?: boolean;
 }) {
   const shoeSizes =
     isShoesCategory(product.category) && product.shoesOptions?.sizes.length
@@ -278,20 +280,21 @@ export function ClothesSizeSelector({
     ? isClothesSizeRequired(product.clothesOptions.stitch)
     : true;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.65 }}
-    >
+  const sizeBlock = (
+    <>
       <label
-        style={{
-          display: 'block',
-          fontSize: '15px',
-          fontWeight: 600,
-          color: '#2d3748',
-          marginBottom: '10px',
-        }}
+        className={embedded ? 'color-selector__label' : undefined}
+        style={
+          embedded
+            ? undefined
+            : {
+                display: 'block',
+                fontSize: '15px',
+                fontWeight: 600,
+                color: '#2d3748',
+                marginBottom: '10px',
+              }
+        }
       >
         {shoeSizes ? 'Select Shoe Size' : 'Select Size'}
         {isStitched ? (
@@ -317,14 +320,14 @@ export function ClothesSizeSelector({
                 }
               }}
               style={{
-                minWidth: '48px',
-                padding: '10px 16px',
+                minWidth: embedded ? '44px' : '48px',
+                padding: embedded ? '8px 14px' : '10px 16px',
                 borderRadius: '10px',
                 border: `2px solid ${selected ? '#667eea' : 'rgba(102, 126, 234, 0.25)'}`,
                 background: selected ? '#667eea' : '#fff',
                 color: selected ? '#fff' : '#4a5568',
                 fontWeight: 700,
-                fontSize: '14px',
+                fontSize: embedded ? '13px' : '14px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}
@@ -334,64 +337,58 @@ export function ClothesSizeSelector({
           );
         })}
       </div>
+    </>
+  );
+
+  if (embedded) return <div>{sizeBlock}</div>;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.65 }}
+    >
+      {sizeBlock}
     </motion.div>
   );
 }
 
-/** Color picker in order form / add-to-cart modal */
+/** Color chips in order form / add-to-cart modal / cart (all product colors). */
 export function ClothesColorSelector({
   product,
   value,
   onChange,
-  colorOptions,
+  embedded = false,
+  idPrefix = 'order',
 }: {
   product: Product;
   value: string;
   onChange: (color: string) => void;
-  /** When set (e.g. colors for the active gallery image), only these are selectable. */
-  colorOptions?: string[];
+  embedded?: boolean;
+  idPrefix?: string;
 }) {
-  const colors = colorOptions?.length ? normalizeColorList(colorOptions) : getProductAvailableColors(product);
+  const colors = getProductAvailableColors(product);
+  if (colors.length === 0) return null;
 
-  if (colors.length === 0) {
-    return null;
-  }
+  const selector = (
+    <ProductColorSelector
+      product={product}
+      value={value}
+      onChange={onChange}
+      embedded={embedded}
+      idPrefix={idPrefix}
+    />
+  );
 
-  const colorRequired = categoryColorsRequired(product.category) || colors.length > 0;
+  if (embedded) return selector;
 
   return (
-    <div>
-      <label
-        className="block text-[15px] font-semibold text-[#2d3748] mb-2.5"
-      >
-        Select Color
-        {colorRequired ? <span className="text-[#e53e3e] ml-1">*</span> : null}
-      </label>
-      <div className="flex flex-wrap gap-2.5">
-        {colors.map((color) => {
-          const selected = value === color;
-          return (
-            <button
-              key={color}
-              type="button"
-              onClick={() => onChange(color)}
-              style={{
-                padding: '10px 16px',
-                borderRadius: '10px',
-                border: `2px solid ${selected ? '#c44569' : 'rgba(196, 69, 105, 0.25)'}`,
-                background: selected ? '#c44569' : '#fff',
-                color: selected ? '#fff' : '#4a5568',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {color}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.65 }}
+    >
+      {selector}
+    </motion.div>
   );
 }

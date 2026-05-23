@@ -34,6 +34,11 @@ export interface Product {
   shoesOptions?: ShoesOptions;
   /** SKU, stock, SEO, brand, etc. */
   productMeta?: ProductMeta;
+  /** Approved customer reviews (shop cards / listing). */
+  reviewSummary?: {
+    averageRating: number;
+    reviewCount: number;
+  };
 }
 
 // Import cleaning function

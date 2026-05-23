@@ -141,6 +141,7 @@ export type OrderWhatsAppItem = {
   name: string;
   quantity: number;
   lineTotal: number;
+  productCode?: string;
   size?: string;
   color?: string;
 };
@@ -155,10 +156,16 @@ export function buildOrderWhatsAppMessage(params: {
   address: string;
   paymentLabel: string;
 }): string {
+  const singleItemCode =
+    params.items.length === 1 ? params.items[0].productCode?.trim().toUpperCase() : undefined;
+
   const itemLines = params.items.flatMap((item, index) => {
     const prefix = params.items.length > 1 ? `${index + 1}. ` : '';
     return [
       `${prefix}${item.name}`,
+      params.items.length > 1 && item.productCode
+        ? `   Product ID: ${item.productCode.trim().toUpperCase()}`
+        : '',
       item.size ? `   Size: ${item.size}` : '',
       item.color ? `   Color: ${item.color}` : '',
       `   Qty: ${item.quantity} — ${item.lineTotal} PKR`,
@@ -169,6 +176,7 @@ export function buildOrderWhatsAppMessage(params: {
     'Assalam o Alaikum, I placed an order on StylesNest.',
     '',
     `Order ID: ${params.orderId}`,
+    singleItemCode ? `Product ID: ${singleItemCode}` : '',
     `Name: ${params.customerName}`,
     `WhatsApp: ${params.customerWhatsApp}`,
     '',
@@ -192,6 +200,7 @@ export function buildSingleProductWhatsAppMessage(params: {
   customerName: string;
   customerWhatsApp: string;
   productName: string;
+  productCode?: string;
   quantity: number;
   total: number;
   city: string;
@@ -207,6 +216,7 @@ export function buildSingleProductWhatsAppMessage(params: {
     items: [
       {
         name: params.productName,
+        productCode: params.productCode,
         quantity: params.quantity,
         lineTotal: params.total,
         size: params.size,

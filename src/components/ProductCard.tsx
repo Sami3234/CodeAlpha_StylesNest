@@ -13,6 +13,7 @@ import AddToCartOptionsModal from '@/components/AddToCartOptionsModal';
 import { ClothesMetaRow } from '@/components/ClothesImageBadges';
 import ProductCardImageOverlays from '@/components/ProductCardImageOverlays';
 import ProductCardTags from '@/components/ProductCardTags';
+import ProductCardRating from '@/components/ProductCardRating';
 import { ProductShortSummary } from '@/components/ProductMetaDisplay';
 import { productNeedsCartOptions } from '@/lib/cart-line-options';
 import { isOutOfStock, validateStockForAdd } from '@/lib/product-stock';
@@ -139,13 +140,16 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           <ClothesMetaRow product={product} />
 
           <div className="product-card-pricing">
-            <span className="product-card-price">
-              {formatPrice(product.currentPrice)}
-              <span className="product-card-price__currency">PKR</span>
-            </span>
-            {product.originalPrice > product.currentPrice ? (
-              <span className="product-card-price--old">{formatPrice(product.originalPrice)}</span>
-            ) : null}
+            <div className="product-card-pricing__left">
+              <span className="product-card-price">
+                {formatPrice(product.currentPrice)}
+                <span className="product-card-price__currency">PKR</span>
+              </span>
+              {product.originalPrice > product.currentPrice ? (
+                <span className="product-card-price--old">{formatPrice(product.originalPrice)}</span>
+              ) : null}
+            </div>
+            <ProductCardRating product={product} />
           </div>
         </div>
 

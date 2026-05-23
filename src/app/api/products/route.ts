@@ -5,7 +5,7 @@ import { mapProductRow } from '@/lib/product-mapper';
 import { categoryShowsGender, validateCategoryOptions } from '@/lib/category-form-fields';
 import { isClothesCategory, parseClothesOptions } from '@/lib/clothes-options';
 import { isShoesCategory, parseShoesOptions } from '@/lib/shoes-options';
-import { normalizeProductMetaForSave, parseProductMeta } from '@/lib/product-meta';
+import { parseProductMeta } from '@/lib/product-meta';
 import { apiErrorResponse } from '@/lib/safe-errors';
 import { hasValidAdminSession, requireAdminSession } from '@/lib/require-admin-session';
 import {
@@ -13,6 +13,14 @@ import {
   getSoldCountsMapFromOrders,
   repairSoldCountsInBackground,
 } from '@/lib/product-sold-count';
+import {
+  attachReviewSummariesToProducts,
+  getProductReviewSummariesMap,
+} from '@/lib/product-reviews';
+import {
+  ensureProductCodesBackfilled,
+  resolveProductMetaForSave,
+} from '@/lib/product-code';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +51,7 @@ function serializeShoesOptions(category: string, shoesOptions: unknown) {
 export async function GET(request: NextRequest) {
   try {
     await ensureProductSchema();
+    await ensureProductCodesBackfilled();
     const includeInactive = await hasValidAdminSession(request);
 
     const rows = includeInactive
@@ -71,9 +80,12 @@ export async function GET(request: NextRequest) {
     const mapped = rows.map((row: Record<string, unknown>) => mapProductRow(row));
 
     // Storefront: real sold counts from orders. Admin list: use DB values (faster).
-    const products = includeInactive
+    let products = includeInactive
       ? mapped
       : applyRealSoldCounts(mapped, await getSoldCountsMapFromOrders());
+
+    const reviewSummaries = await getProductReviewSummariesMap();
+    products = attachReviewSummariesToProducts(products, reviewSummaries);
 
     if (!includeInactive) {
       repairSoldCountsInBackground();
@@ -152,9 +164,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: shoesSerialized.error }, { status: 400 });
     }
 
-    const metaJson = JSON.stringify(
-      normalizeProductMetaForSave(parseProductMeta(productMeta) ?? {})
+    const finalMeta = await resolveProductMetaForSave(
+      parseProductMeta(productMeta) ?? {},
+      String(category ?? 'general'),
     );
+    const metaJson = JSON.stringify(finalMeta);
 
     const result = await sql`
       INSERT INTO products (
@@ -247,9 +261,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: shoesSerialized.error }, { status: 400 });
     }
 
-    const metaJson = JSON.stringify(
-      normalizeProductMetaForSave(parseProductMeta(productMeta) ?? {})
+    const existingRows = await sql`
+      SELECT product_meta FROM products WHERE id = ${id} LIMIT 1
+    `;
+    const existingMeta = parseProductMeta(
+      existingRows[0] ? (existingRows[0] as { product_meta: unknown }).product_meta : undefined,
     );
+
+    const finalMeta = await resolveProductMetaForSave(
+      parseProductMeta(productMeta) ?? {},
+      String(category ?? 'general'),
+      { preserveSku: existingMeta?.sku },
+    );
+    const metaJson = JSON.stringify(finalMeta);
 
     const result = await sql`
       UPDATE products
