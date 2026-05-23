@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useProducts } from '@/context/ProductContext';
 import { useOrders } from '@/context/OrderContext';
 import Link from 'next/link';
@@ -20,7 +19,6 @@ export default function AdminDashboard() {
   const { orders, getOrderStats } = useOrders();
 
   // Calculate product stats
-  const totalProducts = products.length;
   const activeProducts = products.filter(p => p.status === 'active' || !p.status).length;
   const inactiveProducts = products.filter(p => p.status === 'inactive').length;
   const totalCategories = [...new Set(products.map(p => p.category))].length;

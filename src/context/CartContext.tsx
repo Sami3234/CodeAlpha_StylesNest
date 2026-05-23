@@ -95,10 +95,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
+  if (typeof window !== 'undefined' && !hydrated) {
     setLines(loadInitialLines());
     setHydrated(true);
-  }, []);
+  }
 
   useEffect(() => {
     if (!hydrated || typeof window === 'undefined') return;

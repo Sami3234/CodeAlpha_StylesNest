@@ -14,7 +14,7 @@ import { dedupeByProductTitle } from '@/lib/seo/dedupe-products';
 interface ProductContextType {
   products: Product[];
   addProduct: (product: Partial<Product>) => Promise<{ success: boolean; error?: string }>;
-  updateProduct: (product: Product) => void;
+  updateProduct: (product: Product) => Promise<{ success: boolean; error?: string }>;
   deleteProduct: (id: number) => void;
   toggleProductStatus: (id: number) => void;
   getActiveProducts: () => Product[];
@@ -134,8 +134,6 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       productMeta: productData.productMeta,
     };
     
-    console.log('🔄 ProductContext - Adding product with pricingTiers:', newProduct.pricingTiers);
-    
     try {
       const response = await clientFetch('/api/products', {
         method: 'POST',
@@ -145,7 +143,8 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        setProducts([data.product, ...products]);
+        setProducts((prev) => [data.product, ...prev]);
+        void fetchProducts({ silent: true });
         return { success: true };
       } else {
         let errorData: Record<string, unknown> = {};
@@ -182,24 +181,68 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateProduct = async (updatedProduct: Product) => {
+  const updateProduct = async (
+    updatedProduct: Product,
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
+      const titleText =
+        typeof updatedProduct.title === 'string'
+          ? updatedProduct.title
+          : updatedProduct.title?.en || '';
+      const descriptionText =
+        typeof updatedProduct.description === 'string'
+          ? updatedProduct.description
+          : updatedProduct.description?.en || '';
+      const featuresText = Array.isArray(updatedProduct.features)
+        ? updatedProduct.features
+        : updatedProduct.features?.en || [];
+
+      const payload = {
+        ...updatedProduct,
+        title: {
+          en: titleText,
+          ar: titleText,
+        },
+        description: {
+          en: descriptionText,
+          ar: descriptionText,
+        },
+        features: {
+          en: featuresText,
+          ar: featuresText,
+        },
+      };
+
       const response = await clientFetch('/api/products', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedProduct),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         const data = await response.json();
-    setProducts(products.map(p => 
-          p.id === data.product.id ? data.product : p
-    ));
-      } else {
-        console.error('Failed to update product');
+        setProducts((prev) =>
+          prev.map((p) => (p.id === data.product.id ? data.product : p)),
+        );
+        void fetchProducts({ silent: true });
+        return { success: true };
       }
+
+      const errBody = await response.json().catch(() => ({}));
+      console.error('Failed to update product:', errBody);
+      return {
+        success: false,
+        error: clientMessageFromApi(
+          errBody as { error?: string; message?: string },
+          'Failed to update product',
+        ),
+      };
     } catch (error) {
       console.error('Error updating product:', error);
+      return {
+        success: false,
+        error: error instanceof NetworkError ? GENERIC_CLIENT_ERROR : GENERIC_CLIENT_ERROR,
+      };
     }
   };
 
@@ -210,7 +253,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
-    setProducts(products.filter(p => p.id !== id));
+        setProducts((prev) => prev.filter((p) => p.id !== id));
       } else {
         console.error('Failed to delete product');
       }

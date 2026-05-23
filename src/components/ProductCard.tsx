@@ -6,11 +6,13 @@ import { Product } from '@/data/products';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { getProductTitle } from '@/utils/getProductText';
-import { IoBagAddOutline } from 'react-icons/io5';
+import { IoCartOutline } from 'react-icons/io5';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import AddToCartOptionsModal from '@/components/AddToCartOptionsModal';
-import ClothesStitchBadge, { ClothesMetaRow, ShoesGenderBadge } from '@/components/ClothesImageBadges';
+import { ClothesMetaRow } from '@/components/ClothesImageBadges';
+import ProductCardImageOverlays from '@/components/ProductCardImageOverlays';
+import ProductCardTags from '@/components/ProductCardTags';
 import { ProductShortSummary } from '@/components/ProductMetaDisplay';
 import { productNeedsCartOptions } from '@/lib/cart-line-options';
 import { isOutOfStock, validateStockForAdd } from '@/lib/product-stock';
@@ -71,29 +73,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               transition: 'all 0.3s ease',
             }}
           >
-            <motion.span
-              className="badge-discount absolute z-10"
-              style={{
-                top: '12px',
-                right: '12px',
-                background: 'linear-gradient(135deg, #e53e3e 0%, #c53030 50%, #fc8181 100%)',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: '700',
-                padding: '8px 16px',
-                borderRadius: '30px',
-                boxShadow: '0px 6px 20px rgba(229, 62, 62, 0.6), 0px 3px 10px rgba(197, 48, 48, 0.4)',
-                letterSpacing: '0.7px',
-                textTransform: 'uppercase',
-                border: '1px solid rgba(255,255,255,0.4)',
-              }}
-              whileHover={{ scale: 1.05 }}
-            >
-              {product.discount}% OFF
-            </motion.span>
-
             <div
-              className="relative"
+              className="product-image-frame relative"
               style={{
                 paddingBottom: '100%',
                 overflow: 'hidden',
@@ -126,51 +107,26 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                   Image
                 </div>
               )}
+
+              <ProductCardImageOverlays product={product} />
             </div>
-
-            <ClothesStitchBadge product={product} />
-            <ShoesGenderBadge product={product} />
-
-            {product.freeDelivery && (
-              <motion.span
-                className="badge-delivery absolute z-10"
-                style={{
-                  bottom: '12px',
-                  left: '12px',
-                  background: 'linear-gradient(135deg, #38a169 0%, #2f855a 50%, #48bb78 100%)',
-                  color: 'white',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  padding: '7px 14px',
-                  borderRadius: '30px',
-                  boxShadow: '0px 6px 20px rgba(56, 161, 105, 0.6), 0px 3px 10px rgba(47, 133, 90, 0.4)',
-                  letterSpacing: '0.5px',
-                  textTransform: 'uppercase',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                }}
-                whileHover={{ scale: 1.05 }}
-              >
-                Free Delivery
-              </motion.span>
-            )}
           </div>
         </Link>
 
-        <div style={{ paddingTop: '16px', paddingBottom: '6px' }}>
+        <ProductCardTags product={product} />
+
+        <div style={{ paddingTop: '12px', paddingBottom: '6px' }}>
           <h3
             className="product-title line-clamp-2"
             style={{
               marginTop: '0px',
-              fontSize: '18px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              lineHeight: '1.5',
+              fontSize: '17px',
+              color: '#1e293b',
+              lineHeight: '1.45',
               minHeight: '48px',
-              fontWeight: '600',
-              transition: 'all 0.3s ease',
-              letterSpacing: '0.2px',
+              fontWeight: '700',
+              transition: 'color 0.3s ease',
+              letterSpacing: '-0.01em',
             }}
             suppressHydrationWarning
           >
@@ -182,69 +138,24 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
 
           <ClothesMetaRow product={product} />
 
-          <div className="product-pricing flex items-baseline" style={{ marginTop: '8px', gap: '12px' }}>
-            <motion.span
-              className="current-price font-bold"
-              style={{
-                background: 'linear-gradient(135deg, #ff6b9d 0%, #c44569 50%, #f093fb 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                fontSize: '22px',
-                fontWeight: '800',
-                letterSpacing: '0.5px',
-              }}
-              whileHover={{ scale: 1.05 }}
-            >
-              {formatPrice(product.currentPrice)} PKR
-            </motion.span>
-            <span
-              className="original-price line-through"
-              style={{ color: '#999999', fontSize: '14px', fontWeight: '400' }}
-            >
-              {formatPrice(product.originalPrice)} PKR
+          <div className="product-card-pricing">
+            <span className="product-card-price">
+              {formatPrice(product.currentPrice)}
+              <span className="product-card-price__currency">PKR</span>
             </span>
+            {product.originalPrice > product.currentPrice ? (
+              <span className="product-card-price--old">{formatPrice(product.originalPrice)}</span>
+            ) : null}
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: '10px',
-            marginTop: '8px',
-            paddingTop: '16px',
-            borderTop: '1px solid rgba(102, 126, 234, 0.15)',
-          }}
-        >
-          <Link
-            href={`/product/${product.id}`}
-            style={{
-              flex: 1,
-              textDecoration: 'none',
-              display: 'flex',
-            }}
-          >
-            <motion.span
-              style={{
-                width: '100%',
-                textAlign: 'center',
-                padding: '12px 16px',
-                fontSize: '14px',
-                fontWeight: 700,
-                borderRadius: '999px',
-                border: '2px solid rgba(255, 107, 53, 0.55)',
-                color: '#c05621',
-                background: 'rgba(255, 107, 53, 0.08)',
-                cursor: 'pointer',
-              }}
-              whileHover={{ scale: 1.02, background: 'rgba(255, 107, 53, 0.14)' }}
-              whileTap={{ scale: 0.98 }}
-            >
-              View
-            </motion.span>
+        <div className="product-card-actions">
+          <Link href={`/product/${product.id}`} className="product-card-view-btn">
+            View
           </Link>
           <motion.button
             type="button"
+            className="sn-cart-circle-btn product-card-add-btn"
             disabled={addDisabled}
             aria-label={
               outOfStock
@@ -268,27 +179,9 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               addToCart(product.id, check.quantity);
               notifySuccess('Added to cart');
             }}
-            style={{
-              flexShrink: 0,
-              width: '52px',
-              height: '48px',
-              borderRadius: '14px',
-              border: 'none',
-              cursor: addDisabled ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: inCart
-                ? 'linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%)'
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: inCart ? '#94a3b8' : '#fff',
-              boxShadow: inCart ? 'none' : '0 8px 22px rgba(102, 126, 234, 0.35)',
-              opacity: inCart ? 0.85 : 1,
-            }}
-            whileHover={inCart ? undefined : { scale: 1.05 }}
-            whileTap={inCart ? undefined : { scale: 0.95 }}
+            whileTap={addDisabled ? undefined : { scale: 0.94 }}
           >
-            <IoBagAddOutline size={24} aria-hidden />
+            <IoCartOutline className="sn-cart-circle-btn__icon" aria-hidden />
           </motion.button>
         </div>
       </motion.article>

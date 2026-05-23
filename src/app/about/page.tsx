@@ -5,9 +5,10 @@ import { useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useContactSettings } from '@/context/ContactSettingsContext';
+import CustomerSupportForm from '@/components/support/CustomerSupportForm';
 
 export default function AboutPage() {
-  const { settings: contactInfo, loaded: contactLoaded } = useContactSettings();
+  const { settings: contactInfo } = useContactSettings();
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -572,6 +573,8 @@ export default function AboutPage() {
                 </a>
               </motion.div>
             </div>
+
+            <CustomerSupportForm />
           </div>
         </motion.section>
 

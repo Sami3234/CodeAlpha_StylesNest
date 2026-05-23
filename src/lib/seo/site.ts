@@ -30,9 +30,16 @@ export const siteConfig = {
   ],
   twitterHandle: '@stylesnest',
   contactEmail: 'info@stylesnest.com',
-  /** Brand logo — favicon, Google tab, Organization JSON-LD */
+  /** Large logo for Open Graph / social previews */
   logoPath: '/StylesNest_Nest.png',
   defaultOgImagePath: '/StylesNest_Nest.png',
+  /** Browser tab & PWA icons (public/favicon/) */
+  faviconIco: '/favicon/favicon.ico',
+  favicon16: '/favicon/favicon-16x16.png',
+  favicon32: '/favicon/favicon-32x32.png',
+  appleTouchIcon: '/favicon/apple-touch-icon.png',
+  pwaIcon192: '/favicon/android-chrome-192x192.png',
+  pwaIcon512: '/favicon/android-chrome-512x512.png',
 } as const;
 
 export const shopCategories = [

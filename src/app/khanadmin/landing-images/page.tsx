@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useToast } from '@/components/Toast';
 import ImageCropper from '@/components/ImageCropper';
@@ -69,18 +69,12 @@ export default function LandingImagesPage() {
   const [images, setImages] = useState<Record<string, LandingImage[]>>({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<LandingImage | null>(null);
-  const [showModal, setShowModal] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<File | null>(null);
   const [cropImageType, setCropImageType] = useState<string>('');
   const [bannerSize, setBannerSize] = useState<'standard' | 'wide'>('standard'); // standard = 1920x600, wide = 1920x1080
 
-  useEffect(() => {
-    fetchImages();
-  }, []);
-
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/landing-images', { cache: 'no-store' });
@@ -114,7 +108,11 @@ export default function LandingImagesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    void fetchImages();
+  }, [fetchImages]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, imageType: string) => {
     const file = e.target.files?.[0];
@@ -268,27 +266,6 @@ export default function LandingImagesPage() {
     } catch (error) {
       console.error('Error deleting image:', error);
       showToast('Failed to delete image', 'error');
-    }
-  };
-
-  const handleUpdateOrder = async (image: LandingImage, newOrder: number) => {
-    try {
-      const response = await fetch('/api/landing-images', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: image.id,
-          displayOrder: newOrder,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        fetchImages();
-      }
-    } catch (error) {
-      console.error('Error updating order:', error);
     }
   };
 

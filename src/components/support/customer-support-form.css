@@ -1,0 +1,111 @@
+.csf-card {
+  margin-top: 2rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  background: #fff;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 107, 53, 0.2);
+  box-shadow: 0 8px 32px rgba(255, 107, 53, 0.08);
+}
+
+.csf-title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  font-weight: 700;
+  color: #222;
+}
+
+.csf-sub {
+  margin: 0 0 1.25rem;
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.csf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.csf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.csf-field--full {
+  grid-column: 1 / -1;
+}
+
+.csf-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.csf-input,
+.csf-textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: #fff;
+}
+
+.csf-input:focus,
+.csf-textarea:focus {
+  outline: 2px solid rgba(255, 107, 53, 0.35);
+  border-color: #ff6b35;
+}
+
+.csf-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.csf-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.csf-submit {
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 1.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  box-shadow: 0 4px 14px rgba(255, 107, 53, 0.35);
+}
+
+.csf-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.csf-error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.csf-success {
+  margin: 0;
+  color: #15803d;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .csf-grid {
+    grid-template-columns: 1fr;
+  }
+}

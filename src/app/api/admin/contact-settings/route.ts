@@ -305,7 +305,7 @@ export async function PUT(request: NextRequest) {
             top_bar_links_json = ${topBarLinksJson},
             updated_at = CURRENT_TIMESTAMP
         `;
-      } catch (insertError) {
+      } catch {
         await sql`
           UPDATE contact_settings 
           SET whatsapp = ${whatsapp},

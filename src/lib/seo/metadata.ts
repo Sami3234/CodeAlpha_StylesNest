@@ -1,14 +1,8 @@
 import type { Metadata } from 'next';
 import { absoluteUrl, getSiteUrl, siteConfig, truncate } from '@/lib/seo/site';
 
-const logoUrl = absoluteUrl(siteConfig.logoPath);
-
-const brandIcons = [
-  { url: logoUrl, type: 'image/png', sizes: '48x48' },
-  { url: logoUrl, type: 'image/png', sizes: '96x96' },
-  { url: logoUrl, type: 'image/png', sizes: '192x192' },
-  { url: logoUrl, type: 'image/png', sizes: '512x512' },
-] as const;
+const favicon512Url = absoluteUrl(siteConfig.pwaIcon512);
+const favicon32Url = absoluteUrl(siteConfig.favicon32);
 
 type PageSeoInput = {
   title: string;
@@ -99,13 +93,19 @@ export const rootMetadata: Metadata = {
   publisher: siteConfig.name,
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
-      { url: '/favicon/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+      { url: siteConfig.faviconIco, sizes: 'any' },
+      { url: siteConfig.favicon16, type: 'image/png', sizes: '16x16' },
+      { url: siteConfig.favicon32, type: 'image/png', sizes: '32x32' },
     ],
-    shortcut: ['/favicon.ico'],
-    apple: [{ url: '/favicon/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
-    other: [{ rel: 'mask-icon', url: logoUrl, color: '#1e293b' }],
+    shortcut: [siteConfig.faviconIco],
+    apple: [
+      {
+        url: siteConfig.appleTouchIcon,
+        type: 'image/png',
+        sizes: '180x180',
+      },
+    ],
+    other: [{ rel: 'mask-icon', url: favicon32Url, color: '#1e293b' }],
   },
   formatDetection: {
     email: false,
@@ -115,6 +115,6 @@ export const rootMetadata: Metadata = {
   other: {
     'geo.region': siteConfig.region,
     'geo.placename': siteConfig.country,
-    'msapplication-TileImage': absoluteUrl(siteConfig.logoPath),
+    'msapplication-TileImage': favicon512Url,
   },
 };

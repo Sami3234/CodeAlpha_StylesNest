@@ -1,33 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useNetworkStatus } from '@/context/NetworkStatusContext';
 import { BACK_ONLINE_MESSAGE, OFFLINE_MESSAGE } from '@/lib/network-messages';
 
 export default function OfflineBanner() {
-  const { isOnline } = useNetworkStatus();
-  const [showBackOnline, setShowBackOnline] = useState(false);
-  const [wasOffline, setWasOffline] = useState(false);
+  const { offlineBannerMode } = useNetworkStatus();
 
-  useEffect(() => {
-    if (!isOnline) {
-      setWasOffline(true);
-      setShowBackOnline(false);
-      return;
-    }
-    if (wasOffline) {
-      setShowBackOnline(true);
-      const t = window.setTimeout(() => {
-        setShowBackOnline(false);
-        setWasOffline(false);
-      }, 3500);
-      return () => window.clearTimeout(t);
-    }
-  }, [isOnline, wasOffline]);
+  if (offlineBannerMode === 'hidden') return null;
 
-  if (isOnline && !showBackOnline) return null;
-
-  const backOnline = isOnline && showBackOnline;
+  const backOnline = offlineBannerMode === 'back-online';
 
   return (
     <div

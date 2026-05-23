@@ -33,11 +33,12 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
   if (status === 'loading') {
     return (
       <span
+        className="header-profile-pill header-profile-pill--idle"
         style={{
-          width: compact ? 40 : 48,
-          height: compact ? 40 : 48,
-          borderRadius: '50%',
+          width: compact ? 40 : 120,
+          minHeight: compact ? 40 : 44,
           background: 'rgba(0,0,0,0.06)',
+          border: 'none',
         }}
         aria-hidden
       />
@@ -48,34 +49,17 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
     return (
       <button
         type="button"
+        className="header-profile-signin-btn"
         onClick={() => openLogin(pathname || '/')}
         aria-label="Sign in"
-        style={{
-          border: 'none',
-          padding: 0,
-          background: 'transparent',
-          cursor: 'pointer',
-        }}
       >
         <motion.span
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.94 }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: compact ? 40 : 48,
-            height: compact ? 40 : 48,
-            borderRadius: '50%',
-            border: isActive ? 'none' : '2px solid rgba(255, 107, 53, 0.45)',
-            background: isActive
-              ? 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
-              : 'rgba(255, 255, 255, 0.95)',
-            color: isActive ? '#fff' : '#4a5568',
-            boxShadow: isActive ? '0px 8px 22px rgba(255, 107, 53, 0.45)' : '0px 4px 12px rgba(0,0,0,0.08)',
-          }}
+          className={`header-profile-signin-pill${compact ? ' header-profile-signin-pill--compact' : ''}`}
         >
           <IoPersonCircleOutline size={compact ? 20 : 22} aria-hidden />
+          {!compact ? <span className="header-profile-signin-text">Sign in</span> : null}
         </motion.span>
       </button>
     );

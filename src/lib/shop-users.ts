@@ -410,3 +410,41 @@ export async function changeShopUserPassword(
 
   return { ok: true };
 }
+
+export type AdminUserAlert = {
+  id: number;
+  name: string | null;
+  email: string | null;
+  provider: string;
+  createdAt: string;
+};
+
+export async function listNewShopUsersSince(since: string | null): Promise<AdminUserAlert[]> {
+  await ensureShopUsersTable();
+
+  const rows = since
+    ? await sql`
+        SELECT id, name, email, provider, created_at
+        FROM shop_users
+        WHERE created_at > (${since}::timestamptz - INTERVAL '15 seconds')
+        ORDER BY created_at DESC
+        LIMIT 50
+      `
+    : await sql`
+        SELECT id, name, email, provider, created_at
+        FROM shop_users
+        ORDER BY created_at DESC
+        LIMIT 20
+      `;
+
+  return rows.map((row) => ({
+    id: row.id as number,
+    name: (row.name as string | null) ?? null,
+    email: (row.email as string | null) ?? null,
+    provider: String(row.provider ?? 'credentials'),
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : String(row.created_at),
+  }));
+}

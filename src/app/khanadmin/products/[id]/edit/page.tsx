@@ -7,6 +7,7 @@ import { useProducts } from '@/context/ProductContext';
 import { useToast } from '@/components/Toast';
 import type { Product } from '@/data/products';
 import AdminLoading from '@/components/admin/AdminLoading';
+import { sanitizeClientMessage } from '@/lib/safe-errors';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -20,19 +21,43 @@ export default function AdminEditProductPage({ params }: PageProps) {
 
   const product = products.find((p) => String(p.id) === String(id));
 
-  const handleSave = async (productData: Product | Partial<Product>) => {
-    if (!product) return;
+  const handleSave = async (
+    productData: Product | Partial<Product>,
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!product) {
+      return { success: false, error: 'Product not found' };
+    }
+
     const updated: Product = {
-      ...product,
       ...productData,
       id: product.id,
-      title: productData.title || product.title,
-      description: productData.description || product.description,
-      features: productData.features || product.features,
-    } as Product;
-    updateProduct(updated);
-    showToast('Changes saved', 'success');
-    router.push('/khanadmin/products');
+      title: productData.title!,
+      description: productData.description!,
+      image: productData.image ?? product.image,
+      images: productData.images ?? product.images,
+      currentPrice: productData.currentPrice ?? product.currentPrice,
+      originalPrice: productData.originalPrice ?? product.originalPrice,
+      discount: productData.discount ?? product.discount,
+      category: productData.category ?? product.category,
+      freeDelivery: productData.freeDelivery ?? product.freeDelivery,
+      status: productData.status ?? product.status,
+      pricingTiers: productData.pricingTiers ?? product.pricingTiers,
+      productMeta: productData.productMeta,
+      clothesOptions: productData.clothesOptions,
+      shoesOptions: productData.shoesOptions,
+      features: productData.features,
+      soldCount: product.soldCount,
+    };
+
+    const result = await updateProduct(updated);
+    if (result.success) {
+      showToast('Changes saved', 'success');
+      router.push('/khanadmin/products');
+      return { success: true };
+    }
+    const error = sanitizeClientMessage(result.error, 'Failed to save product');
+    showToast(error, 'error');
+    return { success: false, error };
   };
 
   if (loading) {

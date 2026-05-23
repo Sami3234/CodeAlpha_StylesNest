@@ -28,15 +28,18 @@ export default function AddToCartOptionsModal({
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [modalSession, setModalSession] = useState({ open: false, productId: product.id });
   const { lines } = useCart();
 
-  useEffect(() => {
-    if (!open) return;
+  if (open && (!modalSession.open || modalSession.productId !== product.id)) {
+    setModalSession({ open: true, productId: product.id });
     setSelectedSize('');
     setSelectedColor('');
     setQuantity(1);
     setError(null);
-  }, [open, product.id]);
+  } else if (!open && modalSession.open) {
+    setModalSession({ open: false, productId: product.id });
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -76,7 +79,7 @@ export default function AddToCartOptionsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center p-4 sm:items-center"
+      className="fixed inset-0 z-200 flex items-end justify-center p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-cart-modal-title"

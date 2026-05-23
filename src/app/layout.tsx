@@ -1,5 +1,6 @@
 import { Playfair_Display, Poppins } from "next/font/google";
 import "./globals.css";
+import "@/components/product-card-badges.css";
 import JsonLd from "@/components/seo/JsonLd";
 import { rootMetadata } from "@/lib/seo/metadata";
 import { onlineStoreJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld-builders";

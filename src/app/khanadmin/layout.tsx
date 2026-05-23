@@ -25,11 +25,28 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const isPublicRoute = isPublicAdminPath(pathname);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [authNetworkError, setAuthNetworkError] = useState(false);
+  const [trackedPublicRoute, setTrackedPublicRoute] = useState(isPublicRoute);
+  const [lastAuthPath, setLastAuthPath] = useState<string | null>(null);
+
+  if (isPublicRoute !== trackedPublicRoute) {
+    setTrackedPublicRoute(isPublicRoute);
+    if (isPublicRoute) {
+      setIsCheckingAuth(false);
+      setIsAuthenticated(false);
+      setLastAuthPath(null);
+    }
+  }
+
+  if (!isPublicRoute && pathname !== lastAuthPath) {
+    setLastAuthPath(pathname);
+    setIsCheckingAuth(true);
+  }
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -61,14 +78,9 @@ export default function AdminLayout({
   }, [router]);
 
   useEffect(() => {
-    if (isPublicAdminPath(pathname)) {
-      setIsCheckingAuth(false);
-      setIsAuthenticated(false);
-      return;
-    }
+    if (isPublicRoute) return;
 
     let cancelled = false;
-    setIsCheckingAuth(true);
 
     void (async () => {
       await runAuthCheck();
@@ -78,7 +90,7 @@ export default function AdminLayout({
     return () => {
       cancelled = true;
     };
-  }, [pathname, runAuthCheck]);
+  }, [isPublicRoute, runAuthCheck]);
 
   const retryAuthCheck = useCallback(async () => {
     setIsCheckingAuth(true);
@@ -110,7 +122,7 @@ export default function AdminLayout({
     );
   }
 
-  if (isPublicAdminPath(pathname)) {
+  if (isPublicRoute) {
     return <>{children}</>;
   }
 

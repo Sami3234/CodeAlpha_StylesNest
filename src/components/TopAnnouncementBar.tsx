@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import SocialBrandIcon from '@/components/SocialBrandIcon';
 import { useContactSettings } from '@/context/ContactSettingsContext';
@@ -31,18 +30,14 @@ export default function TopAnnouncementBar() {
   const settings = shared;
 
   const announcement = (settings.announcement_text || '').trim();
-  const careHref = (settings.customer_care_url || '').trim();
   const waHref = settings.social_whatsapp.trim() || waLinkFromNumber(settings.whatsapp);
   const fb = settings.social_facebook.trim();
   const dz = settings.social_daraz.trim();
   const sp = (settings.social_shopify || '').trim();
   const hasMarquee = announcement.length > 0;
-  const hasCare = careHref.length > 0;
   const hasIcons = !!(fb || waHref || dz || sp);
 
-  if (!hasMarquee && !hasCare && !hasIcons) return null;
-
-  const careInternal = careHref.startsWith('/') && !careHref.startsWith('//');
+  if (!hasMarquee && !hasIcons) return null;
 
   return (
     <div
@@ -64,21 +59,6 @@ export default function TopAnnouncementBar() {
           )}
         </div>
         <div className="top-announcement-actions">
-          {hasCare &&
-            (careInternal ? (
-              <Link href={careHref} className="top-announcement-care">
-                Customer care
-              </Link>
-            ) : (
-              <a
-                href={careHref}
-                className="top-announcement-care"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Customer care
-              </a>
-            ))}
           <div className="top-announcement-icons">
             {waHref ? (
               <a

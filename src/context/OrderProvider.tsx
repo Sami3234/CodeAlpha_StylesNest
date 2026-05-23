@@ -21,6 +21,8 @@ import { isProtectedAdminPanelPath, adminPath } from '@/lib/admin-path';
 import { fetchAdminAuthenticated } from '@/lib/admin-auth-client';
 import { ADMIN_LIVE_POLL_MS } from '@/lib/admin-live-sync';
 import type { AdminReviewAlert } from '@/lib/product-reviews';
+import type { AdminSupportAlert } from '@/lib/support-tickets';
+import type { AdminUserAlert } from '@/lib/shop-users';
 import {
   getCurrentTimeInTimezone,
   getTodayDateInTimezone,
@@ -51,9 +53,13 @@ interface OrderContextType {
   newOrderAlerts: Order[];
   /** New pending reviews since you last opened the bell. */
   newReviewAlerts: AdminReviewAlert[];
+  newSupportAlerts: AdminSupportAlert[];
+  newUserAlerts: AdminUserAlert[];
   lastRefreshedAt: string | null;
   clearOrderNotifications: () => void;
   clearReviewNotifications: () => void;
+  clearSupportNotifications: () => void;
+  clearUserNotifications: () => void;
   loading: boolean;
   fetchError: FetchErrorKind | null;
   reloadOrders: () => Promise<void>;
@@ -111,6 +117,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [serverStats, setServerStats] = useState<AdminOrderStats | null>(null);
   const [newOrderAlerts, setNewOrderAlerts] = useState<Order[]>([]);
   const [newReviewAlerts, setNewReviewAlerts] = useState<AdminReviewAlert[]>([]);
+  const [newSupportAlerts, setNewSupportAlerts] = useState<AdminSupportAlert[]>([]);
+  const [newUserAlerts, setNewUserAlerts] = useState<AdminUserAlert[]>([]);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(protectedAdmin);
@@ -119,10 +127,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const knownReviewIdsRef = useRef<Set<number>>(new Set());
+  const knownSupportIdsRef = useRef<Set<number>>(new Set());
+  const knownUserIdsRef = useRef<Set<number>>(new Set());
   const pollInitializedRef = useRef(false);
   const reviewPollInitializedRef = useRef(false);
+  const supportPollInitializedRef = useRef(false);
+  const userPollInitializedRef = useRef(false);
   const lastSyncRef = useRef<string | null>(null);
   const lastReviewSyncRef = useRef<string | null>(null);
+  const lastSupportSyncRef = useRef<string | null>(null);
+  const lastUserSyncRef = useRef<string | null>(null);
 
   const appendNewOrderAlerts = useCallback((fresh: Order[]) => {
     if (fresh.length === 0) return;
@@ -141,6 +155,26 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     setNewReviewAlerts((prev) => {
       const seen = new Set(prev.map((r) => r.id));
       const unique = fresh.filter((r) => !seen.has(r.id));
+      if (unique.length === 0) return prev;
+      return [...unique, ...prev].slice(0, 20);
+    });
+  }, []);
+
+  const appendNewSupportAlerts = useCallback((fresh: AdminSupportAlert[]) => {
+    if (fresh.length === 0) return;
+    setNewSupportAlerts((prev) => {
+      const seen = new Set(prev.map((t) => t.id));
+      const unique = fresh.filter((t) => !seen.has(t.id));
+      if (unique.length === 0) return prev;
+      return [...unique, ...prev].slice(0, 20);
+    });
+  }, []);
+
+  const appendNewUserAlerts = useCallback((fresh: AdminUserAlert[]) => {
+    if (fresh.length === 0) return;
+    setNewUserAlerts((prev) => {
+      const seen = new Set(prev.map((u) => u.id));
+      const unique = fresh.filter((u) => !seen.has(u.id));
       if (unique.length === 0) return prev;
       return [...unique, ...prev].slice(0, 20);
     });
@@ -175,6 +209,68 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       }
     },
     [appendNewReviewAlerts],
+  );
+
+  const notifyNewSupport = useCallback(
+    (fresh: AdminSupportAlert[]) => {
+      if (fresh.length === 0) return;
+      appendNewSupportAlerts(fresh);
+      if (document.visibilityState !== 'visible') return;
+      if (fresh.length === 1) {
+        const t = fresh[0];
+        toast.success('New support request', {
+          description: `${t.name} · ${t.subject}`,
+          action: {
+            label: 'Support',
+            onClick: () => {
+              window.location.href = adminPath('/support');
+            },
+          },
+        });
+      } else {
+        toast.success(`${fresh.length} new support requests`, {
+          description: 'Open the notification bell to see details.',
+          action: {
+            label: 'Support',
+            onClick: () => {
+              window.location.href = adminPath('/support');
+            },
+          },
+        });
+      }
+    },
+    [appendNewSupportAlerts],
+  );
+
+  const notifyNewUsers = useCallback(
+    (fresh: AdminUserAlert[]) => {
+      if (fresh.length === 0) return;
+      appendNewUserAlerts(fresh);
+      if (document.visibilityState !== 'visible') return;
+      if (fresh.length === 1) {
+        const u = fresh[0];
+        toast.success('New user registered', {
+          description: u.email ?? u.name ?? `User #${u.id}`,
+          action: {
+            label: 'Users',
+            onClick: () => {
+              window.location.href = adminPath('/users');
+            },
+          },
+        });
+      } else {
+        toast.success(`${fresh.length} new users registered`, {
+          description: 'Open the notification bell to see details.',
+          action: {
+            label: 'Users',
+            onClick: () => {
+              window.location.href = adminPath('/users');
+            },
+          },
+        });
+      }
+    },
+    [appendNewUserAlerts],
   );
 
   const notifyNewOrders = useCallback((fresh: Order[]) => {
@@ -320,6 +416,84 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     [pathname, protectedAdmin, notifyNewReviews],
   );
 
+  const fetchSupportLive = useCallback(
+    async (options?: { silent?: boolean; notify?: boolean }) => {
+      if (!isProtectedAdminPanelPath(pathname)) return;
+      if (!(await fetchAdminAuthenticated())) return;
+      const silent = options?.silent ?? false;
+      const notify = options?.notify ?? false;
+
+      try {
+        const since = lastSupportSyncRef.current;
+        const url = since
+          ? `/api/admin/support/live?since=${encodeURIComponent(since)}`
+          : '/api/admin/support/live';
+
+        const response = await clientFetch(url, { cache: 'no-store' });
+        if (!response.ok) {
+          if (!silent) console.error('Support live sync failed');
+          return;
+        }
+
+        const data = await response.json();
+        const incoming: AdminSupportAlert[] = data.newTickets ?? [];
+        lastSupportSyncRef.current = data.serverTime ?? new Date().toISOString();
+
+        if (!supportPollInitializedRef.current) {
+          incoming.forEach((t) => knownSupportIdsRef.current.add(t.id));
+          supportPollInitializedRef.current = true;
+          return;
+        }
+
+        const fresh = incoming.filter((t) => !knownSupportIdsRef.current.has(t.id));
+        incoming.forEach((t) => knownSupportIdsRef.current.add(t.id));
+        if (fresh.length > 0 && notify && protectedAdmin) notifyNewSupport(fresh);
+      } catch (error) {
+        if (!silent) console.error('Support live sync error:', error);
+      }
+    },
+    [pathname, protectedAdmin, notifyNewSupport],
+  );
+
+  const fetchUserLive = useCallback(
+    async (options?: { silent?: boolean; notify?: boolean }) => {
+      if (!isProtectedAdminPanelPath(pathname)) return;
+      if (!(await fetchAdminAuthenticated())) return;
+      const silent = options?.silent ?? false;
+      const notify = options?.notify ?? false;
+
+      try {
+        const since = lastUserSyncRef.current;
+        const url = since
+          ? `/api/admin/users/live?since=${encodeURIComponent(since)}`
+          : '/api/admin/users/live';
+
+        const response = await clientFetch(url, { cache: 'no-store' });
+        if (!response.ok) {
+          if (!silent) console.error('Users live sync failed');
+          return;
+        }
+
+        const data = await response.json();
+        const incoming: AdminUserAlert[] = data.newUsers ?? [];
+        lastUserSyncRef.current = data.serverTime ?? new Date().toISOString();
+
+        if (!userPollInitializedRef.current) {
+          incoming.forEach((u) => knownUserIdsRef.current.add(u.id));
+          userPollInitializedRef.current = true;
+          return;
+        }
+
+        const fresh = incoming.filter((u) => !knownUserIdsRef.current.has(u.id));
+        incoming.forEach((u) => knownUserIdsRef.current.add(u.id));
+        if (fresh.length > 0 && notify && protectedAdmin) notifyNewUsers(fresh);
+      } catch (error) {
+        if (!silent) console.error('Users live sync error:', error);
+      }
+    },
+    [pathname, protectedAdmin, notifyNewUsers],
+  );
+
   const fetchLive = useCallback(
     async (options?: { silent?: boolean; notify?: boolean }) => {
       if (!isProtectedAdminPanelPath(pathname)) return;
@@ -379,9 +553,17 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       setUnseenNew(0);
       setNewOrderAlerts([]);
       setNewReviewAlerts([]);
+      setNewSupportAlerts([]);
+      setNewUserAlerts([]);
       knownReviewIdsRef.current.clear();
+      knownSupportIdsRef.current.clear();
+      knownUserIdsRef.current.clear();
       reviewPollInitializedRef.current = false;
+      supportPollInitializedRef.current = false;
+      userPollInitializedRef.current = false;
       lastReviewSyncRef.current = null;
+      lastSupportSyncRef.current = null;
+      lastUserSyncRef.current = null;
       return;
     }
 
@@ -394,6 +576,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           await fetchLive({ silent: true, notify: false });
           await fetchReviewLive({ silent: true, notify: false });
+          await fetchSupportLive({ silent: true, notify: false });
+          await fetchUserLive({ silent: true, notify: false });
         }
       } catch (error) {
         if (error instanceof NetworkError) setFetchError(error.kind);
@@ -407,6 +591,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') {
         void fetchLive({ silent: true, notify: true });
         void fetchReviewLive({ silent: true, notify: true });
+        void fetchSupportLive({ silent: true, notify: true });
+        void fetchUserLive({ silent: true, notify: true });
       }
     }, ADMIN_LIVE_POLL_MS);
 
@@ -414,11 +600,15 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') {
         void fetchLive({ silent: true, notify: true });
         void fetchReviewLive({ silent: true, notify: true });
+        void fetchSupportLive({ silent: true, notify: true });
+        void fetchUserLive({ silent: true, notify: true });
       }
     };
     const onFocus = () => {
       void fetchLive({ silent: true, notify: true });
       void fetchReviewLive({ silent: true, notify: true });
+      void fetchSupportLive({ silent: true, notify: true });
+      void fetchUserLive({ silent: true, notify: true });
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onFocus);
@@ -429,7 +619,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onFocus);
     };
-  }, [protectedAdmin, fetchFullOrders, fetchLive, fetchReviewLive]);
+  }, [
+    protectedAdmin,
+    fetchFullOrders,
+    fetchLive,
+    fetchReviewLive,
+    fetchSupportLive,
+    fetchUserLive,
+  ]);
 
   const clearOrderNotifications = useCallback(() => {
     setUnseenNew(0);
@@ -438,6 +635,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const clearReviewNotifications = useCallback(() => {
     setNewReviewAlerts([]);
+  }, []);
+
+  const clearSupportNotifications = useCallback(() => {
+    setNewSupportAlerts([]);
+  }, []);
+
+  const clearUserNotifications = useCallback(() => {
+    setNewUserAlerts([]);
   }, []);
 
   const addOrder = async (
@@ -639,9 +844,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         orderNotifications,
         newOrderAlerts,
         newReviewAlerts,
+        newSupportAlerts,
+        newUserAlerts,
         lastRefreshedAt,
         clearOrderNotifications,
         clearReviewNotifications,
+        clearSupportNotifications,
+        clearUserNotifications,
         loading,
         fetchError,
         reloadOrders,

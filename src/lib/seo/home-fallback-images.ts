@@ -9,7 +9,6 @@ const SECTION_CATEGORIES: Record<string, string[]> = {
   electronics: ['electronics'],
   jewelry: ['jewelry', 'watches', 'bags'],
   general_store: ['general'],
-  hero: ['general', 'cosmetics', 'electronics', 'clothes'],
 };
 
 const MAX_PER_SECTION = 6;

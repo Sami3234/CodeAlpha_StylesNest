@@ -21,61 +21,45 @@ import {
   shoesGenderLabel,
   shoesSizesDisplayLabel,
 } from '@/lib/shoes-options';
-
-const stitchBadgeStyle: React.CSSProperties = {
-  position: 'absolute',
-  zIndex: 10,
-  bottom: '12px',
-  right: '12px',
-  fontSize: '11px',
-  fontWeight: 600,
-  padding: '7px 14px',
-  borderRadius: '30px',
-  letterSpacing: '0.5px',
-  textTransform: 'uppercase',
-  border: '1px solid rgba(255,255,255,0.4)',
-  color: '#fff',
-};
+import {
+  genderBadgeClass,
+  genderImageBadgeClass,
+  stitchImageBadgeClass,
+  stitchOverlayClass,
+} from '@/lib/product-badge-classes';
 
 /** Stitched / Unstitched on product image only */
 export default function ClothesStitchBadge({
   product,
   animated = false,
+  overlay = false,
 }: {
   product: Product;
   animated?: boolean;
+  /** Shop card: bottom-right tag with flat design */
+  overlay?: boolean;
 }) {
   if (!isClothesCategory(product.category) || !product.clothesOptions) {
     return null;
   }
 
   const stitch = product.clothesOptions.stitch;
-  const style: React.CSSProperties = {
-    ...stitchBadgeStyle,
-    background:
-      stitch === 'stitched'
-        ? 'linear-gradient(135deg, #d69e2e 0%, #b7791f 50%, #ecc94b 100%)'
-        : 'linear-gradient(135deg, #805ad5 0%, #6b46c1 50%, #9f7aea 100%)',
-    boxShadow:
-      stitch === 'stitched'
-        ? '0px 6px 20px rgba(214, 158, 46, 0.55)'
-        : '0px 6px 20px rgba(128, 90, 213, 0.55)',
-  };
+  const className = overlay ? stitchOverlayClass(stitch) : stitchImageBadgeClass(stitch);
 
   if (animated) {
     return (
       <motion.span
+        className={className}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ duration: 0.4, delay: 0.4 }}
-        style={style}
       >
         {clothesStitchLabel(stitch)}
       </motion.span>
     );
   }
 
-  return <span style={style}>{clothesStitchLabel(stitch)}</span>;
+  return <span className={className}>{clothesStitchLabel(stitch)}</span>;
 }
 
 /** Men / Women badge on shoe product image */
@@ -90,26 +74,23 @@ export function ShoesGenderBadge({
     return null;
   }
 
-  const style: React.CSSProperties = {
-    ...stitchBadgeStyle,
-    background: 'linear-gradient(135deg, #3182ce 0%, #2b6cb0 50%, #63b3ed 100%)',
-    boxShadow: '0px 6px 20px rgba(49, 130, 206, 0.55)',
-  };
+  const gender = product.shoesOptions.gender;
+  const className = genderImageBadgeClass(gender);
+  const label = shoesGenderLabel(gender);
 
-  const label = shoesGenderLabel(product.shoesOptions.gender);
   if (animated) {
     return (
       <motion.span
+        className={className}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ duration: 0.4, delay: 0.4 }}
-        style={style}
       >
         {label}
       </motion.span>
     );
   }
-  return <span style={style}>{label}</span>;
+  return <span className={className}>{label}</span>;
 }
 
 /** Available colors — display only */
@@ -121,8 +102,8 @@ export function ClothesColorsLine({ product }: { product: Product }) {
     const display = shoesColorsDisplayLabel(product.shoesOptions);
     if (display) {
       return (
-        <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#4a5568', textAlign: 'left' }}>
-          <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+        <p className="pc-meta-line">
+          <span className="pc-meta-label">{display.label}: </span>
           {display.value}
         </p>
       );
@@ -133,16 +114,8 @@ export function ClothesColorsLine({ product }: { product: Product }) {
     const display = clothesColorsDisplayLabel(product.clothesOptions);
     if (display) {
       return (
-        <p
-          style={{
-            margin: 0,
-            fontSize: '13px',
-            fontWeight: 600,
-            color: '#4a5568',
-            textAlign: 'left',
-          }}
-        >
-          <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+        <p className="pc-meta-line">
+          <span className="pc-meta-label">{display.label}: </span>
           {display.value}
         </p>
       );
@@ -153,16 +126,8 @@ export function ClothesColorsLine({ product }: { product: Product }) {
   if (!display) return null;
 
   return (
-    <p
-      style={{
-        margin: 0,
-        fontSize: '13px',
-        fontWeight: 600,
-        color: '#4a5568',
-        textAlign: 'left',
-      }}
-    >
-      <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+    <p className="pc-meta-line">
+      <span className="pc-meta-label">{display.label}: </span>
       {display.value}
     </p>
   );
@@ -174,8 +139,8 @@ export function ClothesSizesLine({ product }: { product: Product }) {
     const display = shoesSizesDisplayLabel(product.shoesOptions);
     if (!display) return null;
     return (
-      <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#4a5568', textAlign: 'left' }}>
-        <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+      <p className="pc-meta-line">
+        <span className="pc-meta-label">{display.label}: </span>
         {display.value}
       </p>
     );
@@ -189,16 +154,8 @@ export function ClothesSizesLine({ product }: { product: Product }) {
   if (!display) return null;
 
   return (
-    <p
-      style={{
-        margin: 0,
-        fontSize: '13px',
-        fontWeight: 600,
-        color: '#4a5568',
-        textAlign: 'left',
-      }}
-    >
-      <span style={{ color: '#718096', fontWeight: 500 }}>{display.label}: </span>
+    <p className="pc-meta-line">
+      <span className="pc-meta-label">{display.label}: </span>
       {display.value}
     </p>
   );
@@ -208,7 +165,7 @@ export function ClothesSizesLine({ product }: { product: Product }) {
 export function ClothesGenderNearPrice({ product }: { product: Product }) {
   if (isShoesCategory(product.category) && product.shoesOptions?.gender) {
     return (
-      <span className="clothes-gender-badge">
+      <span className={genderBadgeClass(product.shoesOptions.gender)}>
         {shoesGenderLabel(product.shoesOptions.gender)}
       </span>
     );
@@ -219,7 +176,7 @@ export function ClothesGenderNearPrice({ product }: { product: Product }) {
   }
 
   return (
-    <span className="clothes-gender-badge">
+    <span className={genderBadgeClass(product.clothesOptions.gender)}>
       {clothesGenderLabel(product.clothesOptions.gender)}
     </span>
   );

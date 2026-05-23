@@ -7,7 +7,7 @@ import { categories, Product } from '@/data/products';
 import { useProducts } from '@/context/ProductContext';
 import { useToast } from '@/components/Toast';
 import TrendingProductsPicker from '@/components/admin/TrendingProductsPicker';
-import { getProductTitle, getProductDescription } from '@/utils/getProductText';
+import { getProductTitle } from '@/utils/getProductText';
 import { formatPrice } from '@/utils/formatPrice';
 
 import { adminProductT, type AdminProductTFunction } from '@/lib/admin/product-form-shared';

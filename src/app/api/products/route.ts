@@ -68,13 +68,16 @@ export async function GET(request: NextRequest) {
           ORDER BY created_at DESC
         `;
 
-    const soldMap = await getSoldCountsMapFromOrders();
-    repairSoldCountsInBackground();
+    const mapped = rows.map((row) => mapProductRow(row as Record<string, unknown>));
 
-    const products = applyRealSoldCounts(
-      rows.map((row) => mapProductRow(row as Record<string, unknown>)),
-      soldMap,
-    );
+    // Storefront: real sold counts from orders. Admin list: use DB values (faster).
+    const products = includeInactive
+      ? mapped
+      : applyRealSoldCounts(mapped, await getSoldCountsMapFromOrders());
+
+    if (!includeInactive) {
+      repairSoldCountsInBackground();
+    }
 
     return NextResponse.json(
       { products },
@@ -82,7 +85,7 @@ export async function GET(request: NextRequest) {
         headers: {
           'Cache-Control': includeInactive
             ? 'private, no-store, max-age=0'
-            : 'public, s-maxage=30, stale-while-revalidate=120',
+            : 'public, max-age=0, must-revalidate',
         },
       },
     );

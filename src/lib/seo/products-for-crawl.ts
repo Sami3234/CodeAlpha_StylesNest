@@ -1,5 +1,4 @@
 import { sql } from '@/lib/db';
-import { ensureProductSchema } from '@/lib/ensure-product-schema';
 import { mapProductRow } from '@/lib/product-mapper';
 import { dedupeByProductTitle } from '@/lib/seo/dedupe-products';
 
@@ -16,7 +15,6 @@ const MAX_CRAWL_PRODUCTS = 150;
 /** Active products for server-rendered crawl HTML (shop SEO). */
 export async function getProductsForCrawl(): Promise<CrawlProduct[]> {
   try {
-    await ensureProductSchema();
     const rows = await sql`
       SELECT
         id, title_en, title_ar, current_price, image, category, status

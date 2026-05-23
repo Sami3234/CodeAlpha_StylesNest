@@ -8,8 +8,6 @@ import {
   BiSpa,
   BiChip,
   BiTime,
-  BiPhone,
-  BiDish,
   BiShoppingBag,
   BiBox,
   BiTimeFive,
@@ -836,6 +834,61 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                   }}
                 >
                   Users
+                </span>
+              </Link>
+            </li>
+
+            {/* Customer support */}
+            <li>
+              <Link
+                href="/khanadmin/support"
+                onClick={isMobile ? onClose : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '16px 20px',
+                  color: pathname === '/khanadmin/support' ? '#fff' : 'rgba(255,255,255,0.7)',
+                  textDecoration: 'none',
+                  backgroundColor: pathname === '/khanadmin/support'
+                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
+                    : 'transparent',
+                  borderLeft: pathname === '/khanadmin/support' ? '4px solid #3498db' : '4px solid transparent',
+                  borderRadius: pathname === '/khanadmin/support' ? '0 12px 12px 0' : '0',
+                  transition: 'all 0.3s ease',
+                  marginRight: '8px',
+                }}
+                onMouseEnter={(e) => {
+                  if (pathname !== '/khanadmin/support') {
+                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (pathname !== '/khanadmin/support') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.transform = 'translateX(0)';
+                  }
+                }}
+              >
+                <span
+                  style={{
+                    opacity: pathname === '/khanadmin/support' ? 1 : 0.7,
+                    color: pathname === '/khanadmin/support' ? '#3498db' : 'inherit',
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: pathname === '/khanadmin/support' ? '600' : '400',
+                    letterSpacing: '0.3px',
+                  }}
+                >
+                  Support
                 </span>
               </Link>
             </li>

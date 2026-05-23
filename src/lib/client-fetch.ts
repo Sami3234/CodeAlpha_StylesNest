@@ -34,7 +34,7 @@ export async function clientFetch(
   } catch (error) {
     if (isLikelyNetworkError(error)) {
       notifyNetworkFailure();
-      throw new NetworkError(classifyFetchError(error));
+      throw new NetworkError(classifyFetchError());
     }
     throw error;
   }

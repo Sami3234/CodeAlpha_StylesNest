@@ -1,7 +1,9 @@
 import type { Product } from '@/data/products';
 
 /** Local fallback — never use external placeholder URLs (often blocked/offline). */
-export const ADMIN_PRODUCT_IMAGE_FALLBACK = '/favicon/favicon-32x32.png';
+import { siteConfig } from '@/lib/seo/site';
+
+export const ADMIN_PRODUCT_IMAGE_FALLBACK = siteConfig.favicon32;
 
 export function getProductTitleText(product: Product): string {
   if (typeof product.title === 'object') {

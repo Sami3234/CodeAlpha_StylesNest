@@ -19,7 +19,6 @@ import {
   IoLocationOutline,
   IoLockClosedOutline,
   IoLogOutOutline,
-  IoPersonCircleOutline,
   IoReceiptOutline,
   IoStarOutline,
   IoStorefrontOutline,
@@ -96,7 +95,7 @@ function ProfilePageContent() {
     } finally {
       setLoadingProfile(false);
     }
-  }, [session?.user?.name]);
+  }, [session?.user?.name, session?.user?.image]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {

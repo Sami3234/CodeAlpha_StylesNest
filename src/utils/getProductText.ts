@@ -67,7 +67,7 @@ export function getProductFeatures(product: ProductText): string[] {
  * Add product translations (no-op since we're English only now)
  * This function is kept for compatibility but does nothing
  */
-export function addProductToI18n(product: ProductText) {
+export function addProductToI18n() {
   // No-op: English only mode
 }
 

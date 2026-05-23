@@ -28,9 +28,13 @@ import ClothesStitchBadge, {
   ShoesGenderBadge,
 } from '@/components/ClothesImageBadges';
 import ProductMetaDisplay from '@/components/ProductMetaDisplay';
-import { clothesOrderProductNameWithOptions, isClothesCategory } from '@/lib/clothes-options';
-import { isShoesCategory, shoesOrderProductNameWithOptions } from '@/lib/shoes-options';
-import { validateCartLineOptions } from '@/lib/cart-line-options';
+import { isClothesCategory } from '@/lib/clothes-options';
+import { isShoesCategory } from '@/lib/shoes-options';
+import {
+  buildOrderProductName,
+  productNeedsCartOptions,
+  validateCartLineOptions,
+} from '@/lib/cart-line-options';
 import { getLineTotal, getUnitPrice } from '@/lib/product-pricing';
 import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
 import OrderPaymentMethods from '@/components/OrderPaymentMethods';
@@ -490,36 +494,19 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
     setPaymentError('');
 
-    const isClothes = isClothesCategory(product.category) && product.clothesOptions;
-    const isShoes = isShoesCategory(product.category) && product.shoesOptions;
-    const clothesOpts = product.clothesOptions;
-    const shoesOpts = product.shoesOptions;
     const selectedSize = formData.selectedSize?.trim() ?? '';
     const selectedColor = formData.selectedColor?.trim() ?? '';
 
-    if (isClothes || isShoes) {
-      const optionsCheck = validateCartLineOptions(product, { selectedSize, selectedColor });
-      if (!optionsCheck.valid) {
-        notifyError(optionsCheck.error ?? 'Please select size and color.');
-        return;
-      }
+    const optionsCheck = validateCartLineOptions(product, { selectedSize, selectedColor });
+    if (!optionsCheck.valid) {
+      notifyError(optionsCheck.error ?? 'Please select size and color.');
+      return;
     }
 
-    const orderProductName = isShoes
-      ? shoesOrderProductNameWithOptions(
-          getProductTitle(product),
-          shoesOpts,
-          selectedSize || undefined,
-          selectedColor || undefined,
-        )
-      : isClothes
-        ? clothesOrderProductNameWithOptions(
-            getProductTitle(product),
-            clothesOpts,
-            selectedSize || undefined,
-            selectedColor || undefined,
-          )
-        : getProductTitle(product);
+    const orderProductName = buildOrderProductName(getProductTitle(product), product, {
+      selectedSize: selectedSize || undefined,
+      selectedColor: selectedColor || undefined,
+    });
 
     // Mark as submitted to prevent saving as abandoned
     hasSubmittedRef.current = true;
@@ -712,8 +699,6 @@ export default function ProductPage({ params }: ProductPageProps) {
         { value: '3', label: `3 Pieces - ${formatPrice(product.currentPrice * 3)} PKR` },
       ];
   
-  console.log('Generated quantityOptions:', quantityOptions);
-
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(180deg, #f5f7fa 0%, #eef2f6 50%, #f5f7fa 100%)' }}>
       <Header />
@@ -1772,8 +1757,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                   />
                 </motion.div>
 
-                {(isClothesCategory(product.category) && product.clothesOptions) ||
-                (isShoesCategory(product.category) && product.shoesOptions) ? (
+                {productNeedsCartOptions(product) ? (
                   <>
                     <ClothesSizeSelector
                       product={product}

@@ -57,7 +57,7 @@ export default function AdminSetup() {
       } else {
         setError(data.error || 'Account create karne mein error aaya');
       }
-    } catch (error) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

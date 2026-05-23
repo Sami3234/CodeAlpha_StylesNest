@@ -45,17 +45,18 @@ export default function AdminNewProductPage() {
     };
   }, [showToast]);
 
-  const handleSave = async (productData: Product | Partial<Product>) => {
+  const handleSave = async (
+    productData: Product | Partial<Product>,
+  ): Promise<{ success: boolean; error?: string }> => {
     const result = await addProduct(productData as Partial<Product>);
     if (result.success) {
       showToast('Product added successfully', 'success');
       router.push('/khanadmin/products');
-      return;
+      return { success: true };
     }
-    showToast(
-      sanitizeClientMessage(result.error, 'Failed to add product'),
-      'error'
-    );
+    const error = sanitizeClientMessage(result.error, 'Failed to add product');
+    showToast(error, 'error');
+    return { success: false, error };
   };
 
   return (

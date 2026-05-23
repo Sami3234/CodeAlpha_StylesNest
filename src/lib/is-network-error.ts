@@ -25,6 +25,6 @@ export function isLikelyNetworkError(error: unknown): boolean {
 
 export type FetchErrorKind = 'offline' | 'network';
 
-export function classifyFetchError(error: unknown): FetchErrorKind {
+export function classifyFetchError(): FetchErrorKind {
   return isBrowserOffline() ? 'offline' : 'network';
 }

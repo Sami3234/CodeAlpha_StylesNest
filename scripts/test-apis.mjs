@@ -57,6 +57,8 @@ const CASES = [
   { method: 'GET', path: '/api/products/1/reviews', expect: [200, 404] },
   { method: 'GET', path: '/robots.txt', expect: [200] },
   { method: 'GET', path: '/sitemap.xml', expect: [200] },
+  { method: 'GET', path: '/llms.txt', expect: [200] },
+  { method: 'GET', path: '/manifest.webmanifest', expect: [200] },
 ];
 
 async function runOne(test) {

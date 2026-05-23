@@ -46,7 +46,7 @@ export async function GET() {
     };
 
     return NextResponse.json(template);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to generate template' },
       { status: 500 }

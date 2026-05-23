@@ -20,12 +20,26 @@ function pickImages(landing: string[] | undefined, fallback: string[] | undefine
 
 type HomePageClientProps = {
   fallbackImages?: HomeFallbackImages;
+  /** Hero banners from server — avoids flash of wrong images while client fetches */
+  initialHeroSlides?: string[];
 };
 
-export default function HomePageClient({ fallbackImages = {} }: HomePageClientProps) {
+export default function HomePageClient({
+  fallbackImages = {},
+  initialHeroSlides = [],
+}: HomePageClientProps) {
+  const initialHero = (initialHeroSlides || [])
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
   // Landing images from database
-  const [landingImages, setLandingImages] = useState<Record<string, string[]>>({});
-  const [loadingImages, setLoadingImages] = useState(true);
+  const [landingImages, setLandingImages] = useState<Record<string, string[]>>(() => {
+    const images: Record<string, string[]> = {};
+    if (initialHero.length > 0) images.hero = initialHero;
+    return images;
+  });
+  const [loadingImages, setLoadingImages] = useState(() => initialHero.length === 0);
 
   // Card flip carousel state for Garments section
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -76,15 +90,16 @@ export default function HomePageClient({ fallbackImages = {} }: HomePageClientPr
   const generalStoreImage =
     pickImages(landingImages['general_store'], fallbackImages.general_store, 1)[0] || '';
 
-  /** Hero carousel: only uploaded images (max 4), ordered by display_order */
+  /** Hero carousel: admin uploads only — never product fallbacks */
   const MAX_HERO_IMAGES = 4;
-  const heroSlides = useMemo(() => {
-    const hero = pickImages(landingImages['hero'], fallbackImages.hero, MAX_HERO_IMAGES);
-    return hero
-      .map((u) => (typeof u === 'string' ? u.trim() : ''))
-      .filter((u) => u.length > 0)
-      .slice(0, MAX_HERO_IMAGES);
-  }, [landingImages, fallbackImages.hero]);
+  const heroSlides = useMemo(
+    () =>
+      (landingImages['hero'] || [])
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .slice(0, MAX_HERO_IMAGES),
+    [landingImages],
+  );
 
   const HERO_AUTO_INTERVAL_MS = 4500;
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
@@ -128,7 +143,6 @@ export default function HomePageClient({ fallbackImages = {} }: HomePageClientPr
         const data = await response.json();
         
         if (data.success && data.images && Array.isArray(data.images)) {
-          console.log('Fetched images:', data.images);
           const grouped: Record<string, Array<{url: string, order: number}>> = {};
           data.images.forEach((img: Record<string, unknown>) => {
             const rawUrl =
@@ -173,7 +187,6 @@ export default function HomePageClient({ fallbackImages = {} }: HomePageClientPr
           merged.jewelry = [...(merged.jewelry || []), ...legacyPurse];
           merged.clothes = [...(merged.clothes || []), ...legacyLace];
 
-          console.log('Grouped images:', merged);
           setLandingImages(merged);
         } else {
           console.warn('No images found or invalid response:', data);
@@ -316,15 +329,17 @@ export default function HomePageClient({ fallbackImages = {} }: HomePageClientPr
                         className="hero-carousel-slide"
                         aria-hidden={slideIdx !== heroSlideIndex}
                       >
-                        <img
+                        <Image
                           src={slideSrc}
                           alt={`StylesNest banner ${slideIdx + 1}`}
+                          fill
+                          unoptimized
                           className="hero-banner-image hero-banner-image--fill"
                           style={{
                             filter: 'brightness(1.05) contrast(1.1) saturate(1.1)',
                           }}
-                          loading={slideIdx === 0 ? 'eager' : 'lazy'}
-                          decoding="async"
+                          sizes="100vw"
+                          priority={slideIdx === 0}
                         />
                         <div className="hero-banner-image-overlay-gradient" aria-hidden />
                         <div className="hero-banner-image-overlay-shine" aria-hidden />

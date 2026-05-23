@@ -1,5 +1,4 @@
 import { sql } from '@/lib/db';
-import { ensureProductSchema } from '@/lib/ensure-product-schema';
 
 export type SitemapProduct = {
   id: number;
@@ -8,7 +7,6 @@ export type SitemapProduct = {
 
 export async function getActiveProductsForSitemap(): Promise<SitemapProduct[]> {
   try {
-    await ensureProductSchema();
     const rows = await sql`
       SELECT id, updated_at
       FROM products

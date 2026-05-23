@@ -49,10 +49,17 @@ export default function ProductReviews({ productId }: Props) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadedProductId, setLoadedProductId] = useState(productId);
+
+  if (productId !== loadedProductId) {
+    setLoadedProductId(productId);
+    setReviews([]);
+    setSummary(null);
+    setLoading(true);
+  }
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetch(`/api/products/${productId}/reviews`, { cache: 'no-store' })
       .then(async (res) => {
         const data = await res.json();

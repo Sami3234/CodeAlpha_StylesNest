@@ -64,14 +64,14 @@ function ToastContainer({ toasts }: { toasts: Toast[] }) {
         gap: '12px',
         pointerEvents: 'none',
       }}>
-      {toasts.map((toast, index) => (
-        <ToastItem key={toast.id} toast={toast} index={index} />
+      {toasts.map((toast) => (
+        <ToastItem key={toast.id} toast={toast} />
       ))}
     </div>
   );
 }
 
-function ToastItem({ toast, index }: { toast: Toast; index: number }) {
+function ToastItem({ toast }: { toast: Toast }) {
   const [isVisible, setIsVisible] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
 

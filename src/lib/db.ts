@@ -14,8 +14,10 @@ const sqlClient = databaseUrl
         cache: 'no-store',
       },
     })
-  : (async (_strings: TemplateStringsArray, ..._values: unknown[]) =>
-      [] as Record<string, unknown>[]);
+  : (async () => [] as Record<string, unknown>[]) as unknown as NeonQueryFunction<
+      false,
+      false
+    >;
 
 /** Tagged-template SQL client; returns [] when DATABASE_URL is missing (sitemap-safe). */
-export const sql = sqlClient as NeonQueryFunction<false, false>;
+export const sql = sqlClient;

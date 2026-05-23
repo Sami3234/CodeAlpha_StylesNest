@@ -8,6 +8,7 @@ import { ensureShopUsersTable } from './shop-users-schema';
 import { ensureAdminSessionsTable } from './admin-session';
 import { ensureOrdersAdminColumns } from './orders-schema';
 import { ensureProductReviewsTable } from './product-reviews-schema';
+import { ensureSupportTicketsTable } from './support-tickets-schema';
 
 /**
  * Initialize database tables
@@ -119,6 +120,7 @@ export async function initDatabase() {
     await ensureAdminSessionsTable();
     await ensureOrdersAdminColumns();
     await ensureProductReviewsTable();
+    await ensureSupportTicketsTable();
 
     await sql`
       INSERT INTO contact_settings (id, whatsapp, phone, email, address, social_whatsapp, social_facebook, social_tiktok, social_daraz, social_shopify)

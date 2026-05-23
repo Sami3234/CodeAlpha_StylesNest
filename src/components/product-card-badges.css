@@ -1,0 +1,409 @@
+/* Product card badges & tags */
+
+.product-image-wrapper,
+.product-image-frame {
+  position: relative;
+}
+
+.product-image-frame {
+  overflow: hidden;
+}
+
+/* —— Below-image tags (e.g. shoes gender only) —— */
+.pc-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  min-height: 0;
+}
+
+.pc-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pc-tag--sale {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.pc-tag--delivery {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.pc-tag--unstitched {
+  color: #4338ca;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.pc-tag--stitched {
+  color: #b45309;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.pc-tag--women {
+  color: #9d174d;
+  background: #fdf2f8;
+  border: 1px solid #fbcfe8;
+}
+
+.pc-tag--men {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+/* —— On-image overlays (shop cards) —— */
+.pc-tag--overlay {
+  position: absolute;
+  z-index: 12;
+}
+
+/* % OFF — top right, solid red */
+.pc-tag--overlay-sale {
+  top: 10px;
+  right: 10px;
+  color: #fff;
+  background: #dc2626;
+  border: 1px solid #b91c1c;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 5px 10px;
+  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.35);
+}
+
+/* Stitched / Unstitched — bottom right on card image (compact) */
+.pc-tag--overlay-stitch {
+  bottom: 10px;
+  right: 10px;
+  z-index: 13;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 4px 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pc-tag--overlay-stitch.pc-tag--unstitched {
+  color: #4338ca;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.pc-tag--overlay-stitch.pc-tag--stitched {
+  color: #b45309;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.product-image-frame:has(.pc-delivery-bar) .pc-tag--overlay-stitch {
+  bottom: 36px;
+}
+
+/* Product card footer — View + circular cart (Daraz-style) */
+.product-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.product-card-view-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 107, 53, 0.55);
+  color: #c05621;
+  background: rgba(255, 107, 53, 0.08);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.product-card-view-btn:hover {
+  background: rgba(255, 107, 53, 0.14);
+}
+
+/* Shared circular cart (product cards + navbar) */
+.sn-cart-circle-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #fff;
+  background: #f85606;
+  box-shadow: 0 2px 8px rgba(248, 86, 6, 0.35);
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.sn-cart-circle-btn:hover {
+  background: #e04e00;
+  box-shadow: 0 3px 10px rgba(248, 86, 6, 0.4);
+}
+
+.sn-cart-circle-btn:active {
+  transform: scale(0.96);
+}
+
+.sn-cart-circle-btn--active {
+  background: #e04e00;
+  box-shadow: 0 3px 10px rgba(248, 86, 6, 0.45);
+}
+
+.sn-cart-circle-btn--compact {
+  width: 40px;
+  height: 40px;
+}
+
+.sn-cart-circle-btn__icon {
+  flex-shrink: 0;
+  font-size: 22px;
+}
+
+.sn-cart-circle-btn--compact .sn-cart-circle-btn__icon {
+  font-size: 20px;
+}
+
+/* Navbar cart — outline only (not filled) */
+.sn-cart-circle-btn--nav {
+  background: #fff;
+  color: #f85606;
+  border: 2px solid #f85606;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.sn-cart-circle-btn--nav:hover {
+  background: rgba(248, 86, 6, 0.08);
+  box-shadow: 0 2px 8px rgba(248, 86, 6, 0.15);
+}
+
+.sn-cart-circle-btn--nav.sn-cart-circle-btn--active {
+  background: rgba(248, 86, 6, 0.1);
+  color: #e04e00;
+  border-color: #e04e00;
+  box-shadow: none;
+}
+
+/* Daraz-style price on product cards */
+.product-card-pricing {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.product-card-price {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f85606;
+  letter-spacing: 0.01em;
+}
+
+.product-card-price__currency {
+  font-size: 11px;
+  font-weight: 600;
+  color: #757575;
+  margin-left: 3px;
+  letter-spacing: 0.02em;
+}
+
+.product-card-price--old {
+  font-size: 13px;
+  font-weight: 400;
+  color: #9e9e9e;
+  text-decoration: line-through;
+}
+
+.sn-cart-circle-btn.product-card-add-btn:disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+  background: #e2e8f0;
+  box-shadow: none;
+}
+
+.sn-cart-circle-btn.product-card-add-btn:disabled:hover {
+  background: #e2e8f0;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Free delivery — green bar, text scrolls left → right */
+.pc-delivery-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 14;
+  height: 24px;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #047857 0%,
+    #059669 45%,
+    #10b981 55%,
+    #047857 100%
+  );
+  border-top: 1px solid rgba(167, 243, 208, 0.45);
+  box-shadow: 0 -2px 10px rgba(5, 150, 105, 0.25);
+}
+
+.pc-delivery-bar__track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  height: 100%;
+  animation: pc-delivery-scroll-ltr 18s linear infinite;
+  will-change: transform;
+}
+
+.pc-delivery-bar__item {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 18px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #fff;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.pc-delivery-bar__dot {
+  margin-left: 18px;
+  opacity: 0.65;
+  font-weight: 400;
+}
+
+@keyframes pc-delivery-scroll-ltr {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-delivery-bar__track {
+    animation: none;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pc-delivery-bar__item:not(:first-child) {
+    display: none;
+  }
+
+  .pc-delivery-bar__item:first-child .pc-delivery-bar__dot {
+    display: none;
+  }
+}
+
+/* Meta — size / color */
+.pc-meta-line {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  text-align: left;
+  line-height: 1.45;
+}
+
+.pc-meta-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Product detail page — corner badges */
+.pc-badge {
+  position: absolute;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.pc-badge--discount {
+  top: 10px;
+  right: 10px;
+  color: #fff;
+  background: #dc2626;
+}
+
+.pc-badge--delivery {
+  bottom: 10px;
+  left: 10px;
+  color: #166534;
+  background: #fff;
+  border: 1px solid #bbf7d0;
+}
+
+.pc-badge--on-image {
+  bottom: 10px;
+  right: 10px;
+}
+
+.pc-badge--unstitched {
+  color: #4338ca;
+  background: #fff;
+  border: 1px solid #c7d2fe;
+}
+
+.pc-badge--stitched {
+  color: #92400e;
+  background: #fff;
+  border: 1px solid #fde68a;
+}
+
+.pc-badge--gender-women {
+  color: #9d174d;
+  background: #fff;
+  border: 1px solid #fbcfe8;
+}
+
+.pc-badge--gender-men {
+  color: #1d4ed8;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+}

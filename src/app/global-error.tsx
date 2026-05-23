@@ -4,7 +4,6 @@ import ConnectionProblem from '@/components/network/ConnectionProblem';
 import ErrorPageShell from '@/components/network/ErrorPageShell';
 
 export default function GlobalError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };

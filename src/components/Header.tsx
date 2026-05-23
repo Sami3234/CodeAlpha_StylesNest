@@ -7,19 +7,20 @@ import { usePathname } from 'next/navigation';
 import { motion, MotionStyle } from 'framer-motion';
 import { WORDMARK_GRADIENT } from '@/lib/brand-wordmark';
 import TopAnnouncementBar from '@/components/TopAnnouncementBar';
-import { IoBagOutline } from 'react-icons/io5';
+import { IoCartOutline } from 'react-icons/io5';
 import { useCart } from '@/context/CartContext';
 import HeaderProfile, { HeaderProfileMobile } from '@/components/HeaderProfile';
 import AdminNotificationBell from '@/components/admin/AdminNotificationBell';
 
-const LOGO_MARK = '/StylesNest_Transparent.png';
+/** Navbar only — transparent PNG; other surfaces use StylesNest_Nest via site config */
+const NAVBAR_LOGO = '/StylesNest_Transparent.png';
 
 function BrandMark() {
   return (
     <span className="inline-flex min-w-0 flex-row items-center gap-2 overflow-visible sm:gap-3 md:gap-4">
       <span className="inline-flex h-[48px] max-h-[48px] shrink-0 items-center justify-center leading-none sm:h-[56px] sm:max-h-[56px] md:h-[66px] md:max-h-[66px]">
         <Image
-          src={LOGO_MARK}
+          src={NAVBAR_LOGO}
           alt="StylesNest logo"
           width={508}
           height={390}
@@ -335,57 +336,33 @@ export default function Header() {
               <Link
                 href="/cart"
                 aria-label={`Shopping cart${cartHydrated && totalQuantity > 0 ? `, ${totalQuantity} items` : ''}`}
-                style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className={`sn-cart-circle-btn sn-cart-circle-btn--nav${isActive('/cart') ? ' sn-cart-circle-btn--active' : ''}`}
+                style={{ position: 'relative' }}
               >
-                <motion.span
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.6 }}
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.92 }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    border: isActive('/cart') ? 'none' : '2px solid rgba(255, 107, 53, 0.45)',
-                    background: isActive('/cart')
-                      ? 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
-                      : 'rgba(255, 255, 255, 0.95)',
-                    boxShadow: isActive('/cart')
-                      ? '0px 8px 22px rgba(255, 107, 53, 0.45)'
-                      : '0px 4px 12px rgba(0,0,0,0.08)',
-                    cursor: 'pointer',
-                    color: isActive('/cart') ? '#fff' : '#4a5568',
-                  }}
-                >
-                  <IoBagOutline size={22} aria-hidden />
-                  {cartHydrated && totalQuantity > 0 ? (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '-2px',
-                        right: '-2px',
-                        minWidth: '20px',
-                        height: '20px',
-                        padding: '0 5px',
-                        borderRadius: '999px',
-                        background: '#e53e3e',
-                        color: '#fff',
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(229,62,62,0.45)',
-                      }}
-                    >
-                      {totalQuantity > 99 ? '99+' : totalQuantity}
-                    </span>
-                  ) : null}
-                </motion.span>
+                <IoCartOutline className="sn-cart-circle-btn__icon" aria-hidden />
+                {cartHydrated && totalQuantity > 0 ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      minWidth: '20px',
+                      height: '20px',
+                      padding: '0 5px',
+                      borderRadius: '999px',
+                      background: '#e53e3e',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(229,62,62,0.45)',
+                    }}
+                  >
+                    {totalQuantity > 99 ? '99+' : totalQuantity}
+                  </span>
+                ) : null}
               </Link>
             </motion.nav>
           )}
@@ -401,51 +378,32 @@ export default function Header() {
               <Link
                 href="/cart"
                 aria-label={`Shopping cart${cartHydrated && totalQuantity > 0 ? `, ${totalQuantity} items` : ''}`}
-                style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className={`sn-cart-circle-btn sn-cart-circle-btn--nav sn-cart-circle-btn--compact${isActive('/cart') ? ' sn-cart-circle-btn--active' : ''}`}
+                style={{ position: 'relative' }}
               >
-                <motion.span
-                  whileTap={{ scale: 0.92 }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    border: isActive('/cart') ? 'none' : '2px solid rgba(255, 107, 53, 0.45)',
-                    background: isActive('/cart')
-                      ? 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
-                      : 'rgba(255, 255, 255, 0.95)',
-                    boxShadow: isActive('/cart')
-                      ? '0px 8px 22px rgba(255, 107, 53, 0.45)'
-                      : '0px 4px 12px rgba(0,0,0,0.08)',
-                    color: isActive('/cart') ? '#fff' : '#4a5568',
-                  }}
-                >
-                  <IoBagOutline size={20} aria-hidden />
-                  {cartHydrated && totalQuantity > 0 ? (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '-2px',
-                        right: '-2px',
-                        minWidth: '18px',
-                        height: '18px',
-                        padding: '0 4px',
-                        borderRadius: '999px',
-                        background: '#e53e3e',
-                        color: '#fff',
-                        fontSize: '10px',
-                        fontWeight: 800,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {totalQuantity > 99 ? '99+' : totalQuantity}
-                    </span>
-                  ) : null}
-                </motion.span>
+                <IoCartOutline className="sn-cart-circle-btn__icon" aria-hidden />
+                {cartHydrated && totalQuantity > 0 ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      minWidth: '18px',
+                      height: '18px',
+                      padding: '0 4px',
+                      borderRadius: '999px',
+                      background: '#e53e3e',
+                      color: '#fff',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {totalQuantity > 99 ? '99+' : totalQuantity}
+                  </span>
+                ) : null}
               </Link>
 
               <button

@@ -77,15 +77,25 @@ export function ContactSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<ContactSettings>(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
 
-  const refresh = useCallback(async () => {
-    const next = await fetchContactSettings();
+  const applySettings = useCallback((next: ContactSettings) => {
     setSettings(next);
     setLoaded(true);
   }, []);
 
+  const refresh = useCallback(async () => {
+    const next = await fetchContactSettings();
+    applySettings(next);
+  }, [applySettings]);
+
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+    fetchContactSettings().then((next) => {
+      if (!cancelled) applySettings(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [applySettings]);
 
   const value = useMemo(
     () => ({ settings, loaded, refresh }),

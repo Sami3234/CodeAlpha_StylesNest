@@ -57,23 +57,30 @@ function CartPageContent() {
   );
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [selectionSignature, setSelectionSignature] = useState('');
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [whatsappConfirm, setWhatsappConfirm] = useState(
     () => (typeof window !== 'undefined' ? readOrderWhatsAppConfirm() : null),
   );
+  const [orderPlacedHandled, setOrderPlacedHandled] = useState(false);
+
+  if (searchParams.get('placed') === '1' && !orderPlacedHandled) {
+    setOrderPlacedHandled(true);
+    setWhatsappConfirm(readOrderWhatsAppConfirm());
+    setBanner({
+      type: 'success',
+      text: 'Order placed successfully. We will contact you soon.',
+    });
+  }
 
   useEffect(() => {
     if (searchParams.get('placed') === '1') {
-      setWhatsappConfirm(readOrderWhatsAppConfirm());
-      setBanner({
-        type: 'success',
-        text: 'Order placed successfully. We will contact you soon.',
-      });
       router.replace('/cart', { scroll: false });
     }
   }, [searchParams, router]);
 
-  useEffect(() => {
+  if (selectableSignature !== selectionSignature) {
+    setSelectionSignature(selectableSignature);
     const validKeys = selectableRows.map((r) => r.line.lineKey);
     const validSet = new Set(validKeys);
     setSelectedKeys((prev) => {
@@ -86,7 +93,7 @@ function CartPageContent() {
       });
       return next;
     });
-  }, [selectableSignature]);
+  }
 
   const toggleSelected = useCallback((lineKey: string) => {
     setSelectedKeys((prev) => {

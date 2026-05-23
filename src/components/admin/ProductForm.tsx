@@ -12,7 +12,6 @@ import {
 } from '@/lib/clothes-options';
 import {
   categoryShowsGender,
-  categoryShowsShoesPanel,
   validateCategoryOptions,
 } from '@/lib/category-form-fields';
 import { isShoesCategory } from '@/lib/shoes-options';
@@ -41,7 +40,9 @@ import './product-form.css';
 
 export interface ProductFormProps {
   product: Product | null;
-  onSave: (product: Product | Partial<Product>) => void | Promise<void>;
+  onSave: (
+    product: Product | Partial<Product>,
+  ) => void | Promise<void> | Promise<{ success?: boolean; error?: string }>;
   onCancel: () => void;
   t?: AdminProductTFunction;
 }
@@ -335,19 +336,27 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
           colors: isClothesCategory(formData.category) ? savedColors : clothesOptions.colors ?? [],
         };
         productData.shoesOptions = undefined;
-      }
-      if (product) {
-        productData.title = product.title;
-        productData.description = product.description;
       } else {
-        productData.title = { en: formData.title, ar: formData.title };
-        productData.description = { en: formData.description, ar: formData.description };
+        productData.clothesOptions = undefined;
+        productData.shoesOptions = undefined;
       }
-      if (features.length) {
-        productData.features = { en: features, ar: features };
-      }
+
+      productData.title = { en: formData.title.trim(), ar: formData.title.trim() };
+      productData.description = {
+        en: formData.description.trim(),
+        ar: formData.description.trim(),
+      };
+      productData.features = { en: features, ar: features };
       if (product?.id) productData.id = product.id;
-      await onSave(productData);
+      const result = await onSave(productData);
+      if (
+        result &&
+        typeof result === 'object' &&
+        'success' in result &&
+        result.success === false
+      ) {
+        showToast(result.error ?? 'Failed to save product', 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }

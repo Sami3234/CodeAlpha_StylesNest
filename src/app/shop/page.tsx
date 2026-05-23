@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Header from '@/components/Header';
@@ -24,16 +24,8 @@ function ShopPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCategory = searchParams.get('category') || 'all';
-  const categoryFromUrl =
-    LEGACY_CATEGORY_MAP[rawCategory] ?? rawCategory;
-  const [activeCategory, setActiveCategory] = useState(categoryFromUrl);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Update active category when URL changes
-  useEffect(() => {
-    const raw = searchParams.get('category') || 'all';
-    setActiveCategory(LEGACY_CATEGORY_MAP[raw] ?? raw);
-  }, [searchParams]);
+  const activeCategory = LEGACY_CATEGORY_MAP[rawCategory] ?? rawCategory;
+  const searchQuery = searchParams.get('search') ?? '';
 
   // Get only active products from context
   const { getActiveProducts, loading, fetchError, reloadProducts } = useProducts();
@@ -68,7 +60,6 @@ function ShopPageContent() {
   }, [activeCategory, searchQuery, activeProducts]);
 
   const handleCategoryChange = (category: string) => {
-    setActiveCategory(category);
     const params = new URLSearchParams(searchParams.toString());
     params.delete('skin');
     if (category === 'all') {
@@ -81,7 +72,15 @@ function ShopPageContent() {
   };
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
+    const params = new URLSearchParams(searchParams.toString());
+    const trimmed = query.trim();
+    if (trimmed) {
+      params.set('search', trimmed);
+    } else {
+      params.delete('search');
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/shop?${qs}` : '/shop', { scroll: false });
   };
 
   return (
@@ -99,7 +98,7 @@ function ShopPageContent() {
     >
       <Header />
 
-      <SearchBar onSearch={handleSearch} searchQuery={searchQuery} />
+      <SearchBar key={searchQuery} onSearch={handleSearch} searchQuery={searchQuery} />
 
       <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
 
