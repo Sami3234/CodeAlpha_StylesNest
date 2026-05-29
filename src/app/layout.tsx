@@ -7,7 +7,8 @@ import { rootMetadata } from "@/lib/seo/metadata";
 import { onlineStoreJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld-builders";
 import { getContactForSchema } from "@/lib/seo/contact-for-schema";
 import AppProviders from "@/components/providers/AppProviders";
-import MetaPixel from "@/components/analytics/MetaPixel";
+import MetaPixelScript from "@/components/analytics/MetaPixelScript";
+import MetaPixelPageView from "@/components/analytics/MetaPixelPageView";
 
 export { rootMetadata as metadata };
 
@@ -44,6 +45,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <MetaPixelScript />
+      </head>
       <body
         className={`${poppins.variable} ${brandMark.variable} font-sans antialiased bg-[#f5f5f5]`}
         style={{ backgroundColor: '#f5f5f5', color: '#171717' }}
@@ -53,7 +57,7 @@ export default async function RootLayout({
           data={[organizationJsonLd(contact), websiteJsonLd(contact), onlineStoreJsonLd()]}
         />
         <AppProviders>{children}</AppProviders>
-        <MetaPixel />
+        <MetaPixelPageView />
       </body>
     </html>
   );
