@@ -7,6 +7,7 @@ import { rootMetadata } from "@/lib/seo/metadata";
 import { onlineStoreJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld-builders";
 import { getContactForSchema } from "@/lib/seo/contact-for-schema";
 import AppProviders from "@/components/providers/AppProviders";
+import MetaPixel from "@/components/analytics/MetaPixel";
 
 export { rootMetadata as metadata };
 
@@ -52,6 +53,7 @@ export default async function RootLayout({
           data={[organizationJsonLd(contact), websiteJsonLd(contact), onlineStoreJsonLd()]}
         />
         <AppProviders>{children}</AppProviders>
+        <MetaPixel />
       </body>
     </html>
   );
