@@ -12,6 +12,7 @@ import AdminThumbImage from '@/components/admin/AdminThumbImage';
 import AdminPkrAmount from '@/components/admin/AdminPkrAmount';
 import OrderDateRangeBar from '@/components/admin/OrderDateRangeBar';
 import OrderWorkflowActions from '@/components/admin/OrderWorkflowActions';
+import AdminOrderPickPoint from '@/components/admin/AdminOrderPickPoint';
 import { getProductImageByName } from '@/lib/admin-product-image';
 import { getTodayDateInTimezone } from '@/lib/order-date';
 import { useAdminOrdersList } from '@/hooks/useAdminOrdersList';
@@ -368,6 +369,7 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
                     <p style={{ fontSize: '14px', color: '#1E293B', fontWeight: '500', marginBottom: '4px' }}>
                       {product.name}
                     </p>
+                    <AdminOrderPickPoint line={product} catalog={products} />
                     <p style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
                       Quantity: x{product.quantity}
                     </p>
@@ -729,6 +731,7 @@ function EditOrderModal({ order, isOpen, onClose, onSave }: EditOrderModalProps)
                   <p style={{ fontSize: '14px', fontWeight: '600', color: '#1E293B', marginBottom: '4px' }}>
                     {product.name}
                   </p>
+                  <AdminOrderPickPoint line={product} catalog={allProducts} />
                   <p style={{ fontSize: '12px', color: '#666' }}>
                     Price: <AdminPkrAmount amount={product.price} size="compact" decimals={2} />
                   </p>

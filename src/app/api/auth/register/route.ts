@@ -7,6 +7,14 @@ export async function POST(request: NextRequest) {
     const name = String(body.name ?? '');
     const email = String(body.email ?? '');
     const password = String(body.password ?? '');
+    const acceptedTerms = body.acceptedTerms === true;
+
+    if (!acceptedTerms) {
+      return NextResponse.json(
+        { error: 'You must accept the Terms & Conditions to register.' },
+        { status: 400 },
+      );
+    }
 
     const result = await registerCredentialsUser({ name, email, password });
     if (!result.ok) {

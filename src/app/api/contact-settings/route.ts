@@ -24,10 +24,10 @@ type Row = {
 };
 
 const defaults: Row = {
-  whatsapp: '923001234567',
-  phone: '+92 300 1234567',
-  email: 'info@stylesnest.com',
-  address: 'Vehari, Pakistan',
+  whatsapp: '',
+  phone: '',
+  email: '',
+  address: '',
   social_whatsapp: '',
   social_facebook: '',
   social_tiktok: '',

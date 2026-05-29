@@ -8,6 +8,7 @@ import { ensureShopUsersTable } from './shop-users-schema';
 import { ensureAdminSessionsTable } from './admin-session';
 import { ensureOrdersAdminColumns } from './orders-schema';
 import { ensureProductReviewsTable } from './product-reviews-schema';
+import { ensureLegalPagesColumn } from './contact-settings-schema';
 import { ensureSupportTicketsTable } from './support-tickets-schema';
 
 /**
@@ -116,6 +117,7 @@ export async function initDatabase() {
     await ensureContactSocialColumns();
     await ensureContactAnnouncementColumns();
     await ensureContactLandingExtrasColumns();
+    await ensureLegalPagesColumn();
     await ensureShopUsersTable();
     await ensureAdminSessionsTable();
     await ensureOrdersAdminColumns();

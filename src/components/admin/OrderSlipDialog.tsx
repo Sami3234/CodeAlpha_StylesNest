@@ -1,23 +1,9 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useMemo, useRef } from 'react';
 import type { Order } from '@/types/order';
-import { downloadOrderSlipPdf, printOrderSlip } from '@/lib/order-slip';
+import { buildOrderSlipHtml, downloadOrderSlipPdf, printOrderSlip } from '@/lib/order-slip';
 import './order-slip-dialog.css';
-
-const STORE_NAME = 'StylesNest';
-
-function productLineLabel(p: Order['products'][number]): string {
-  const id =
-    typeof p.productId === 'number' && p.productId > 0 ? `ID ${p.productId} · ` : '';
-  const opts = [p.selectedSize, p.selectedColor].filter(Boolean).join(', ');
-  const suffix = opts ? ` (${opts})` : '';
-  return `${id}${p.name}${suffix}`;
-}
-
-function formatMoney(amount: number): string {
-  return `${amount.toLocaleString('en-PK')} PKR`;
-}
 
 type Props = {
   order: Order;
@@ -26,6 +12,10 @@ type Props = {
 };
 
 export default function OrderSlipDialog({ order, open, onClose }: Props) {
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const previewRef = useRef<HTMLIFrameElement>(null);
+  const slipHtml = useMemo(() => buildOrderSlipHtml(order), [order]);
+
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -43,6 +33,35 @@ export default function OrderSlipDialog({ order, open, onClose }: Props) {
       document.body.style.overflow = prev;
     };
   }, [open, handleKey]);
+
+  useEffect(() => {
+    if (!open) return;
+    const iframe = previewRef.current;
+    if (!iframe) return;
+
+    const resize = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      const h = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight);
+      iframe.style.height = `${h}px`;
+    };
+
+    iframe.addEventListener('load', resize);
+    const t = window.setTimeout(resize, 300);
+    return () => {
+      iframe.removeEventListener('load', resize);
+      window.clearTimeout(t);
+    };
+  }, [slipHtml, open]);
+
+  const handlePdf = async () => {
+    setPdfLoading(true);
+    try {
+      await downloadOrderSlipPdf(order);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   if (!open) return null;
 
@@ -63,57 +82,13 @@ export default function OrderSlipDialog({ order, open, onClose }: Props) {
         </div>
 
         <div className="osd-preview-wrap">
-          <article className="osd-slip" aria-label="Slip preview">
-            <div className="osd-slip__brand">
-              <h3>{STORE_NAME}</h3>
-              <p>Packing slip</p>
-            </div>
-            <p className="osd-slip__id">{order.id}</p>
-            <p className="osd-slip__meta">
-              {order.date} · {order.time} · {order.status}
-            </p>
-            <div className="osd-slip__customer">
-              <strong>{order.customer}</strong>
-              <span>{order.phone}</span>
-              <span>{order.city}</span>
-              <span>{order.address}</span>
-            </div>
-            {order.trackingId?.trim() ? (
-              <div className="osd-slip__track">
-                <strong>Tracking:</strong> {order.trackingId.trim()}
-              </div>
-            ) : null}
-            <table>
-              <thead>
-                <tr>
-                  <th className="col-name">Item</th>
-                  <th className="col-qty">Qty</th>
-                  <th className="col-amt">PKR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.products.map((p, i) => (
-                  <tr key={`${p.productId ?? p.name}-${i}`}>
-                    <td className="col-name">{productLineLabel(p)}</td>
-                    <td className="col-qty">×{p.quantity}</td>
-                    <td className="col-amt">
-                      {(p.lineTotal ?? p.price * p.quantity).toLocaleString('en-PK')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="osd-slip__total">
-              <span>Total</span>
-              <span>{formatMoney(order.total)}</span>
-            </div>
-            {order.notes?.trim() ? (
-              <div className="osd-slip__note">
-                <strong>Note:</strong> {order.notes}
-              </div>
-            ) : null}
-            <p className="osd-slip__footer">Thank you for shopping with {STORE_NAME}</p>
-          </article>
+          <iframe
+            ref={previewRef}
+            srcDoc={slipHtml}
+            title="Slip preview"
+            className="osd-slip-iframe"
+            aria-label="Slip preview — same as print and PDF"
+          />
         </div>
 
         <div className="osd-actions">
@@ -127,9 +102,10 @@ export default function OrderSlipDialog({ order, open, onClose }: Props) {
           <button
             type="button"
             className="osd-btn osd-btn--pdf"
-            onClick={() => downloadOrderSlipPdf(order)}
+            onClick={() => void handlePdf()}
+            disabled={pdfLoading}
           >
-            Download PDF
+            {pdfLoading ? 'Preparing…' : 'Download PDF'}
           </button>
           <button type="button" className="osd-btn osd-btn--ghost" onClick={onClose}>
             Close

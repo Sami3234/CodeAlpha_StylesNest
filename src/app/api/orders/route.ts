@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
       paymentMethod: p.paymentMethod,
       selectedSize: p.selectedSize,
       selectedColor: p.selectedColor,
+      pickPoint: p.pickPoint,
     }));
 
     const serverTotal = priced.total;

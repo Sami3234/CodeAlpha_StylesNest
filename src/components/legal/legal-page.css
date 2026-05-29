@@ -1,0 +1,128 @@
+/* Legal page — loading placeholder (matches section layout) */
+.legal-page-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.legal-page-placeholder__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 28px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.01em;
+}
+
+.legal-page-placeholder__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e8eef5;
+  border-top-color: #ff8c42;
+  border-radius: 50%;
+  animation: legal-page-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes legal-page-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.legal-page-placeholder__section {
+  padding-bottom: 28px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.legal-page-placeholder__section:last-of-type {
+  margin-bottom: 20px;
+}
+
+.legal-page-placeholder__heading {
+  width: 38%;
+  max-width: 220px;
+  height: 20px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e8eef5 0%, #f4f7fb 48%, #e8eef5 100%);
+  background-size: 200% 100%;
+  animation: legal-page-shimmer 1.35s ease-in-out infinite;
+}
+
+.legal-page-placeholder__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.legal-page-placeholder__line {
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eef2f6 0%, #f8fafc 48%, #eef2f6 100%);
+  background-size: 200% 100%;
+  animation: legal-page-shimmer 1.35s ease-in-out infinite;
+}
+
+.legal-page-placeholder__line--full {
+  width: 100%;
+}
+
+.legal-page-placeholder__line--med {
+  width: 90%;
+  animation-delay: 0.08s;
+}
+
+.legal-page-placeholder__line--short {
+  width: 64%;
+  animation-delay: 0.14s;
+}
+
+.legal-page-placeholder > .legal-page-placeholder__section:nth-child(2) .legal-page-placeholder__heading {
+  animation-delay: 0.06s;
+}
+
+.legal-page-placeholder > .legal-page-placeholder__section:nth-child(3) .legal-page-placeholder__heading {
+  animation-delay: 0.12s;
+}
+
+.legal-page-placeholder > .legal-page-placeholder__section:nth-child(4) .legal-page-placeholder__heading {
+  animation-delay: 0.18s;
+}
+
+.legal-page-placeholder__contact {
+  height: 72px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #f1f5f9 0%, #f8fafc 48%, #f1f5f9 100%);
+  background-size: 200% 100%;
+  animation: legal-page-shimmer 1.35s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+@keyframes legal-page-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legal-page-placeholder__spinner {
+    animation: none;
+    border-top-color: #cbd5e1;
+  }
+
+  .legal-page-placeholder__heading,
+  .legal-page-placeholder__line,
+  .legal-page-placeholder__contact {
+    animation: none;
+    background: #eef2f6;
+  }
+}

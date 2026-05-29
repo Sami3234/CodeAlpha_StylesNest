@@ -81,6 +81,9 @@ export const adminProductTranslations: Record<string, string> = {
   'admin.form.fabricHint': 'Clothes only — shown in Product details',
   'admin.form.costPrice': 'Cost price (PKR)',
   'admin.form.costPriceHint': 'Never shown to customers — for your profit records only',
+  'admin.form.pickPoint': 'Pick point (warehouse location)',
+  'admin.form.pickPointHint':
+    'Optional — where this item is stored (shelf, group, room). Shown on admin orders only so you can pack faster. Customers never see this.',
   'admin.form.seoTitle': 'SEO title',
   'admin.form.seoTitleHint': 'Google & Facebook link preview only — not on product page',
   'admin.form.seoDescription': 'SEO description',

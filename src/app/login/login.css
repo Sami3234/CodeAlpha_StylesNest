@@ -27,6 +27,7 @@
   max-width: 440px;
   max-height: min(92vh, 720px);
   overflow-y: auto;
+  overflow-x: hidden;
   background: #fff;
   border-radius: 20px;
   padding: 28px 26px 32px;
@@ -34,6 +35,28 @@
     0 24px 64px rgba(15, 23, 42, 0.22),
     0 0 0 1px rgba(255, 255, 255, 0.08);
   animation: login-panel-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  scrollbar-width: thin;
+  scrollbar-color: #ff8c42 #f1f5f9;
+}
+
+.login-modal-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.login-modal-panel::-webkit-scrollbar-track {
+  margin: 10px 0;
+  background: transparent;
+  border-radius: 999px;
+}
+
+.login-modal-panel::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff6b35 0%, #f7931e 100%);
+  border-radius: 999px;
+  border: 2px solid #fff;
+}
+
+.login-modal-panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e85a24 0%, #e07d10 100%);
 }
 
 @keyframes login-panel-in {
@@ -308,6 +331,57 @@
 .login-form input:focus {
   border-color: #ff6b35;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+}
+
+/* Override .login-form label column layout — keep checkbox inline with text */
+.login-form .login-terms {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 4px;
+  padding: 0;
+  font-weight: 500;
+  cursor: default;
+}
+
+.login-terms input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #ff6b35;
+  cursor: pointer;
+}
+
+/* Must override .login-form label — otherwise each link stacks on its own line */
+.login-form label.login-terms__text {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  flex-direction: unset;
+  gap: 0;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.login-terms__link {
+  display: inline;
+  color: #ff6b35;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.login-terms__link:hover {
+  color: #e85a24;
 }
 
 .login-submit {

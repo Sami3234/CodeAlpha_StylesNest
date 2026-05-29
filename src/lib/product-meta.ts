@@ -11,6 +11,8 @@ export interface ProductMeta {
   fabric?: string;
   weightGrams?: number;
   costPrice?: number;
+  /** Admin-only warehouse/shelf note — shown on admin orders, never on storefront. */
+  pickPoint?: string;
   seoTitle?: string;
   seoDescription?: string;
 }
@@ -74,6 +76,7 @@ export function parseProductMeta(raw: unknown): ProductMeta | undefined {
     fabric: typeof o.fabric === 'string' ? o.fabric.trim() : '',
     weightGrams,
     costPrice,
+    pickPoint: typeof o.pickPoint === 'string' ? o.pickPoint.trim() : '',
     seoTitle: typeof o.seoTitle === 'string' ? o.seoTitle.trim() : '',
     seoDescription: typeof o.seoDescription === 'string' ? o.seoDescription.trim() : '',
   };
@@ -110,6 +113,7 @@ export function normalizeProductMetaForSave(meta: ProductMeta): ProductMeta {
     weightGrams:
       meta.weightGrams != null && meta.weightGrams > 0 ? Math.round(meta.weightGrams) : undefined,
     costPrice: meta.costPrice != null && meta.costPrice >= 0 ? meta.costPrice : undefined,
+    pickPoint: meta.pickPoint?.trim() || undefined,
     seoTitle: meta.seoTitle?.trim() || undefined,
     seoDescription: meta.seoDescription?.trim() || undefined,
   };

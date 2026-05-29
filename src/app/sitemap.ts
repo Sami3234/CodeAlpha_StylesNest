@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { legalPagePaths } from '@/lib/legal-pages-types';
 import { getActiveProductsForSitemap } from '@/lib/seo/products-for-sitemap';
 import { getSiteUrl, shopCategories } from '@/lib/seo/site';
 
@@ -14,10 +15,18 @@ function safeDate(value: Date | string | null | undefined, fallback: Date): Date
 }
 
 function staticEntries(base: string, now: Date): MetadataRoute.Sitemap {
+  const legal = legalPagePaths.map((page) => ({
+    url: `${base}${page.path}`,
+    lastModified: now,
+    changeFrequency: 'yearly' as const,
+    priority: 0.5,
+  }));
+
   return [
     { url: base, lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/shop`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: `${base}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    ...legal,
   ];
 }
 

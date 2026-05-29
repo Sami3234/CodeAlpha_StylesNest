@@ -10,6 +10,7 @@ import { LoginModalProvider } from '@/context/LoginModalContext';
 import NetworkProviders from '@/components/network/NetworkProviders';
 import { ContactSettingsProvider } from '@/context/ContactSettingsContext';
 import { PendingReviewsProvider } from '@/context/PendingReviewsContext';
+import CookieConsent from '@/components/legal/CookieConsent';
 
 /** All client-side app providers in one boundary (avoids SSR chunk issues in root layout). */
 export default function AppProviders({ children }: { children: ReactNode }) {
@@ -23,6 +24,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
                 <CartProvider>
                   <OrderProvider>
                     {children}
+                    <CookieConsent />
                     <AppToaster variant="store" />
                   </OrderProvider>
                 </CartProvider>

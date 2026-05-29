@@ -115,7 +115,11 @@ export default function Footer() {
                 { href: '/shop', label: 'Home' },
                 { href: '/shop', label: 'Shop' },
                 { href: '/about', label: 'About Us' },
-                { href: '/about#contact', label: 'Contact Us' }
+                { href: '/about#contact', label: 'Contact Us' },
+                { href: '/privacy-policy', label: 'Privacy Policy' },
+                { href: '/terms', label: 'Terms & Conditions' },
+                { href: '/shipping-delivery', label: 'Shipping & Delivery' },
+                { href: '/returns-refunds', label: 'Returns & Refunds' },
               ].map((link, index) => (
                 <motion.li
                   key={index}
@@ -170,51 +174,65 @@ export default function Footer() {
               Contact Info
             </h4>
             <div style={{ color: '#cbd5e0', fontSize: '15px', lineHeight: '2.2' }}>
-              <motion.p 
-                whileHover={{ x: 5 }}
-                style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: '12px' }}
-              >
-                <span style={{ fontSize: '18px' }}>📍</span>
-                <span>{contactInfo.address}</span>
-              </motion.p>
-              <motion.p 
-                whileHover={{ x: 5 }}
-                style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: '12px' }}
-              >
-                <span style={{ fontSize: '18px' }}>📞</span>
-                <a 
-                  href={`tel:${contactInfo.phone.replace(/\s+/g, '')}`}
-                  style={{ 
-                    color: '#ff6b35', 
-                    textDecoration: 'none',
-                    fontWeight: '500',
-                    transition: 'color 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#f7931e'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#ff6b35'}
+              {contactInfo.address?.trim() ? (
+                <motion.p
+                  whileHover={{ x: 5 }}
+                  style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: '12px' }}
                 >
-                  {contactInfo.phone}
-                </a>
-              </motion.p>
-              <motion.p 
-                whileHover={{ x: 5 }}
-                style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: '12px' }}
-              >
-                <span style={{ fontSize: '18px' }}>✉️</span>
-                <a
-                  href={`mailto:${contactInfo.email}`}
-                  style={{ 
-                    color: '#ff6b35', 
-                    textDecoration: 'none',
-                    fontWeight: '500',
-                    transition: 'color 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#f7931e'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#ff6b35'}
+                  <span style={{ fontSize: '18px' }}>📍</span>
+                  <span>{contactInfo.address}</span>
+                </motion.p>
+              ) : null}
+              {contactInfo.phone?.trim() ? (
+                <motion.p
+                  whileHover={{ x: 5 }}
+                  style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: '12px' }}
                 >
-                  {contactInfo.email}
-                </a>
-              </motion.p>
+                  <span style={{ fontSize: '18px' }}>📞</span>
+                  <a
+                    href={`tel:${contactInfo.phone.replace(/\s+/g, '')}`}
+                    style={{
+                      color: '#ff6b35',
+                      textDecoration: 'none',
+                      fontWeight: '500',
+                      transition: 'color 0.3s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#f7931e';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#ff6b35';
+                    }}
+                  >
+                    {contactInfo.phone}
+                  </a>
+                </motion.p>
+              ) : null}
+              {contactInfo.email?.trim() ? (
+                <motion.p
+                  whileHover={{ x: 5 }}
+                  style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: '12px' }}
+                >
+                  <span style={{ fontSize: '18px' }}>✉️</span>
+                  <a
+                    href={`mailto:${contactInfo.email}`}
+                    style={{
+                      color: '#ff6b35',
+                      textDecoration: 'none',
+                      fontWeight: '500',
+                      transition: 'color 0.3s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#f7931e';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#ff6b35';
+                    }}
+                  >
+                    {contactInfo.email}
+                  </a>
+                </motion.p>
+              ) : null}
             </div>
           </motion.div>
 

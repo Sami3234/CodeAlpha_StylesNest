@@ -27,6 +27,7 @@ export type ValidatedOrderLine = {
   paymentMethod?: string;
   selectedSize?: string;
   selectedColor?: string;
+  pickPoint?: string;
 };
 
 export type ValidateOrderResult =
@@ -125,6 +126,7 @@ export async function validateAndPriceOrderLines(
       paymentMethod: line.paymentMethod?.trim() || undefined,
       selectedSize: options.selectedSize,
       selectedColor: options.selectedColor,
+      pickPoint: product.productMeta?.pickPoint?.trim() || undefined,
     });
   }
 

@@ -393,6 +393,12 @@
   font-weight: 600;
 }
 
+.pc-meta-line--compact {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Product detail page — corner badges */
 .pc-badge {
   position: absolute;

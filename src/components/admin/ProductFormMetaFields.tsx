@@ -202,6 +202,22 @@ export default function ProductFormMetaFields({
             />
           </Field>
         </div>
+        <div style={{ marginTop: '16px' }}>
+          <Field
+            label={t('admin.form.pickPoint')}
+            hint={t('admin.form.pickPointHint')}
+            visibility="admin-only"
+          >
+            <input
+              type="text"
+              className={inputClass('pickPoint')}
+              value={meta.pickPoint ?? ''}
+              onChange={(e) => set('pickPoint', e.target.value)}
+              placeholder="e.g. Shelf A3, Group 2, back room rack"
+              maxLength={120}
+            />
+          </Field>
+        </div>
       </div>
 
       <div className="pf-section pf-panel pf-panel-seo" style={{ marginTop: '24px' }}>

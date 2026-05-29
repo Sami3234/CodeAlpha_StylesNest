@@ -10,8 +10,10 @@ export default function WhatsAppFab() {
     const w = settings.social_whatsapp?.trim();
     if (w) return w;
     const digits = String(settings.whatsapp).replace(/\D/g, '');
-    return digits ? `https://wa.me/${digits}` : 'https://wa.me/923001234567';
+    return digits ? `https://wa.me/${digits}` : '';
   }, [settings.social_whatsapp, settings.whatsapp]);
+
+  if (!whatsappHref) return null;
 
   return (
     <a

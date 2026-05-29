@@ -95,13 +95,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
-  if (typeof window !== 'undefined' && !hydrated) {
+  useEffect(() => {
     setLines(loadInitialLines());
     setHydrated(true);
-  }
+  }, []);
 
   useEffect(() => {
-    if (!hydrated || typeof window === 'undefined') return;
+    if (!hydrated) return;
     try {
       if (lines.length === 0) localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));

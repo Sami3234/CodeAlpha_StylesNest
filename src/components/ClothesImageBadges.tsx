@@ -12,7 +12,6 @@ import {
   isClothesSizeRequired,
 } from '@/lib/clothes-options';
 import {
-  categoryColorsRequired,
   getProductAvailableColors,
   getProductImageColorDisplay,
   productColorsDisplayLabel,
@@ -135,15 +134,36 @@ export function ClothesColorsLine({ product }: { product: Product }) {
   );
 }
 
+const CARD_SIZE_PREVIEW_COUNT = 3;
+
+function formatSizesPreview(sizes: string[], compact: boolean): string {
+  if (sizes.length === 0) return '';
+  if (!compact || sizes.length <= CARD_SIZE_PREVIEW_COUNT) {
+    return sizes.join(' · ');
+  }
+  return `${sizes.slice(0, CARD_SIZE_PREVIEW_COUNT).join(' · ')}...`;
+}
+
 /** Available sizes — left aligned (display only) */
-export function ClothesSizesLine({ product }: { product: Product }) {
+export function ClothesSizesLine({
+  product,
+  compact = false,
+}: {
+  product: Product;
+  /** Shop card: show first 3 sizes only, then "..." */
+  compact?: boolean;
+}) {
   if (isShoesCategory(product.category) && product.shoesOptions) {
     const display = shoesSizesDisplayLabel(product.shoesOptions);
     if (!display) return null;
+    const value =
+      product.shoesOptions.sizes.length > 0
+        ? formatSizesPreview(product.shoesOptions.sizes, compact)
+        : display.value;
     return (
-      <p className="pc-meta-line">
+      <p className={`pc-meta-line${compact ? ' pc-meta-line--compact' : ''}`}>
         <span className="pc-meta-label">{display.label}: </span>
-        {display.value}
+        {value}
       </p>
     );
   }
@@ -155,10 +175,15 @@ export function ClothesSizesLine({ product }: { product: Product }) {
   const display = clothesSizesDisplayLabel(product.clothesOptions);
   if (!display) return null;
 
+  const value =
+    product.clothesOptions.sizes.length > 0
+      ? formatSizesPreview(product.clothesOptions.sizes, compact)
+      : display.value;
+
   return (
-    <p className="pc-meta-line">
+    <p className={`pc-meta-line${compact ? ' pc-meta-line--compact' : ''}`}>
       <span className="pc-meta-label">{display.label}: </span>
-      {display.value}
+      {value}
     </p>
   );
 }
@@ -232,7 +257,7 @@ export function ClothesMetaRow({
       }}
     >
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-        <ClothesSizesLine product={product} />
+        <ClothesSizesLine product={product} compact />
         {showColor ? (
           <div
             style={{

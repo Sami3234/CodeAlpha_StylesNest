@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useOrders } from '@/context/OrderContext';
 import type { Order } from '@/context/OrderContext';
+import { useProducts } from '@/context/ProductContext';
+import AdminOrderPickPoint from '@/components/admin/AdminOrderPickPoint';
 import './admin-cart-orders.css';
 import AdminLoading from '@/components/admin/AdminLoading';
 import AdminPkrAmount from '@/components/admin/AdminPkrAmount';
@@ -49,6 +51,7 @@ function StatusBadge({ status }: { status: Order['status'] }) {
 
 export default function AdminCartOrdersPage() {
   const { orders, loading, updateOrderStatus } = useOrders();
+  const { products: catalog } = useProducts();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [query, setQuery] = useState('');
 
@@ -180,7 +183,10 @@ export default function AdminCartOrdersPage() {
                         {order.products.map((p, idx) => (
                           <tr key={`${order.id}-${idx}`}>
                             <td className="aco-td-num">{idx + 1}</td>
-                            <td className="aco-td-product">{p.name}</td>
+                            <td className="aco-td-product">
+                              <div className="aco-td-product__name">{p.name}</div>
+                              <AdminOrderPickPoint line={p} catalog={catalog} compact />
+                            </td>
                             <td className="aco-td-qty">{p.quantity}</td>
                             <td className="aco-td-price">
                               <AdminPkrAmount amount={Number(p.price)} size="compact" decimals={2} />

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { signIn, getProviders } from 'next-auth/react';
@@ -30,13 +31,17 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
   const [confirmPassword, setConfirmPassword] = useState('');
   const [captcha, setCaptcha] = useState<MathCaptcha>(() => createMathCaptcha());
   const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   const captchaFilled = captchaAnswer.trim().length > 0;
-  const emailSubmitLocked = loading || oauthLoading || !captchaFilled;
+  const registerSubmitLocked =
+    loading || oauthLoading || !captchaFilled || !acceptedTerms;
+  const signInSubmitLocked = loading || oauthLoading || !captchaFilled;
+  const emailSubmitLocked = mode === 'register' ? registerSubmitLocked : signInSubmitLocked;
   const oauthBusy = loading || oauthLoading;
 
   const refreshCaptcha = useCallback(() => {
@@ -63,6 +68,7 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
   const switchMode = (next: 'signin' | 'register') => {
     setMode(next);
     setError('');
+    setAcceptedTerms(false);
     refreshCaptcha();
   };
 
@@ -115,6 +121,11 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
 
     if (!requireCaptcha()) return;
 
+    if (!acceptedTerms) {
+      setError('Please accept the Terms & Conditions to create an account.');
+      return;
+    }
+
     if (!passwordsMatch(password, confirmPassword)) {
       setError('Passwords do not match');
       return;
@@ -131,7 +142,7 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
       const reg = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, acceptedTerms: true }),
       });
       const data = await reg.json();
       if (!reg.ok) {
@@ -292,6 +303,42 @@ export default function LoginFormContent({ callbackUrl, onSuccess, onClose }: Pr
             />
           </label>
           <PasswordStrengthList password={password} confirmPassword={confirmPassword} showMatch />
+
+          <div className="login-terms">
+            <input
+              id="login-accept-terms"
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => {
+                setAcceptedTerms(e.target.checked);
+                if (error) setError('');
+              }}
+              required
+            />
+            <label htmlFor="login-accept-terms" className="login-terms__text">
+              I agree to the{' '}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="login-terms__link"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Terms &amp; Conditions
+              </Link>{' '}
+              and{' '}
+              <Link
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="login-terms__link"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Privacy Policy
+              </Link>
+              .
+            </label>
+          </div>
 
           {captchaBlock}
 

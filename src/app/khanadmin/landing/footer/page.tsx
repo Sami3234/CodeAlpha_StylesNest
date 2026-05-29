@@ -35,7 +35,11 @@ export default function LandingFooterPage() {
       <header className="alp-head">
         <h1>Footer &amp; site links</h1>
         <p>
-          Contact details, footer services, and social links (5 platforms). Top bar uses 4 icons on{' '}
+          Contact details, footer services, and social links (5 platforms). Edit policy pages on{' '}
+          <Link href="/khanadmin/landing/legal-pages" style={{ color: '#3498db', fontWeight: 600 }}>
+            Policies &amp; legal
+          </Link>
+          . Top bar:{' '}
           <Link href="/khanadmin/landing/top-bar" style={{ color: '#3498db', fontWeight: 600 }}>
             Top bar
           </Link>

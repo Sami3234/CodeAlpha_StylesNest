@@ -30,8 +30,6 @@ import ClothesStitchBadge, {
 import ProductCardRating from '@/components/ProductCardRating';
 import ProductMetaDisplay from '@/components/ProductMetaDisplay';
 import { hasCustomerProductMeta } from '@/lib/product-meta-display';
-import { isClothesCategory } from '@/lib/clothes-options';
-import { isShoesCategory } from '@/lib/shoes-options';
 import {
   buildOrderProductName,
   productNeedsCartOptions,
@@ -53,6 +51,10 @@ import '@/components/product-page.css';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
+}
+
+function createRecentOrderLocalId(): string {
+  return `ORD-${Date.now()}`;
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
@@ -590,7 +592,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     // Create order object
     const newOrder = {
-      id: `ORD-${Date.now()}`,
+      id: createRecentOrderLocalId(),
       customer: formData.fullName,
       phone: formData.mobile,
       city: formData.city,

@@ -12,7 +12,6 @@ import { formatPrice } from '@/utils/formatPrice';
 import AddToCartOptionsModal from '@/components/AddToCartOptionsModal';
 import { ClothesMetaRow } from '@/components/ClothesImageBadges';
 import ProductCardImageOverlays from '@/components/ProductCardImageOverlays';
-import ProductCardTags from '@/components/ProductCardTags';
 import ProductCardRating from '@/components/ProductCardRating';
 import { ProductShortSummary } from '@/components/ProductMetaDisplay';
 import { productNeedsCartOptions } from '@/lib/cart-line-options';
@@ -113,8 +112,6 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             </div>
           </div>
         </Link>
-
-        <ProductCardTags product={product} />
 
         <div style={{ paddingTop: '12px', paddingBottom: '6px' }}>
           <h3

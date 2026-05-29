@@ -1,8 +1,13 @@
 import { jsPDF } from 'jspdf';
 import type { Order } from '@/types/order';
+import {
+  slipParcelProductId,
+  slipParcelProductTitle,
+} from '@/lib/order-product-line';
+import { slipLogoImgHtml } from '@/lib/order-slip-logo';
 
 const STORE_NAME = 'StylesNest';
-const SLIP_WIDTH_MM = 80;
+export const SLIP_WIDTH_MM = 80;
 
 function escapeHtml(value: string): string {
   return value
@@ -16,22 +21,190 @@ function formatMoney(amount: number): string {
   return `${amount.toLocaleString('en-PK')} PKR`;
 }
 
-function productLineLabel(p: Order['products'][number]): string {
-  const id =
-    typeof p.productId === 'number' && p.productId > 0 ? `ID ${p.productId} · ` : '';
-  const opts = [p.selectedSize, p.selectedColor].filter(Boolean).join(', ');
-  const suffix = opts ? ` (${opts})` : '';
-  return `${id}${p.name}${suffix}`;
+function formatSlipDate(date: string, time?: string): string {
+  const raw = date?.trim();
+  if (!raw) return '';
+  const parsed = raw.includes('T') ? new Date(raw) : new Date(`${raw}${time?.trim() ? ` ${time.trim()}` : ''}`);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString('en-PK', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+  return raw;
 }
 
+/** Shared B&W styles — print, PDF, and preview use the same HTML. */
+export const SLIP_PRINT_STYLES = `
+    @page { size: 80mm auto; margin: 4mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 4mm 4.5mm 5mm;
+      width: 71mm;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 10px;
+      line-height: 1.45;
+      color: #000;
+      background: #fff;
+    }
+    .slip-header {
+      text-align: center;
+      margin: 0 0 12px;
+      padding: 0 0 10px;
+      border-bottom: 1.5px solid #000;
+    }
+    .slip-logo {
+      display: block;
+      margin: 0 auto 8px;
+      width: auto;
+      height: auto;
+      max-width: 50mm;
+      max-height: 20mm;
+      object-fit: contain;
+      object-position: center;
+      filter: grayscale(100%);
+    }
+    .slip-type {
+      margin: 0;
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #333;
+    }
+    .slip-section {
+      margin-bottom: 12px;
+    }
+    .slip-section-label {
+      margin: 0 0 5px;
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #444;
+    }
+    .slip-order-id {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #000;
+      line-height: 1.2;
+    }
+    .slip-order-date {
+      margin: 4px 0 0;
+      font-size: 9px;
+      color: #333;
+    }
+    .slip-card {
+      border: 1.5px solid #000;
+      border-radius: 5px;
+      padding: 10px 11px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+    .slip-card strong {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #000;
+      line-height: 1.3;
+    }
+    .slip-card span {
+      display: block;
+      font-size: 9.5px;
+      color: #111;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+    .slip-track {
+      font-size: 9.5px;
+      border: 1px solid #000;
+      border-radius: 5px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      color: #000;
+      line-height: 1.4;
+    }
+    .slip-track strong {
+      font-size: 7.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9px;
+      margin: 0 0 10px;
+    }
+    thead th {
+      text-align: left;
+      font-size: 7.5px;
+      font-weight: 700;
+      color: #000;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 6px 4px;
+      border-bottom: 1.5px solid #000;
+    }
+    tbody td {
+      padding: 7px 4px;
+      vertical-align: top;
+      border-bottom: 1px solid #bbb;
+      color: #000;
+      line-height: 1.35;
+    }
+    .col-id {
+      width: 11%;
+      font-weight: 800;
+      font-size: 9px;
+      white-space: nowrap;
+    }
+    .col-name { width: 49%; word-break: break-word; font-weight: 600; }
+    .col-qty { width: 14%; text-align: center; font-weight: 700; }
+    .col-amt { width: 26%; text-align: right; white-space: nowrap; font-weight: 700; }
+    .slip-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      padding: 10px 11px;
+      border: 2px solid #000;
+      border-radius: 5px;
+      background: #fff;
+      color: #000;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .slip-total span:last-child { font-size: 12px; }
+    .slip-footer {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed #888;
+      text-align: center;
+      font-size: 8px;
+      color: #333;
+      line-height: 1.5;
+    }
+    @media print {
+      body { padding: 3.5mm 4mm 4.5mm; width: 72mm; }
+    }
+`;
+
 export function buildOrderSlipHtml(order: Order, storeName = STORE_NAME): string {
+  const orderDate = formatSlipDate(order.date, order.time);
   const productsHtml = order.products
     .map((p) => {
       const lineTotal = (p.lineTotal ?? p.price * p.quantity).toLocaleString('en-PK');
       return `<tr>
-        <td class="item-name">${escapeHtml(productLineLabel(p))}</td>
-        <td class="item-qty">×${p.quantity}</td>
-        <td class="item-amt">${lineTotal}</td>
+        <td class="col-id">${escapeHtml(slipParcelProductId(p))}</td>
+        <td class="col-name">${escapeHtml(slipParcelProductTitle(p))}</td>
+        <td class="col-qty">×${p.quantity}</td>
+        <td class="col-amt">${lineTotal}</td>
       </tr>`;
     })
     .join('');
@@ -41,130 +214,138 @@ export function buildOrderSlipHtml(order: Order, storeName = STORE_NAME): string
 <head>
   <meta charset="utf-8" />
   <title>${escapeHtml(order.id)} — ${escapeHtml(storeName)}</title>
-  <style>
-    @page { size: 80mm auto; margin: 4mm; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 6mm 4mm;
-      width: 72mm;
-      font-family: "Segoe UI", system-ui, sans-serif;
-      font-size: 11px;
-      line-height: 1.35;
-      color: #0f172a;
-      background: #fff;
-    }
-    .brand {
-      text-align: center;
-      border-bottom: 2px dashed #cbd5e1;
-      padding-bottom: 8px;
-      margin-bottom: 8px;
-    }
-    .brand h1 {
-      margin: 0;
-      font-size: 15px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    .brand p {
-      margin: 4px 0 0;
-      font-size: 10px;
-      color: #64748b;
-      font-weight: 600;
-    }
-    .order-id {
-      font-size: 13px;
-      font-weight: 700;
-      text-align: center;
-      margin: 0 0 6px;
-    }
-    .meta {
-      font-size: 10px;
-      color: #64748b;
-      text-align: center;
-      margin: 0 0 10px;
-    }
-    .block {
-      margin-bottom: 8px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .block strong { display: block; font-size: 12px; margin-bottom: 2px; }
-    .block span { display: block; font-size: 10px; color: #334155; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10px;
-      margin: 6px 0;
-    }
-    th {
-      text-align: left;
-      font-size: 9px;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 4px 2px;
-    }
-    td { padding: 5px 2px; vertical-align: top; border-bottom: 1px dotted #e2e8f0; }
-    .item-name { width: 58%; word-break: break-word; }
-    .item-qty { width: 14%; text-align: center; }
-    .item-amt { width: 28%; text-align: right; white-space: nowrap; }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      font-weight: 700;
-      margin-top: 8px;
-      padding-top: 6px;
-      border-top: 2px solid #0f172a;
-    }
-    .note, .track {
-      font-size: 10px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      padding: 6px;
-      margin-top: 8px;
-    }
-    .footer {
-      margin-top: 10px;
-      text-align: center;
-      font-size: 9px;
-      color: #94a3b8;
-    }
-    @media print {
-      body { padding: 0; width: 72mm; }
-    }
-  </style>
+  <style>${SLIP_PRINT_STYLES}</style>
 </head>
 <body>
-  <div class="brand">
-    <h1>${escapeHtml(storeName)}</h1>
-    <p>Packing slip</p>
-  </div>
-  <p class="order-id">${escapeHtml(order.id)}</p>
-  <p class="meta">${escapeHtml(order.date)} · ${escapeHtml(order.time)} · ${escapeHtml(order.status)}</p>
-  <div class="block">
+  <header class="slip-header">
+    ${slipLogoImgHtml()}
+    <p class="slip-type">Packing slip</p>
+  </header>
+
+  <section class="slip-section">
+    <p class="slip-section-label">Order no.</p>
+    <p class="slip-order-id">${escapeHtml(order.id)}</p>
+    ${orderDate ? `<p class="slip-order-date">${escapeHtml(orderDate)}</p>` : ''}
+  </section>
+
+  <section class="slip-card">
+    <p class="slip-section-label">Receiver</p>
     <strong>${escapeHtml(order.customer)}</strong>
     <span>${escapeHtml(order.phone)}</span>
     <span>${escapeHtml(order.city)}</span>
     <span>${escapeHtml(order.address)}</span>
-  </div>
-  ${order.trackingId?.trim() ? `<div class="track"><strong>Tracking:</strong> ${escapeHtml(order.trackingId.trim())}</div>` : ''}
+  </section>
+
+  ${order.trackingId?.trim() ? `<div class="slip-track"><strong>Tracking</strong> ${escapeHtml(order.trackingId.trim())}</div>` : ''}
+
   <table>
-    <thead><tr><th>Item</th><th>Qty</th><th>PKR</th></tr></thead>
+    <thead>
+      <tr>
+        <th class="col-id">ID</th>
+        <th class="col-name">Product</th>
+        <th class="col-qty">Qty</th>
+        <th class="col-amt">PKR</th>
+      </tr>
+    </thead>
     <tbody>${productsHtml}</tbody>
   </table>
-  <div class="total-row"><span>Total</span><span>${formatMoney(order.total)}</span></div>
-  ${order.notes?.trim() ? `<div class="note"><strong>Note:</strong> ${escapeHtml(order.notes.trim())}</div>` : ''}
-  <p class="footer">Thank you for shopping with ${escapeHtml(storeName)}</p>
+
+  <div class="slip-total"><span>Total</span><span>${formatMoney(order.total)}</span></div>
+
+  <p class="slip-footer">Thank you for shopping with ${escapeHtml(storeName)}</p>
 </body>
 </html>`;
 }
 
-/** Print via hidden iframe (works when popups are blocked). */
+function waitForDocumentImages(doc: Document, timeoutMs = 4000): Promise<void> {
+  const images = Array.from(doc.images);
+  if (images.length === 0) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+
+    const timer = window.setTimeout(finish, timeoutMs);
+    let pending = 0;
+
+    for (const img of images) {
+      if (img.complete) continue;
+      pending += 1;
+      img.addEventListener('load', () => {
+        pending -= 1;
+        if (pending <= 0) {
+          window.clearTimeout(timer);
+          finish();
+        }
+      });
+      img.addEventListener('error', () => {
+        pending -= 1;
+        if (pending <= 0) {
+          window.clearTimeout(timer);
+          finish();
+        }
+      });
+    }
+
+    if (pending === 0) {
+      window.clearTimeout(timer);
+      finish();
+    }
+  });
+}
+
+async function mountSlipIframe(html: string): Promise<{
+  iframe: HTMLIFrameElement;
+  body: HTMLElement;
+  cleanup: () => void;
+}> {
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute(
+    'style',
+    'position:fixed;left:-10000px;top:0;width:80mm;border:0;visibility:hidden',
+  );
+  iframe.setAttribute('title', 'Order slip render');
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+  if (!doc) {
+    iframe.remove();
+    throw new Error('Could not render slip');
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  await waitForDocumentImages(doc);
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  const body = doc.body;
+  if (!body) {
+    iframe.remove();
+    throw new Error('Could not render slip body');
+  }
+
+  const height = Math.max(body.scrollHeight, doc.documentElement.scrollHeight);
+  iframe.style.height = `${height}px`;
+
+  return {
+    iframe,
+    body,
+    cleanup: () => iframe.remove(),
+  };
+}
+
+function slipFilename(order: Order): string {
+  const id = order.id.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'order';
+  return `StylesNest-slip-${id}.pdf`;
+}
+
+/** Print via hidden iframe (same HTML as PDF). */
 export function printOrderSlip(order: Order, storeName = STORE_NAME): void {
   const html = buildOrderSlipHtml(order, storeName);
   const iframe = document.createElement('iframe');
@@ -194,102 +375,51 @@ export function printOrderSlip(order: Order, storeName = STORE_NAME): void {
     }
   };
 
-  if (iframe.contentWindow?.document?.readyState === 'complete') {
-    runPrint();
-  } else {
-    iframe.onload = runPrint;
-    window.setTimeout(runPrint, 400);
-  }
-}
-
-function slipFilename(order: Order): string {
-  const id = order.id.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'order';
-  return `StylesNest-slip-${id}.pdf`;
-}
-
-function estimateSlipHeightMm(order: Order): number {
-  const base = 52;
-  const perProduct = 11;
-  const extras =
-    (order.trackingId?.trim() ? 8 : 0) + (order.notes?.trim() ? 12 : 0);
-  return Math.min(180, Math.max(85, base + order.products.length * perProduct + extras));
-}
-
-/** Compact 80mm PDF for courier / packing. */
-export function downloadOrderSlipPdf(order: Order, storeName = STORE_NAME): void {
-  const margin = 4;
-  const contentWidth = SLIP_WIDTH_MM - margin * 2;
-  const pageHeight = estimateSlipHeightMm(order);
-
-  const doc = new jsPDF({
-    unit: 'mm',
-    format: [SLIP_WIDTH_MM, pageHeight],
-    orientation: 'portrait',
+  void waitForDocumentImages(doc).then(() => {
+    if (iframe.contentWindow?.document?.readyState === 'complete') {
+      runPrint();
+    } else {
+      iframe.onload = runPrint;
+      window.setTimeout(runPrint, 500);
+    }
   });
+}
 
-  let y = margin + 2;
+/** PDF from the same HTML as print — 100% matching layout (B&W). */
+export async function downloadOrderSlipPdf(
+  order: Order,
+  storeName = STORE_NAME,
+): Promise<void> {
+  const html = buildOrderSlipHtml(order, storeName);
+  const { body, cleanup } = await mountSlipIframe(html);
 
-  const addText = (
-    text: string,
-    size: number,
-    opts?: { bold?: boolean; align?: 'left' | 'center' | 'right' },
-  ) => {
-    doc.setFontSize(size);
-    doc.setFont('helvetica', opts?.bold ? 'bold' : 'normal');
-    const lines = doc.splitTextToSize(text, contentWidth) as string[];
-    const x =
-      opts?.align === 'center'
-        ? SLIP_WIDTH_MM / 2
-        : opts?.align === 'right'
-          ? SLIP_WIDTH_MM - margin
-          : margin;
-    const mode = opts?.align === 'center' ? 'center' : opts?.align === 'right' ? 'right' : 'left';
-    doc.text(lines, x, y, { align: mode, maxWidth: contentWidth });
-    y += lines.length * (size * 0.38) + 1.2;
-  };
+  try {
+    const { default: html2canvas } = await import('html2canvas');
+    const canvas = await html2canvas(body, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: body.scrollWidth,
+      height: body.scrollHeight,
+      windowWidth: body.scrollWidth,
+      windowHeight: body.scrollHeight,
+    });
 
-  const addRule = () => {
-    doc.setDrawColor(200);
-    doc.line(margin, y, SLIP_WIDTH_MM - margin, y);
-    y += 3;
-  };
+    const imgData = canvas.toDataURL('image/png');
+    const widthMm = SLIP_WIDTH_MM;
+    const heightMm = (canvas.height / canvas.width) * widthMm;
 
-  addText(storeName.toUpperCase(), 11, { bold: true, align: 'center' });
-  addText('PACKING SLIP', 8, { align: 'center' });
-  y += 1;
-  addRule();
-  addText(order.id, 10, { bold: true, align: 'center' });
-  addText(`${order.date} · ${order.time} · ${order.status}`, 7, { align: 'center' });
-  y += 1;
-  addRule();
-  addText(order.customer, 9, { bold: true });
-  addText(order.phone, 8);
-  addText(order.city, 8);
-  addText(order.address, 8);
-  if (order.trackingId?.trim()) {
-    y += 1;
-    addText(`Tracking: ${order.trackingId.trim()}`, 8, { bold: true });
+    const doc = new jsPDF({
+      unit: 'mm',
+      format: [widthMm, heightMm],
+      orientation: 'portrait',
+    });
+
+    doc.addImage(imgData, 'PNG', 0, 0, widthMm, heightMm);
+    doc.save(slipFilename(order));
+  } finally {
+    cleanup();
   }
-  y += 1;
-  addRule();
-
-  for (const p of order.products) {
-    const amt = p.lineTotal ?? p.price * p.quantity;
-    addText(productLineLabel(p), 7.5, { bold: true });
-    addText(`Qty ${p.quantity}  ·  ${amt.toLocaleString('en-PK')} PKR`, 7, { align: 'right' });
-    y += 0.5;
-  }
-
-  addRule();
-  addText(`TOTAL  ${formatMoney(order.total)}`, 10, { bold: true, align: 'right' });
-
-  if (order.notes?.trim()) {
-    y += 1;
-    addText(`Note: ${order.notes.trim()}`, 7);
-  }
-
-  y += 4;
-  addText(`Thank you — ${storeName}`, 7, { align: 'center' });
-
-  doc.save(slipFilename(order));
 }

@@ -10,6 +10,8 @@ export interface OrderProduct {
   paymentMethod?: string;
   selectedSize?: string;
   selectedColor?: string;
+  /** Snapshotted from product at order time — admin packing only. */
+  pickPoint?: string;
 }
 
 export interface Order {

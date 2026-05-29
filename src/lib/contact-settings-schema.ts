@@ -24,3 +24,8 @@ export async function ensureContactLandingExtrasColumns(): Promise<void> {
 export async function ensurePaymentMethodsColumn(): Promise<void> {
   await sql`ALTER TABLE contact_settings ADD COLUMN IF NOT EXISTS payment_methods_json TEXT DEFAULT ''`;
 }
+
+/** Admin-editable legal / policy pages (JSON) */
+export async function ensureLegalPagesColumn(): Promise<void> {
+  await sql`ALTER TABLE contact_settings ADD COLUMN IF NOT EXISTS legal_pages_json TEXT DEFAULT ''`;
+}

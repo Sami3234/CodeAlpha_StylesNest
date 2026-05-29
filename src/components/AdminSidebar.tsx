@@ -779,6 +779,55 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
                   </svg>
                   <span>Footer &amp; links</span>
                 </Link>
+
+                <Link
+                  href="/khanadmin/landing/legal-pages"
+                  onClick={isMobile ? onClose : undefined}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 20px 12px 52px',
+                    color:
+                      pathname === '/khanadmin/landing/legal-pages'
+                        ? '#3498db'
+                        : 'rgba(255,255,255,0.6)',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                    fontWeight: pathname === '/khanadmin/landing/legal-pages' ? '600' : '400',
+                    transition: 'all 0.3s ease',
+                    backgroundColor:
+                      pathname === '/khanadmin/landing/legal-pages'
+                        ? 'rgba(52, 152, 219, 0.15)'
+                        : 'transparent',
+                    borderLeft:
+                      pathname === '/khanadmin/landing/legal-pages'
+                        ? '4px solid #3498db'
+                        : '4px solid transparent',
+                    borderRadius: pathname === '/khanadmin/landing/legal-pages' ? '0 8px 8px 0' : '0',
+                    marginRight: '8px',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (pathname !== '/khanadmin/landing/legal-pages') {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (pathname !== '/khanadmin/landing/legal-pages') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
+                    }
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                  <span>Policies &amp; legal</span>
+                </Link>
               </div>
             </li>
 
