@@ -1,6 +1,7 @@
 'use client';
 
 import type { PaymentMethod } from '@/lib/payment-methods';
+import { COD_SERVICE_FEE } from '@/lib/payment-methods';
 import PaymentMethodLogo from '@/components/PaymentMethodLogo';
 
 type Props = {
@@ -8,19 +9,22 @@ type Props = {
   selectedId: string;
   onSelect: (id: string) => void;
   error?: string;
+  compact?: boolean;
 };
 
-export default function OrderPaymentMethods({ methods, selectedId, onSelect, error }: Props) {
+export default function OrderPaymentMethods({ methods, selectedId, onSelect, error, compact = false }: Props) {
   if (!methods.length) return null;
 
-  const selected = methods.find((m) => m.id === selectedId) ?? methods[0];
+  const selected = selectedId ? methods.find((m) => m.id === selectedId) ?? null : null;
 
   return (
-    <div className="order-payment-block">
+    <div className={`order-payment-block${compact ? ' order-payment-block--checkout-tight' : ''}`}>
       <label className="order-form-label">
         Payment method<span className="order-form-required">*</span>
       </label>
-      <p className="order-form-hint">Choose how you will pay for this order.</p>
+      {!compact ? (
+        <p className="order-form-hint">Choose how you will pay for this order.</p>
+      ) : null}
       <div className="order-payment-grid">
         {methods.map((method) => {
           const isSelected = method.id === selectedId;
@@ -44,7 +48,10 @@ export default function OrderPaymentMethods({ methods, selectedId, onSelect, err
             <p className="order-payment-details__note">{selected.instructions}</p>
           ) : null}
           {selected.type === 'cod' ? (
-            <p className="order-payment-details__note">You will pay in cash when the order arrives.</p>
+            <p className="order-payment-details__note">
+              You will pay in cash when the order arrives. A {COD_SERVICE_FEE} PKR COD handling fee
+              applies.
+            </p>
           ) : null}
           {selected.bankName ? (
             <div className="order-payment-details__row">

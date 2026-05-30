@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import { ensureHomepageSettingsTable } from '@/lib/homepage-settings-schema';
-import { coerceTrendingIds } from '@/lib/trending-products';
+import { fetchPinnedTrendingProductIds } from '@/lib/trending-product-ids';
+import { MAX_TRENDING_PRODUCTS } from '@/lib/trending-products';
 
 export const dynamic = 'force-dynamic';
 
 /** Public: ordered trending product ids for home strip */
 export async function GET() {
   try {
-    await ensureHomepageSettingsTable();
-    const rows = await sql`
-      SELECT trending_product_ids FROM homepage_settings WHERE id = 1 LIMIT 1
-    `;
-    const raw = rows[0]?.trending_product_ids;
-    const ids = coerceTrendingIds(raw ?? []);
+    const ids = (await fetchPinnedTrendingProductIds()).slice(0, MAX_TRENDING_PRODUCTS);
 
     return NextResponse.json(
       { success: true, ids },

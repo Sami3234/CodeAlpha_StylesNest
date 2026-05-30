@@ -1,5 +1,8 @@
 /** Shared order types (safe for server + client imports). */
 
+import type { PaymentMethodType } from '@/lib/payment-methods';
+import type { OrderPaymentStatus } from '@/lib/order-payment';
+
 export interface OrderProduct {
   name: string;
   quantity: number;
@@ -21,6 +24,18 @@ export interface Order {
   city: string;
   address: string;
   products: OrderProduct[];
+  /** Product subtotal in PKR */
+  subtotal?: number;
+  /** Delivery fee in PKR */
+  deliveryFee?: number;
+  /** COD handling fee in PKR (30 when paying cash on delivery). */
+  codFee?: number;
+  /** Selected payment type — used for server-side total validation. */
+  paymentMethodType?: PaymentMethodType;
+  /** Display label at order time (e.g. JazzCash). */
+  paymentMethodLabel?: string;
+  /** Payment settlement: cod | awaiting_payment | paid */
+  paymentStatus?: OrderPaymentStatus;
   total: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   date: string;
@@ -29,4 +44,6 @@ export interface Order {
   notes?: string;
   /** Courier / tracking reference. */
   trackingId?: string;
+  /** Shop account that placed this order (for email-based tracking). */
+  shopUserId?: number;
 }

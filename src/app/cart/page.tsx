@@ -19,6 +19,7 @@ import { persistCheckoutLineKeys } from '@/lib/checkout-selection';
 import { getProductTitle } from '@/utils/getProductText';
 import { formatPrice } from '@/utils/formatPrice';
 import { getLineTotal } from '@/lib/product-pricing';
+import { getOrderDeliveryFee, CART_COMBINED_DELIVERY_FEE } from '@/lib/product-delivery';
 import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
 import './cart-page.css';
 import {
@@ -127,6 +128,19 @@ function CartPageContent() {
     (sum, { line, product }) => sum + (product ? getLineTotal(product, line.quantity) : 0),
     0,
   );
+
+  const selectedDeliveryFee = useMemo(() => {
+    const withProduct = selectedLines.filter(
+      (row): row is typeof row & { product: NonNullable<(typeof row)['product']> } =>
+        row.product != null,
+    );
+    return getOrderDeliveryFee(
+      withProduct.map(({ product }) => product),
+      withProduct.map(({ product }) => product.id),
+    );
+  }, [selectedLines]);
+
+  const selectedGrandTotal = selectedSubtotal + selectedDeliveryFee;
 
   const changeLineQuantity = useCallback(
     (lineKey: string, product: NonNullable<(typeof rows)[0]['product']>, line: (typeof lines)[0], nextQty: number) => {
@@ -473,12 +487,27 @@ function CartPageContent() {
                     Selected for order
                   </span>
                   <div style={{ fontSize: '22px', fontWeight: 800, color: '#c44569' }}>
-                    {formatPrice(selectedSubtotal)} PKR
+                    {formatPrice(selectedGrandTotal)} PKR
                   </div>
+                  {selectedDeliveryFee > 0 ? (
+                    <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                      {selectedCount > 1
+                        ? `incl. ${formatPrice(CART_COMBINED_DELIVERY_FEE)} PKR combined delivery`
+                        : `incl. ${formatPrice(selectedDeliveryFee)} PKR delivery at checkout`}
+                    </p>
+                  ) : selectedCount > 0 ? (
+                    <p style={{ fontSize: '12px', color: '#2e7d32', marginTop: '4px' }}>
+                      Free delivery
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '12px' }}>
-                Shipping and final total can be confirmed after we contact you.
+                {selectedCount > 1 && selectedDeliveryFee > 0
+                  ? `Combined delivery for ${selectedCount} products: ${formatPrice(CART_COMBINED_DELIVERY_FEE)} PKR total (shown at checkout).`
+                  : selectedDeliveryFee > 0
+                    ? 'Delivery charge is shown when you place your order.'
+                    : 'Selected items include free delivery where applicable.'}
               </p>
               <div className="cart-actions">
                 <button

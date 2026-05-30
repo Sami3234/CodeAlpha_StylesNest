@@ -1,6 +1,9 @@
 /** Max products admins can pin for the home page trending strip */
 export const MAX_TRENDING_PRODUCTS = 15;
 
+/** First N pinned trending products — used for Google/social preview images (auto-synced). */
+export const SEO_TRENDING_IMAGE_COUNT = 5;
+
 /** Parse stored JSON/jsonb from DB into deduped positive integer IDs (order preserved). */
 export function coerceTrendingIds(raw: unknown): number[] {
   let arr: unknown = raw;

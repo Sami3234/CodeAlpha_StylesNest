@@ -23,6 +23,10 @@ async function runProductSchemaMigrations(): Promise<void> {
     ALTER TABLE products
     ADD COLUMN IF NOT EXISTS product_meta JSONB DEFAULT '{}'
   `;
+  await sql`
+    ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS delivery_charge DECIMAL(10,2) DEFAULT 0
+  `;
 
   await sql`
     UPDATE products

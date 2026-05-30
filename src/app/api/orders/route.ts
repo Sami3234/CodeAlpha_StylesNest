@@ -11,6 +11,8 @@ import {
 import {
   normalizeOrderPayload,
 } from '@/lib/normalize-order-payload';
+import { paymentTypeLabel } from '@/lib/payment-methods';
+import { defaultPaymentStatusForType, requireOrderPaymentMethodType } from '@/lib/order-payment';
 import { getCurrentTimeInTimezone, getTodayDateInTimezone } from '@/lib/order-date';
 import { ensureOrdersAdminColumns } from '@/lib/orders-schema';
 import { mapOrderRow } from '@/lib/admin-orders-query';
@@ -22,6 +24,7 @@ import {
   reconcileSoldCountChange,
 } from '@/lib/product-sold-count';
 import { parseOrderProducts } from '@/lib/normalize-order-payload';
+import { deleteReviewsForOrder } from '@/lib/product-reviews';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,8 +106,13 @@ export async function GET(request: NextRequest) {
 /** Customer checkout — requires shop login; order id assigned server-side. */
 export async function POST(request: NextRequest) {
   try {
-    const { error: authError } = await requireShopSession();
+    const { session, error: authError } = await requireShopSession();
     if (authError) return authError;
+
+    const shopUserId = Number(session!.user!.id);
+    if (!Number.isFinite(shopUserId) || shopUserId < 1) {
+      return NextResponse.json({ error: 'Invalid account session.' }, { status: 401 });
+    }
 
     const body = await request.json();
     const {
@@ -116,6 +124,8 @@ export async function POST(request: NextRequest) {
       status,
       date,
       time,
+      paymentMethodType: rawPaymentType,
+      paymentMethodLabel: rawPaymentLabel,
     } = body;
 
     if (!customer?.trim() || !phone?.trim() || !city?.trim() || !address?.trim()) {
@@ -137,7 +147,18 @@ export async function POST(request: NextRequest) {
         }))
       : [];
 
-    const priced = await validateAndPriceOrderLines(lineInputs);
+    const paymentCheck = requireOrderPaymentMethodType(rawPaymentType);
+    if (!paymentCheck.ok) {
+      return NextResponse.json({ error: paymentCheck.error }, { status: 400 });
+    }
+    const paymentMethodType = paymentCheck.paymentMethodType;
+    const paymentMethodLabel =
+      typeof rawPaymentLabel === 'string' && rawPaymentLabel.trim()
+        ? rawPaymentLabel.trim().slice(0, 120)
+        : paymentTypeLabel(paymentMethodType);
+    const paymentStatus = defaultPaymentStatusForType(paymentMethodType);
+
+    const priced = await validateAndPriceOrderLines(lineInputs, { paymentMethodType });
     if (!priced.ok) {
       return NextResponse.json({ error: priced.error }, { status: priced.status });
     }
@@ -155,6 +176,7 @@ export async function POST(request: NextRequest) {
     }));
 
     const serverTotal = priced.total;
+    const serverDeliveryFee = priced.deliveryFee;
     const id = await nextOrderId();
 
     const orderDate =
@@ -177,6 +199,11 @@ export async function POST(request: NextRequest) {
         address,
         products,
         total,
+        delivery_fee,
+        shop_user_id,
+        payment_method_type,
+        payment_method_label,
+        payment_status,
         status,
         date,
         time
@@ -189,6 +216,11 @@ export async function POST(request: NextRequest) {
         ${address.trim()},
         ${JSON.stringify(storedProducts)}::jsonb,
         ${serverTotal}::decimal,
+        ${serverDeliveryFee}::decimal,
+        ${shopUserId},
+        ${paymentMethodType},
+        ${paymentMethodLabel},
+        ${paymentStatus},
         ${status || 'pending'},
         ${orderDate}::date,
         ${orderTime}::time
@@ -342,6 +374,8 @@ export async function DELETE(request: NextRequest) {
       WHERE id = ${id}
       RETURNING id
     `;
+
+    await deleteReviewsForOrder(id);
 
     await reconcileSoldCountChange(
       { status: previousStatus, products: previousProducts },

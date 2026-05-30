@@ -15,7 +15,7 @@ export type NavbarProfileDisplay = {
   ready: boolean;
 };
 
-/** Navbar avatar: DB upload only; otherwise email initials + local part label. */
+/** Navbar avatar: session first, DB upload fetched in background (never blocks the bar). */
 export function useNavbarProfile(): NavbarProfileDisplay {
   const { data: session, status } = useSession();
   const email = session?.user?.email ?? '';
@@ -24,19 +24,18 @@ export function useNavbarProfile(): NavbarProfileDisplay {
     : null;
 
   const [dbAvatar, setDbAvatar] = useState<string | null>(null);
-  const [ready, setReady] = useState(status !== 'authenticated');
 
   useEffect(() => {
     if (status !== 'authenticated' || !session?.user?.id) {
       setDbAvatar(null);
-      setReady(status !== 'loading');
       return;
     }
 
-    let cancelled = false;
-    setReady(false);
+    if (sessionAvatar) return;
 
-    fetch('/api/account/profile', { cache: 'no-store' })
+    let cancelled = false;
+
+    fetch('/api/account/profile')
       .then(async (res) => {
         const data = await res.json();
         if (cancelled) return;
@@ -45,15 +44,12 @@ export function useNavbarProfile(): NavbarProfileDisplay {
       })
       .catch(() => {
         if (!cancelled) setDbAvatar(null);
-      })
-      .finally(() => {
-        if (!cancelled) setReady(true);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [status, session?.user?.id, session?.user?.image]);
+  }, [status, session?.user?.id, sessionAvatar]);
 
   const avatarUrl = sessionAvatar ?? dbAvatar;
   const initials = emailInitials(email);
@@ -62,15 +58,13 @@ export function useNavbarProfile(): NavbarProfileDisplay {
   const isRealName =
     Boolean(namePart && namePart.length >= 2 && namePart.toLowerCase() !== emailLocal.toLowerCase());
 
-  /** Never show raw email in navbar — use display name or generic "Profile". */
   const label = isRealName ? namePart! : 'Profile';
-
-  const profileReady = ready || Boolean(sessionAvatar);
+  const ready = status !== 'loading';
 
   return {
     avatarUrl,
     initials,
-    label: profileReady ? label : '',
-    ready: profileReady,
+    label: status === 'authenticated' ? label : '',
+    ready,
   };
 }

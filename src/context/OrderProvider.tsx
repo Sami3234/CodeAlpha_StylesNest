@@ -21,7 +21,7 @@ import type { FetchErrorKind } from '@/lib/is-network-error';
 import { clientFetchWithDbRetry } from '@/lib/client-fetch-retry';
 import { clientFetch, NetworkError } from '@/lib/client-fetch';
 import { dispatchAdminBootstrap, type AdminBootstrapPayload } from '@/lib/admin-bootstrap';
-import { isProtectedAdminPanelPath, adminPath } from '@/lib/admin-path';
+import { isProtectedAdminPanelPath } from '@/lib/admin-path';
 import { ensureAdminAuthenticated } from '@/lib/admin-auth-client';
 import { ADMIN_LIVE_POLL_MS } from '@/lib/admin-live-sync';
 import type { AdminReviewAlert } from '@/lib/product-reviews';
@@ -64,6 +64,7 @@ interface OrderContextType {
   clearReviewNotifications: () => void;
   clearSupportNotifications: () => void;
   clearUserNotifications: () => void;
+  clearAllAdminNotifications: () => void;
   loading: boolean;
   fetchError: FetchErrorKind | null;
   reloadOrders: () => Promise<void>;
@@ -197,29 +198,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     (fresh: AdminReviewAlert[]) => {
       if (fresh.length === 0) return;
       appendNewReviewAlerts(fresh);
-      if (document.visibilityState !== 'visible') return;
-      if (fresh.length === 1) {
-        const r = fresh[0];
-        toast.success('New review submitted', {
-          description: `${r.reviewerName} · ${r.productName ?? `Product #${r.productId}`} · ${r.rating}★`,
-          action: {
-            label: 'Moderate',
-            onClick: () => {
-              window.location.href = adminPath('/reviews');
-            },
-          },
-        });
-      } else {
-        toast.success(`${fresh.length} new reviews to moderate`, {
-          description: 'Open the notification bell to see details.',
-          action: {
-            label: 'Reviews',
-            onClick: () => {
-              window.location.href = adminPath('/reviews');
-            },
-          },
-        });
-      }
     },
     [appendNewReviewAlerts],
   );
@@ -228,29 +206,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     (fresh: AdminSupportAlert[]) => {
       if (fresh.length === 0) return;
       appendNewSupportAlerts(fresh);
-      if (document.visibilityState !== 'visible') return;
-      if (fresh.length === 1) {
-        const t = fresh[0];
-        toast.success('New support request', {
-          description: `${t.name} · ${t.subject}`,
-          action: {
-            label: 'Support',
-            onClick: () => {
-              window.location.href = adminPath('/support');
-            },
-          },
-        });
-      } else {
-        toast.success(`${fresh.length} new support requests`, {
-          description: 'Open the notification bell to see details.',
-          action: {
-            label: 'Support',
-            onClick: () => {
-              window.location.href = adminPath('/support');
-            },
-          },
-        });
-      }
     },
     [appendNewSupportAlerts],
   );
@@ -259,66 +214,17 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     (fresh: AdminUserAlert[]) => {
       if (fresh.length === 0) return;
       appendNewUserAlerts(fresh);
-      if (document.visibilityState !== 'visible') return;
-      if (fresh.length === 1) {
-        const u = fresh[0];
-        toast.success('New user registered', {
-          description: u.email ?? u.name ?? `User #${u.id}`,
-          action: {
-            label: 'Users',
-            onClick: () => {
-              window.location.href = adminPath('/users');
-            },
-          },
-        });
-      } else {
-        toast.success(`${fresh.length} new users registered`, {
-          description: 'Open the notification bell to see details.',
-          action: {
-            label: 'Users',
-            onClick: () => {
-              window.location.href = adminPath('/users');
-            },
-          },
-        });
-      }
     },
     [appendNewUserAlerts],
   );
 
-  const notifyNewOrders = useCallback((fresh: Order[]) => {
-    if (fresh.length === 0) return;
-    appendNewOrderAlerts(fresh);
-    if (document.visibilityState !== 'visible') return;
-        if (fresh.length === 1) {
-          const o = fresh[0];
-          const ids = o.products
-            .map((p) => p.productId)
-            .filter((id): id is number => typeof id === 'number' && id > 0)
-            .join(', ');
-          toast.success('New order received', {
-            description: ids
-              ? `${o.customer} · Product ID: ${ids}`
-              : `${o.customer} · ${o.id}`,
-            action: {
-              label: 'View orders',
-              onClick: () => {
-                window.location.href = adminPath('/orders');
-              },
-            },
-          });
-        } else {
-          toast.success(`${fresh.length} new orders received`, {
-            description: 'Open the notification bell to see customer names and product IDs.',
-            action: {
-              label: 'View orders',
-              onClick: () => {
-                window.location.href = adminPath('/orders');
-              },
-            },
-          });
-        }
-  }, [appendNewOrderAlerts]);
+  const notifyNewOrders = useCallback(
+    (fresh: Order[]) => {
+      if (fresh.length === 0) return;
+      appendNewOrderAlerts(fresh);
+    },
+    [appendNewOrderAlerts],
+  );
 
   const applyLivePayload = useCallback(
     (payload: {
@@ -728,6 +634,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     setNewUserAlerts([]);
   }, []);
 
+  const clearAllAdminNotifications = useCallback(() => {
+    setUnseenNew(0);
+    setNewOrderAlerts([]);
+    setNewReviewAlerts([]);
+    setNewSupportAlerts([]);
+    setNewUserAlerts([]);
+  }, []);
+
   const addOrder = async (
     orderData: Omit<Order, 'id' | 'date' | 'time'>,
   ): Promise<{ order: Order | null; error?: string }> => {
@@ -934,6 +848,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         clearReviewNotifications,
         clearSupportNotifications,
         clearUserNotifications,
+        clearAllAdminNotifications,
         loading,
         fetchError,
         reloadOrders,

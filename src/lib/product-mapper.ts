@@ -30,6 +30,7 @@ export function mapProductRow(row: Record<string, unknown>): Product {
     image: row.image as string,
     images: (row.images as string[]) || [],
     freeDelivery: Boolean(row.free_delivery),
+    deliveryCharge: Math.max(0, parseFloat(String(row.delivery_charge ?? 0)) || 0),
     soldCount: row.sold_count as number,
     category: row.category as string,
     features:

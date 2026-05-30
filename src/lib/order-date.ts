@@ -6,6 +6,21 @@ export function getTodayDateInTimezone(timeZone = ORDER_TIMEZONE): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
 }
 
+/** Shift a YYYY-MM-DD key by calendar days (negative = past). */
+export function shiftDateKey(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split('-').map((n) => Number(n));
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+export function firstDayOfMonthKey(isoDate: string): string {
+  return `${isoDate.slice(0, 7)}-01`;
+}
+
 /** HH:MM:SS 24h in local timezone. */
 export function getCurrentTimeInTimezone(timeZone = ORDER_TIMEZONE): string {
   const parts = new Intl.DateTimeFormat('en-GB', {

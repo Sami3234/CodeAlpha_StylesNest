@@ -30,6 +30,9 @@ export function useAdminOrdersList(): AdminOrdersListState {
   const [error, setError] = useState<string | null>(null);
 
   const status = searchParams.get('status');
+  const payment = searchParams.get('payment');
+  const paystatus = searchParams.get('paystatus');
+  const city = searchParams.get('city');
   const period = searchParams.get('period');
   const from = searchParams.get('from');
   const to = searchParams.get('to');
@@ -44,6 +47,9 @@ export function useAdminOrdersList(): AdminOrdersListState {
       params.set('page', String(pageParam > 0 ? pageParam : 1));
       params.set('limit', '50');
       if (status && status !== 'all') params.set('status', status);
+      if (payment && payment !== 'all') params.set('payment', payment);
+      if (paystatus && paystatus !== 'all') params.set('paystatus', paystatus);
+      if (city && city !== 'all') params.set('city', city);
       if (period) params.set('period', period);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
@@ -75,7 +81,7 @@ export function useAdminOrdersList(): AdminOrdersListState {
     } finally {
       setLoading(false);
     }
-  }, [status, period, from, to, q, pageParam]);
+  }, [status, payment, paystatus, city, period, from, to, q, pageParam]);
 
   useEffect(() => {
     void load();

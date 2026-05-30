@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
           SELECT
             id, title_en, title_ar, description_en, description_ar,
             current_price, original_price, discount, image, images,
-            free_delivery, sold_count, category, features_en, features_ar,
+            free_delivery, delivery_charge, sold_count, category, features_en, features_ar,
             pricing_tiers, clothes_options, shoes_options, product_meta,
             status, created_at, updated_at
           FROM products
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
           SELECT
             id, title_en, title_ar, description_en, description_ar,
             current_price, original_price, discount, image, images,
-            free_delivery, sold_count, category, features_en, features_ar,
+            free_delivery, delivery_charge, sold_count, category, features_en, features_ar,
             pricing_tiers, clothes_options, shoes_options, product_meta,
             status, created_at, updated_at
           FROM products
@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
       image,
       images,
       freeDelivery,
+      deliveryCharge,
       category,
       features,
       pricingTiers,
@@ -170,6 +171,11 @@ export async function POST(request: NextRequest) {
     );
     const metaJson = JSON.stringify(finalMeta);
 
+    const deliveryChargeValue =
+      freeDelivery === true
+        ? 0
+        : Math.max(0, parseFloat(String(deliveryCharge ?? 0)) || 0);
+
     const result = await sql`
       INSERT INTO products (
         title_en,
@@ -182,6 +188,7 @@ export async function POST(request: NextRequest) {
         image,
         images,
         free_delivery,
+        delivery_charge,
         sold_count,
         category,
         features_en,
@@ -203,6 +210,7 @@ export async function POST(request: NextRequest) {
         ${image},
         ${JSON.stringify(images || [])},
         ${freeDelivery},
+        ${deliveryChargeValue},
         0,
         ${category},
         ${JSON.stringify(features?.en || [])},
@@ -243,6 +251,7 @@ export async function PUT(request: NextRequest) {
       image,
       images,
       freeDelivery,
+      deliveryCharge,
       category,
       features,
       pricingTiers,
@@ -275,6 +284,11 @@ export async function PUT(request: NextRequest) {
     );
     const metaJson = JSON.stringify(finalMeta);
 
+    const deliveryChargeValue =
+      freeDelivery === true
+        ? 0
+        : Math.max(0, parseFloat(String(deliveryCharge ?? 0)) || 0);
+
     const result = await sql`
       UPDATE products
       SET
@@ -288,6 +302,7 @@ export async function PUT(request: NextRequest) {
         image = ${image},
         images = ${JSON.stringify(images || [])},
         free_delivery = ${freeDelivery},
+        delivery_charge = ${deliveryChargeValue},
         category = ${category},
         features_en = ${JSON.stringify(features?.en || [])},
         features_ar = ${JSON.stringify(features?.ar || [])},

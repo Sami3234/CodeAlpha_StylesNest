@@ -22,6 +22,8 @@ export interface Product {
   image: string;
   images?: string[];
   freeDelivery: boolean;
+  /** PKR delivery fee when freeDelivery is false */
+  deliveryCharge?: number;
   soldCount: number;
   category: string;
   description: { en: string; ar: string };

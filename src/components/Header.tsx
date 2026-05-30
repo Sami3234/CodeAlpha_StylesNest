@@ -24,6 +24,7 @@ function BrandMark() {
           alt="StylesNest logo"
           width={508}
           height={390}
+          sizes="(max-width: 768px) 120px, 160px"
           className="block h-full w-auto max-h-full object-contain object-center"
           priority
         />
@@ -75,16 +76,10 @@ export default function Header() {
     };
   }, [pathname, isAdminPanel, mobileMenuOpen]);
 
-  // Disable animations for admin panel
-  const headerAnimationProps = isAdminPanel ? {
-    initial: false,
-    animate: false,
-    transition: { duration: 0 }
-  } : {
-    initial: { y: -100, opacity: 0 },
-    animate: { y: 0, opacity: 1 },
-    transition: { duration: 0.5, ease: 'easeOut' }
-  };
+  // Storefront: show navbar instantly (entrance animations felt like slow loading)
+  const headerAnimationProps = isAdminPanel
+    ? { initial: false as const, animate: false as const, transition: { duration: 0 } }
+    : { initial: false as const };
 
   const outerHeaderStyle: MotionStyle = {
     position: 'fixed',
@@ -161,19 +156,16 @@ export default function Header() {
               </div>
             </>
           ) : (
-            <motion.div
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+            <div
               style={{
                 width: 'auto',
                 minWidth: 0,
                 display: 'flex',
-                justifyContent: 'center'
+                justifyContent: 'center',
               }}
             >
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 style={{
                   textDecoration: 'none',
                   display: 'flex',
@@ -200,23 +192,15 @@ export default function Header() {
                   <BrandMark />
                 </motion.div>
               </Link>
-            </motion.div>
+            </div>
           )}
 
           {/* Navigation Buttons - Hidden in Admin Panel */}
           {!isAdminPanel && (
-            <motion.nav 
-              className="hidden md:flex items-center gap-3"
-              initial={{ x: 50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
-            >
+            <nav className="hidden md:flex items-center gap-3">
               <Link href="/">
                 <motion.button
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.4 }}
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.08,
                     y: -2,
                     background: isActive('/')
@@ -253,10 +237,7 @@ export default function Header() {
 
               <Link href="/shop">
                 <motion.button
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.5 }}
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.08,
                     y: -2,
                     background: isActive('/shop')
@@ -293,10 +274,7 @@ export default function Header() {
 
               <Link href="/about">
                 <motion.button
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.55 }}
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.08,
                     y: -2,
                     background: isActive('/about')
@@ -364,7 +342,7 @@ export default function Header() {
                   </span>
                 ) : null}
               </Link>
-            </motion.nav>
+            </nav>
           )}
 
           {/* Mobile: profile + cart on bar; hamburger for nav links */}

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, use, useEffect, useRef, useCallback } from 'react';
+import type { Product } from '@/data/products';
+import { clientFetch } from '@/lib/client-fetch';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
@@ -36,12 +38,15 @@ import {
   validateCartLineOptions,
 } from '@/lib/cart-line-options';
 import { getLineTotal, getUnitPrice } from '@/lib/product-pricing';
+import { getProductDeliveryCharge } from '@/lib/product-delivery';
+import OrderTotalSummary from '@/components/OrderTotalSummary';
 import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
 import OrderPaymentMethods from '@/components/OrderPaymentMethods';
 import {
   buildSingleProductWhatsAppMessage,
   buildWhatsAppLink,
   formatPaymentMethodForOrder,
+  getCodServiceFee,
   type PaymentMethod,
 } from '@/lib/payment-methods';
 import ProductReviews from '@/components/reviews/ProductReviews';
@@ -65,14 +70,12 @@ export default function ProductPage({ params }: ProductPageProps) {
   const { openLogin } = useLoginModal();
   const { products, loading, fetchError, reloadProducts } = useProducts();
   const { addOrder } = useOrders();
-  // Handle both integer IDs (from initial data) and decimal IDs (from new products)
-  const product = products.find(p => {
-    // Convert both to numbers and compare
-    const productId = Number(p.id);
-    const searchId = Number(id);
-    // Use strict equality for exact match (works for both integers and decimals)
-    return productId === searchId;
-  });
+  const [directProduct, setDirectProduct] = useState<Product | null>(null);
+  const [directLoading, setDirectLoading] = useState(false);
+  const [directFetchFailed, setDirectFetchFailed] = useState(false);
+
+  const catalogProduct = products.find((p) => Number(p.id) === Number(id));
+  const product = catalogProduct ?? directProduct ?? undefined;
   const isArabic = false;
   
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -165,7 +168,40 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [storeWhatsApp, setStoreWhatsApp] = useState('');
   const [whatsappConfirmUrl, setWhatsappConfirmUrl] = useState('');
   const [lastOrderId, setLastOrderId] = useState('');
+  const [lastOrderTotal, setLastOrderTotal] = useState(0);
   useSavedCustomerDetails(setFormData, authStatus === 'authenticated');
+
+  useEffect(() => {
+    if (catalogProduct || directProduct || directLoading || directFetchFailed) return;
+    if (loading) return;
+
+    let cancelled = false;
+    setDirectLoading(true);
+
+    (async () => {
+      try {
+        const res = await clientFetch(`/api/products/${id}`, { cache: 'no-store' });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.product) {
+            setDirectProduct(data.product as Product);
+            setDirectFetchFailed(false);
+            return;
+          }
+        }
+        setDirectFetchFailed(true);
+      } catch {
+        if (!cancelled) setDirectFetchFailed(true);
+      } finally {
+        if (!cancelled) setDirectLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, catalogProduct, directProduct, directLoading, directFetchFailed, loading]);
 
   const hasSubmittedRef = useRef(false); // Track if form was submitted
   const formDataRef = useRef(formData); // Keep ref for cleanup handlers
@@ -416,8 +452,11 @@ export default function ProductPage({ params }: ProductPageProps) {
     };
   }, [product, handleSaveAbandonedOrder]);
 
-  // Show loading state while products are being fetched
-  if (loading) {
+  // Show loading only when product is not available yet
+  const waitingForProduct =
+    !product && (loading || directLoading || (!directFetchFailed && !fetchError));
+
+  if (waitingForProduct) {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(180deg, #f5f7fa 0%, #eef2f6 50%, #f5f7fa 100%)' }}>
         <Header />
@@ -448,14 +487,18 @@ export default function ProductPage({ params }: ProductPageProps) {
     );
   }
 
-  if (!loading && fetchError && products.length === 0) {
+  if (!product && !loading && !directLoading && (fetchError || directFetchFailed)) {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(180deg, #f5f7fa 0%, #eef2f6 50%, #f5f7fa 100%)' }}>
         <Header />
         <main className="flex-1" style={{ paddingTop: 'var(--site-header-h, 90px)' }}>
           <ConnectionProblem
-            kind={fetchError}
-            onRetry={() => void reloadProducts()}
+            kind={fetchError ?? 'network'}
+            onRetry={() => {
+              setDirectFetchFailed(false);
+              setDirectProduct(null);
+              void reloadProducts();
+            }}
             retryLabel="Reload product"
             homeHref="/shop"
             homeLabel="Back to shop"
@@ -504,8 +547,13 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
 
     const selectedPayment = paymentMethods.find((m) => m.id === selectedPaymentId);
-    if (paymentMethods.length && !selectedPayment) {
+    if (!paymentMethods.length) {
+      notifyError('Payment methods are not available. Please try again later or contact support.');
+      return;
+    }
+    if (!selectedPayment?.type) {
       setPaymentError('Please select a payment method');
+      notifyError('Please select a payment method');
       return;
     }
     setPaymentError('');
@@ -544,7 +592,10 @@ export default function ProductPage({ params }: ProductPageProps) {
       return;
     }
 
-    const totalPrice = getLineTotal(product, quantity);
+    const lineSubtotal = getLineTotal(product, quantity);
+    const deliveryFee = getProductDeliveryCharge(product);
+    const codFee = getCodServiceFee(selectedPayment?.type);
+    const totalPrice = lineSubtotal + deliveryFee + codFee;
     const unitPrice = getUnitPrice(product, quantity);
 
     // Remove abandoned order if exists (user successfully submitted)
@@ -608,9 +659,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    const paymentLabel = selectedPayment
-      ? formatPaymentMethodForOrder(selectedPayment)
-      : 'Cash on Delivery';
+    const paymentLabel = formatPaymentMethodForOrder(selectedPayment);
 
     // Add order to context / API
     const { order: placedOrder, error: orderError } = await addOrder({
@@ -623,11 +672,16 @@ export default function ProductPage({ params }: ProductPageProps) {
         name: orderProductName,
         quantity,
         price: unitPrice,
-        lineTotal: totalPrice,
+        lineTotal: lineSubtotal,
         paymentMethod: paymentLabel,
         selectedSize: selectedSize || undefined,
         selectedColor: selectedColor || undefined,
       }],
+      subtotal: lineSubtotal,
+      deliveryFee,
+      codFee,
+      paymentMethodType: selectedPayment.type,
+      paymentMethodLabel: selectedPayment.label,
       total: totalPrice,
       status: 'pending',
     });
@@ -640,6 +694,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     void reloadProducts();
 
     setLastOrderId(placedOrder.id);
+    setLastOrderTotal(placedOrder.total);
     const waPhone = storeWhatsApp.replace(/\D/g, '') || formData.mobile.replace(/\D/g, '');
     const waMessage = buildSingleProductWhatsAppMessage({
       orderId: placedOrder.id,
@@ -700,12 +755,6 @@ export default function ProductPage({ params }: ProductPageProps) {
   // Calculate actual sold count from orders
   const actualSoldCount = product?.soldCount ?? 0;
 
-  // Generate quantity options from pricing tiers or default
-  // Debug: Log pricing tiers
-  console.log('Product ID:', product.id);
-  console.log('Product pricingTiers:', product.pricingTiers);
-  console.log('Tiers length:', product.pricingTiers?.length || 0);
-  
   const quantityOptions = product.pricingTiers && product.pricingTiers.length > 0
     ? product.pricingTiers.map(tier => ({
         value: tier.quantity.toString(),
@@ -716,9 +765,16 @@ export default function ProductPage({ params }: ProductPageProps) {
         { value: '2', label: `2 Pieces - ${formatPrice(product.currentPrice * 2)} PKR` },
         { value: '3', label: `3 Pieces - ${formatPrice(product.currentPrice * 3)} PKR` },
       ];
+
+  const orderQuantity = Math.max(1, parseInt(formData.quantity || '1', 10) || 1);
+  const lineSubtotal = getLineTotal(product, orderQuantity);
+  const deliveryFee = getProductDeliveryCharge(product);
+  const selectedPaymentForTotal = paymentMethods.find((m) => m.id === selectedPaymentId) ?? null;
+  const codFee = getCodServiceFee(selectedPaymentForTotal?.type);
+  const orderGrandTotal = lineSubtotal + deliveryFee + codFee;
   
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(180deg, #f5f7fa 0%, #eef2f6 50%, #f5f7fa 100%)' }}>
+    <div className="min-h-screen flex flex-col overflow-x-clip" style={{ background: 'linear-gradient(180deg, #f5f7fa 0%, #eef2f6 50%, #f5f7fa 100%)' }}>
       <Header />
       
       <main className="flex-1 min-w-0" style={{ paddingTop: 'calc(var(--site-header-h, 90px) + 20px)', paddingBottom: '50px' }}>
@@ -768,16 +824,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             className="product-top-badges"
           >
             {product.freeDelivery ? (
-              <span style={{ 
-                display: 'inline-block',
-                background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
-                color: '#fff',
-                fontSize: '14px',
-                fontWeight: '600',
-                padding: '6px 16px',
-                borderRadius: '20px',
-                boxShadow: '0px 4px 12px rgba(56, 161, 105, 0.3)'
-              }}>
+              <span className="product-delivery-badge product-delivery-badge--free">
                 ✓ Free Delivery
               </span>
             ) : null}
@@ -955,7 +1002,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text',
                       }}>
-                        {formatPrice(product.currentPrice * parseInt(formData.quantity || '1'))} PKR
+                        {formatPrice(lastOrderTotal || orderGrandTotal)} PKR
                       </span>
                     </div>
                   </div>
@@ -1277,23 +1324,25 @@ export default function ProductPage({ params }: ProductPageProps) {
                             className="object-cover"
                             sizes="(max-width: 768px) 50vw, 25vw"
                           />
-                          {recommendedProduct.freeDelivery && (
-                            <span style={{
-                              position: 'absolute',
-                              bottom: '10px',
-                              left: '10px',
-                              zIndex: 10,
-                              background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
-                              color: '#fff',
-                              fontSize: '10px',
-                              fontWeight: '600',
-                              padding: '4px 10px',
-                              borderRadius: '20px',
-                              boxShadow: '0px 4px 12px rgba(56, 161, 105, 0.4)',
-                            }}>
+                          {recommendedProduct.freeDelivery ? (
+                            <span
+                              style={{
+                                position: 'absolute',
+                                bottom: '10px',
+                                left: '10px',
+                                zIndex: 10,
+                                background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
+                                color: '#fff',
+                                fontSize: '10px',
+                                fontWeight: '600',
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                boxShadow: '0px 4px 12px rgba(56, 161, 105, 0.4)',
+                              }}
+                            >
                               ✓ Free Delivery
                             </span>
-                          )}
+                          ) : null}
                         </div>
 
                         {/* Product Info */}
@@ -1351,6 +1400,7 @@ export default function ProductPage({ params }: ProductPageProps) {
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
+              className="product-media-card"
               style={{
                 background: 'linear-gradient(145deg, #ffffff 0%, #f7fafc 100%)',
                 borderRadius: '24px',
@@ -1498,56 +1548,40 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <ClothesStitchBadge product={product} animated />
                 <ShoesGenderBadge product={product} animated />
 
-                {product.freeDelivery && (
-                  <motion.span 
+                {product.freeDelivery ? (
+                  <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
+                    className="product-delivery-badge product-delivery-badge--free"
                     style={{
                       position: 'absolute',
                       bottom: '16px',
                       left: '16px',
                       zIndex: 10,
-                      background: 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)',
-                      color: 'white',
                       fontSize: '12px',
-                      fontWeight: '600',
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      boxShadow: '0px 4px 12px rgba(56, 161, 105, 0.4)',
-                      letterSpacing: '0.3px'
+                      letterSpacing: '0.3px',
                     }}
                   >
                     ✓ Free Delivery
                   </motion.span>
-                )}
+                ) : null}
               </div>
 
               {/* Thumbnail Gallery */}
-              <div className="flex justify-center" style={{ gap: '10px', marginTop: '20px' }}>
+              <div className="product-thumbnail-gallery">
                 {allImages.map((img, index) => (
                   <motion.button
                     key={index}
+                    type="button"
                     onClick={() => handleImageSelect(index)}
-                    whileHover={{ scale: 1.1, y: -2 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
-                    style={{
-                      width: '70px',
-                      height: '70px',
-                      borderRadius: '12px',
-                      border: selectedImage === index 
-                        ? '3px solid #ff6b35' 
-                        : '2px solid rgba(102, 126, 234, 0.2)',
-                      overflow: 'hidden',
-                      position: 'relative',
-                      transition: 'all 0.3s ease',
-                      background: selectedImage === index 
-                        ? 'linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(247, 147, 30, 0.1) 100%)'
-                        : 'transparent',
-                      boxShadow: selectedImage === index 
-                        ? '0px 6px 20px rgba(255, 107, 53, 0.3)'
-                        : '0px 2px 8px rgba(0,0,0,0.1)'
-                    }}
+                    className={`product-thumbnail-gallery__btn ${
+                      selectedImage === index
+                        ? 'product-thumbnail-gallery__btn--active'
+                        : 'product-thumbnail-gallery__btn--idle'
+                    }`}
                   >
                     {!imageErrors.has(index) ? (
                       <Image
@@ -1968,7 +2002,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div className="order-payment-block--compact">
                   <OrderPaymentMethods
                     methods={paymentMethods}
-                    selectedId={selectedPaymentId || paymentMethods[0]?.id || ''}
+                    selectedId={selectedPaymentId}
                     onSelect={(id) => {
                       setSelectedPaymentId(id);
                       setPaymentError('');
@@ -1976,6 +2010,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                     error={paymentError}
                   />
                 </div>
+
+                <OrderTotalSummary
+                  subtotal={lineSubtotal}
+                  deliveryFee={deliveryFee}
+                  codFee={codFee}
+                  total={orderGrandTotal}
+                />
 
                 {/* Submit Button */}
                 <motion.button

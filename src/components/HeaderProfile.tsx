@@ -29,21 +29,18 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
   const { openLogin } = useLoginModal();
   const isActive = pathname === '/profile';
   const { pendingCount } = usePendingReviews();
-  const { avatarUrl, initials, label, ready: profileReady } = useNavbarProfile();
+  const { avatarUrl, initials, label, ready } = useNavbarProfile();
   const profileHref = '/profile';
 
   if (status === 'loading') {
     return (
       <span
-        className="header-profile-pill header-profile-pill--idle"
-        style={{
-          width: compact ? 40 : 120,
-          minHeight: compact ? 40 : 44,
-          background: 'rgba(0,0,0,0.06)',
-          border: 'none',
-        }}
+        className={`header-profile-signin-pill${compact ? ' header-profile-signin-pill--compact' : ''}`}
+        style={{ opacity: 0.55, pointerEvents: 'none' }}
         aria-hidden
-      />
+      >
+        <IoPersonCircleOutline size={compact ? 20 : 22} />
+      </span>
     );
   }
 
@@ -89,20 +86,18 @@ export default function HeaderProfile({ compact }: { compact?: boolean }) {
           <span className="header-profile-avatar">
             {avatarUrl ? (
               <Image src={avatarUrl} alt="" fill sizes="32px" unoptimized />
-            ) : profileReady ? (
+            ) : ready ? (
               <span className="header-profile-initials" aria-hidden>
                 {initials}
               </span>
             ) : (
-              <IoPersonCircleOutline size={compact ? 20 : 20} aria-hidden />
+              <IoPersonCircleOutline size={20} aria-hidden />
             )}
           </span>
           <ProfileBadge count={pendingCount} />
         </span>
-        {!compact && profileReady && label ? (
+        {!compact && ready && label ? (
           <span className="header-profile-label">{label}</span>
-        ) : !compact && !profileReady ? (
-          <span className="header-profile-label header-profile-label--placeholder" aria-hidden />
         ) : null}
       </motion.span>
     </Link>

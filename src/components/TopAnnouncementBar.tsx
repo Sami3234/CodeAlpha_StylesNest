@@ -11,7 +11,7 @@ function waLinkFromNumber(num: string): string {
 }
 
 export default function TopAnnouncementBar() {
-  const { settings: shared, loaded } = useContactSettings();
+  const { settings: shared } = useContactSettings();
   /** Visible only when the page is at (or very near) scroll top; stays hidden while scrolled down */
   const [scrollCollapsed, setScrollCollapsed] = useState(false);
 
@@ -24,8 +24,6 @@ export default function TopAnnouncementBar() {
     window.addEventListener('scroll', apply, { passive: true });
     return () => window.removeEventListener('scroll', apply);
   }, []);
-
-  if (!loaded) return null;
 
   const settings = shared;
 

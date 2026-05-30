@@ -1,5 +1,6 @@
 'use client';
 
+import type { Session } from 'next-auth';
 import type { ReactNode } from 'react';
 import AppToaster from '@/components/ui/AppToaster';
 import { ProductProvider } from '@/context/ProductContext';
@@ -13,11 +14,17 @@ import { PendingReviewsProvider } from '@/context/PendingReviewsContext';
 import CookieConsent from '@/components/legal/CookieConsent';
 
 /** All client-side app providers in one boundary (avoids SSR chunk issues in root layout). */
-export default function AppProviders({ children }: { children: ReactNode }) {
+export default function AppProviders({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session: Session | null;
+}) {
   return (
     <NetworkProviders>
       <ContactSettingsProvider>
-        <AuthProvider>
+        <AuthProvider session={session}>
           <LoginModalProvider>
             <PendingReviewsProvider>
               <ProductProvider>

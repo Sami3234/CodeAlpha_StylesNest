@@ -66,6 +66,7 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
           category: product.category,
           description,
           freeDelivery: product.freeDelivery,
+          deliveryCharge: product.deliveryCharge ?? 0,
           status: product.status || 'active' as 'active' | 'inactive',
         };
       }
@@ -77,6 +78,7 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
         category: 'clothes',
         description: '',
         freeDelivery: true,
+        deliveryCharge: 0,
         status: 'active' as 'active' | 'inactive',
       };
     });
@@ -219,6 +221,12 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
       newFieldErrors.description = errorMsg;
     }
 
+    if (!formData.freeDelivery && (!formData.deliveryCharge || formData.deliveryCharge <= 0)) {
+      const errorMsg = t('admin.form.deliveryChargeRequired');
+      newErrors.push(errorMsg);
+      newFieldErrors.deliveryCharge = errorMsg;
+    }
+
     if (
       categoryShowsGender(formData.category) ||
       isClothesCategory(formData.category) ||
@@ -304,6 +312,7 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
         discount: formData.discount,
         category: formData.category,
         freeDelivery: formData.freeDelivery,
+        deliveryCharge: formData.freeDelivery ? 0 : Math.max(0, formData.deliveryCharge || 0),
         status: formData.status,
         image: imageList[0] ?? '',
         images: imageList,
@@ -881,7 +890,13 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
                 </div>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, freeDelivery: !formData.freeDelivery })}
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      freeDelivery: !prev.freeDelivery,
+                      deliveryCharge: !prev.freeDelivery ? 0 : prev.deliveryCharge,
+                    }))
+                  }
                   style={{
                     width: '50px',
                     height: '28px',
@@ -908,6 +923,50 @@ export default function ProductForm({ product, onSave, onCancel, t: tProp }: Pro
                   />
                 </button>
               </div>
+
+              {!formData.freeDelivery ? (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#1a1a2e', marginBottom: '6px' }}>
+                    {t('admin.form.deliveryCharge')}<span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span>
+                  </label>
+                  <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px' }}>{t('admin.form.deliveryChargeDesc')}</p>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={formData.deliveryCharge || ''}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      setFormData({ ...formData, deliveryCharge: Number.isFinite(value) ? value : 0 });
+                      if (fieldErrors.deliveryCharge) {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.deliveryCharge;
+                          return next;
+                        });
+                      }
+                    }}
+                    placeholder="e.g. 200"
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      border: fieldErrors.deliveryCharge ? '2px solid #e53e3e' : '2px solid #e8e8e8',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#667eea';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = fieldErrors.deliveryCharge ? '#e53e3e' : '#e8e8e8';
+                    }}
+                  />
+                  {fieldErrors.deliveryCharge ? (
+                    <p style={{ fontSize: '12px', color: '#e53e3e', marginTop: '6px' }}>{fieldErrors.deliveryCharge}</p>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="pf-section-divider" />
               <ProductFormMetaFields meta={productMeta} onChange={setProductMeta} tagsInput={tagsInput} onTagsInputChange={setTagsInput} category={formData.category} t={t} fieldErrors={fieldErrors} />

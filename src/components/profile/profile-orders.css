@@ -516,3 +516,31 @@
   background: rgba(255, 107, 53, 0.14);
   color: #ea580c;
 }
+
+.profile-order-detail__payment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eef2f7;
+}
+
+.order-payment-status {
+  display: inline-flex;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.order-payment-status--paid {
+  color: #15803d;
+}
+
+.order-payment-status--cod {
+  color: #c2410c;
+}
+
+.order-payment-status--awaiting_payment,
+.order-payment-status--pending {
+  color: #b45309;
+}

@@ -16,6 +16,7 @@ import AdminOrderPickPoint from '@/components/admin/AdminOrderPickPoint';
 import { getProductImageByName } from '@/lib/admin-product-image';
 import { getTodayDateInTimezone } from '@/lib/order-date';
 import { useAdminOrdersList } from '@/hooks/useAdminOrdersList';
+import OrderPaymentBadge from '@/components/OrderPaymentBadge';
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -62,6 +63,13 @@ const translations: Record<string, string> = {
   'admin.orders.table.products': 'Products',
   'admin.orders.table.total': 'Total',
   'admin.orders.table.status': 'Status',
+  'admin.orders.table.payment': 'Payment',
+  'admin.orders.payment.all': 'All payments',
+  'admin.orders.payment.cod': 'COD',
+  'admin.orders.payment.jazzcash': 'JazzCash',
+  'admin.orders.payment.easypaisa': 'EasyPaisa',
+  'admin.orders.payment.bank': 'Bank',
+  'admin.orders.paymentInfo': 'Payment',
   'admin.orders.table.date': 'Date',
   'admin.orders.table.actions': 'Actions',
   'admin.orders.selectAll': 'Select All',
@@ -284,6 +292,14 @@ function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus }: OrderDetai
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Payment */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1E293B', marginBottom: '12px' }}>
+              {t('admin.orders.paymentInfo')}
+            </h3>
+            <OrderPaymentBadge order={order} size="md" />
           </div>
 
           {/* Customer Info */}
@@ -842,6 +858,7 @@ function AdminOrdersContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const statusParam = searchParams.get('status');
+  const paymentParam = searchParams.get('payment');
   const periodParam = searchParams.get('period');
   const filterToday = periodParam === 'today';
 
@@ -872,12 +889,30 @@ function AdminOrdersContent() {
 
   // Use URL param as source of truth
   const filterStatus = statusParam || 'all';
+  const filterPayment = paymentParam || 'all';
+
+  const PAYMENT_FILTER_OPTIONS: { value: string; label: string }[] = [
+    { value: 'all', label: 'All payments' },
+    { value: 'cod', label: 'COD' },
+    { value: 'jazzcash', label: 'Jazz' },
+    { value: 'easypaisa', label: 'Easy' },
+    { value: 'bank', label: 'Bank' },
+  ];
   
   // Update URL when filter changes (button click)
   const goToPage = (pageNum: number) => {
     const params = new URLSearchParams(searchParams.toString());
     if (pageNum <= 1) params.delete('page');
     else params.set('page', String(pageNum));
+    router.push(`/khanadmin/orders?${params.toString()}`);
+  };
+
+  const setFilterPayment = (payment: string) => {
+    setSelectedOrders([]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('page');
+    if (payment === 'all') params.delete('payment');
+    else params.set('payment', payment);
     router.push(`/khanadmin/orders?${params.toString()}`);
   };
 
@@ -1514,6 +1549,37 @@ function AdminOrdersContent() {
             Search
           </button>
 
+          {/* Payment filter dropdown */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value)}
+              aria-label="Filter by payment method"
+              style={{
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                minWidth: '132px',
+                padding: '12px 36px 12px 14px',
+                borderRadius: '10px',
+                border: '1px solid #e0e0e0',
+                backgroundColor: filterPayment !== 'all' ? '#fff7ed' : '#f8f9fa',
+                color: '#1E293B',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 12px center',
+              }}
+            >
+              {PAYMENT_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Status Filter */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => {
@@ -1629,6 +1695,9 @@ function AdminOrdersContent() {
                   {t('admin.orders.table.total')}
                 </th>
                 <th style={{ textAlign: 'left', padding: '16px', color: '#666', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
+                  {t('admin.orders.table.payment')}
+                </th>
+                <th style={{ textAlign: 'left', padding: '16px', color: '#666', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
                   {t('admin.orders.table.status')}
                 </th>
                 <th style={{ textAlign: 'left', padding: '16px', color: '#666', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
@@ -1736,6 +1805,9 @@ function AdminOrdersContent() {
                     <p style={{ fontSize: '16px', fontWeight: '700', color: '#10B981' }}>
                       <AdminPkrAmount amount={order.total} size="inline" decimals={2} />
                     </p>
+                  </td>
+                  <td style={{ padding: '16px', verticalAlign: 'middle' }}>
+                    <OrderPaymentBadge order={order} size="sm" />
                   </td>
                   <td style={{ padding: '16px', position: 'relative', overflow: 'visible' }}>
                     <div style={{ position: 'relative', zIndex: openStatusDropdown === order.id ? 1001 : 'auto' }}>
@@ -2004,6 +2076,9 @@ function AdminOrdersContent() {
                   <div>
                     <p style={{ fontSize: '15px', fontWeight: '600', color: '#1E293B' }}>#{order.id}</p>
                     <p style={{ fontSize: '12px', color: '#999', marginTop: '2px' }}>{order.date} • {order.time}</p>
+                    <div style={{ marginTop: '8px' }}>
+                      <OrderPaymentBadge order={order} size="sm" />
+                    </div>
                   </div>
                 </div>
                 <div style={{ position: 'relative', zIndex: openStatusDropdown === order.id ? 1001 : 'auto' }}>

@@ -12,6 +12,7 @@ import {
 } from '@/lib/order-tracking';
 import { formatPrice } from '@/utils/formatPrice';
 import { IoArrowBack, IoCalendarOutline, IoTimeOutline } from 'react-icons/io5';
+import OrderPaymentBadge from '@/components/OrderPaymentBadge';
 
 type ProfileOrderDetailProps = {
   order: Order;
@@ -65,6 +66,11 @@ export default function ProfileOrderDetail({ order, onBack }: ProfileOrderDetail
             {itemCount} item{itemCount === 1 ? '' : 's'}
           </span>
           <strong>{formatPrice(order.total)}</strong>
+        </div>
+
+        <div className="profile-order-detail__payment">
+          <span className="profile-order-detail__meta-label">Payment</span>
+          <OrderPaymentBadge order={order} size="sm" showPaidOnly />
         </div>
       </header>
 

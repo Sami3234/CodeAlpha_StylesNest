@@ -173,10 +173,10 @@ export default function AdminLayout({
               width: '56px',
               height: '56px',
               borderRadius: '50%',
-              backgroundColor: '#2c3e50',
+              backgroundColor: '#0f172a',
               color: '#fff',
-              border: 'none',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255, 107, 53, 0.35)',
+              boxShadow: '0 8px 24px rgba(255, 107, 53, 0.25)',
               cursor: 'pointer',
               zIndex: 30,
               display: 'flex',
@@ -205,7 +205,7 @@ export default function AdminLayout({
               padding: '20px',
               minHeight: '100vh',
               marginTop: '90px',
-              marginLeft: isMobile ? '0' : '260px',
+              marginLeft: isMobile ? '0' : '268px',
               transition: 'margin-left 0.3s ease',
             }}
           >

@@ -176,7 +176,7 @@ export function productJsonLd({
 }
 
 export function itemListJsonLd(
-  products: { id: number; name: string; price: number }[],
+  products: { id: number; name: string; price: number; image?: string; imageUrl?: string }[],
   listName = 'StylesNest Shop',
 ) {
   return {
@@ -184,23 +184,36 @@ export function itemListJsonLd(
     '@type': 'ItemList',
     name: listName,
     numberOfItems: products.length,
-    itemListElement: products.slice(0, 50).map((p, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      url: absoluteUrl(`/product/${p.id}`),
-      name: p.name,
-      item: {
-        '@type': 'Product',
-        name: p.name,
+    itemListElement: products.slice(0, 50).map((p, index) => {
+      const imageUrl =
+        p.imageUrl ?? (p.image ? (p.image.startsWith('http') ? p.image : absoluteUrl(p.image)) : undefined);
+      return {
+        '@type': 'ListItem',
+        position: index + 1,
         url: absoluteUrl(`/product/${p.id}`),
-        offers: {
-          '@type': 'Offer',
-          priceCurrency: 'PKR',
-          price: p.price.toFixed(0),
+        name: p.name,
+        item: {
+          '@type': 'Product',
+          name: p.name,
+          url: absoluteUrl(`/product/${p.id}`),
+          ...(imageUrl ? { image: imageUrl } : {}),
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'PKR',
+            price: p.price.toFixed(0),
+            availability: 'https://schema.org/InStock',
+          },
         },
-      },
-    })),
+      };
+    }),
   };
+}
+
+/** Trending products on homepage — helps Google associate product images with the brand. */
+export function trendingProductsJsonLd(
+  products: { id: number; name: string; price: number; imageUrl: string }[],
+) {
+  return itemListJsonLd(products, 'Trending Products at StylesNest');
 }
 
 export function breadcrumbJsonLd(items: { name: string; path: string }[]) {

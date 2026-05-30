@@ -82,6 +82,12 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (adminPanel) return;
     void fetchProducts();
+
+    const safetyTimer = window.setTimeout(() => {
+      setLoading(false);
+    }, 25_000);
+
+    return () => window.clearTimeout(safetyTimer);
   }, [adminPanel, fetchProducts]);
 
   useEffect(() => {
@@ -335,7 +341,14 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       deleteProduct,
       toggleProductStatus,
       getActiveProducts,
-      reloadProducts: () => fetchProducts({ silent: true }),
+      reloadProducts: async () => {
+        setLoading(true);
+        try {
+          await fetchProducts({ silent: true });
+        } finally {
+          setLoading(false);
+        }
+      },
       loading,
       fetchError,
     }}>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLoading from '@/components/admin/AdminLoading';
+import AdminReportDownload from '@/components/admin/AdminReportDownload';
 
 interface AdminProfile {
   id: number;
@@ -473,6 +474,8 @@ export default function AdminProfile() {
           </div>
         </form>
         </div>
+
+        <AdminReportDownload />
       </div>
     </div>
     </>

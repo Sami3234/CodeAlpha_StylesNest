@@ -5,7 +5,7 @@ import ClothesStitchBadge from '@/components/ClothesImageBadges';
 import FreeDeliveryBar from '@/components/FreeDeliveryBar';
 import { saleOverlayClass } from '@/lib/product-badge-classes';
 
-/** Discount, stitch, and free-delivery bar — on product image (shop cards) */
+/** Discount, stitch, and free-delivery bar on product image (shop cards) */
 export default function ProductCardImageOverlays({ product }: { product: Product }) {
   return (
     <>

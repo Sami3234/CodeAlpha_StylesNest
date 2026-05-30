@@ -99,9 +99,9 @@ export async function initDatabase() {
     await sql`
       CREATE TABLE IF NOT EXISTS contact_settings (
         id INTEGER PRIMARY KEY DEFAULT 1,
-        whatsapp TEXT NOT NULL DEFAULT '923001234567',
-        phone TEXT DEFAULT '+92 300 1234567',
-        email TEXT DEFAULT 'info@stylesnest.com',
+        whatsapp TEXT NOT NULL DEFAULT '923374323370',
+        phone TEXT DEFAULT '+92 337 432 3370',
+        email TEXT DEFAULT 'stylesnest34@gmail.com',
         address TEXT DEFAULT 'Vehari, Pakistan',
         social_whatsapp TEXT DEFAULT '',
         social_facebook TEXT DEFAULT '',
@@ -126,7 +126,7 @@ export async function initDatabase() {
 
     await sql`
       INSERT INTO contact_settings (id, whatsapp, phone, email, address, social_whatsapp, social_facebook, social_tiktok, social_daraz, social_shopify)
-      VALUES (1, '923001234567', '+92 300 1234567', 'info@stylesnest.com', 'Vehari, Pakistan', '', '', '', '', '')
+      VALUES (1, '923374323370', '+92 337 432 3370', 'stylesnest34@gmail.com', 'Vehari, Pakistan', '', '', '', '', '')
       ON CONFLICT (id) DO NOTHING
     `;
 

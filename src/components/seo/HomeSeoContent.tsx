@@ -1,17 +1,24 @@
 import Link from 'next/link';
 import { shopCategories, siteConfig } from '@/lib/seo/site';
+import type { TrendingProductForSchema } from '@/lib/seo/trending-for-schema';
 import './seo-crawl.css';
 
+type Props = {
+  trendingProducts?: TrendingProductForSchema[];
+  socialLinks?: string[];
+};
+
 /** Server-rendered homepage copy for crawlers — visually hidden, full word count for SEO. */
-export default function HomeSeoContent() {
+export default function HomeSeoContent({ trendingProducts = [], socialLinks = [] }: Props) {
   return (
     <section className="seo-crawl-only" aria-label="About StylesNest">
-      <h1>StylesNest — Online Shopping in Pakistan with Free Delivery</h1>
+      <h1>StylesNest — Fashion for Men, Women &amp; Kids, All in One Place</h1>
       <p>
-        <strong>{siteConfig.name}</strong> is a Pakistan-based online store offering cosmetics,
-        electronics, clothes, jewelry, watches, bags, men&apos;s fashion, shoes, and general store
-        essentials. We serve customers nationwide from {siteConfig.address} with free delivery on
-        eligible orders and cash on delivery (COD) for a safe, convenient checkout experience.
+        <strong>{siteConfig.name}</strong> is a Pakistan-based all-in-one online store offering
+        cosmetics, electronics, clothes, jewelry, watches, bags, men&apos;s fashion, shoes, and
+        general store essentials. We serve customers nationwide from {siteConfig.address} with free
+        delivery on eligible orders and cash on delivery (COD) for a safe, convenient checkout
+        experience.
       </p>
       <h2>Why shop at StylesNest</h2>
       <p>
@@ -57,6 +64,20 @@ export default function HomeSeoContent() {
           </li>
         ))}
       </ul>
+      {trendingProducts.length > 0 ? (
+        <>
+          <h2>Trending products</h2>
+          <ul>
+            {trendingProducts.map((p) => (
+              <li key={p.id}>
+                <Link href={`/product/${p.id}`}>{p.name}</Link>
+                {' — '}
+                {p.price.toFixed(0)} PKR
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
       <h2>Delivery and payment in Pakistan</h2>
       <p>
         We ship orders across Pakistan including major cities and smaller towns. Standard delivery
@@ -102,6 +123,25 @@ export default function HomeSeoContent() {
       </dl>
       <p>
         <Link href="/shop">Shop all products</Link> · <Link href="/about">About StylesNest</Link>
+        {socialLinks.length > 0
+          ? socialLinks.map((url) => {
+              const label = url.includes('facebook')
+                ? 'Facebook'
+                : url.includes('instagram')
+                  ? 'Instagram'
+                  : url.includes('tiktok')
+                    ? 'TikTok'
+                    : 'Social';
+              return (
+                <span key={url}>
+                  {' · '}
+                  <a href={url} rel="noopener noreferrer">
+                    {label}
+                  </a>
+                </span>
+              );
+            })
+          : null}
       </p>
     </section>
   );

@@ -5,6 +5,27 @@ export type PaymentMethodType =
   | 'cod'
   | 'other';
 
+/** Extra charge when customer pays cash on delivery. */
+export const COD_SERVICE_FEE = 30;
+
+export function getCodServiceFee(paymentType?: PaymentMethodType | null): number {
+  return paymentType === 'cod' ? COD_SERVICE_FEE : 0;
+}
+
+const VALID_PAYMENT_TYPES = new Set<PaymentMethodType>([
+  'jazzcash',
+  'easypaisa',
+  'bank',
+  'cod',
+  'other',
+]);
+
+export function parsePaymentMethodType(raw: unknown): PaymentMethodType | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const value = raw.trim() as PaymentMethodType;
+  return VALID_PAYMENT_TYPES.has(value) ? value : undefined;
+}
+
 export interface PaymentMethod {
   id: string;
   type: PaymentMethodType;

@@ -1,6 +1,5 @@
 import { parseAdminLiveSince } from '@/lib/admin-live-sync';
 import { sql } from '@/lib/db';
-import { normalizePhoneDigits } from '@/lib/phone-normalize';
 import { getShopUserProfile } from '@/lib/shop-users';
 import {
   ensureProductReviewsTable,
@@ -85,9 +84,10 @@ function parseOrderProducts(raw: unknown): OrderProduct[] {
 export async function getProductReviewSummary(productId: number): Promise<ProductReviewSummary> {
   await ensureProductReviewsTable();
   const rows = await sql`
-    SELECT rating
-    FROM product_reviews
-    WHERE product_id = ${productId} AND status = 'approved'
+    SELECT pr.rating
+    FROM product_reviews pr
+    INNER JOIN orders o ON o.id = pr.order_id
+    WHERE pr.product_id = ${productId} AND pr.status = 'approved'
   `;
   const distribution: ProductReviewSummary['distribution'] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let sum = 0;
@@ -118,12 +118,13 @@ export async function getProductReviewSummariesMap(): Promise<
   await ensureProductReviewsTable();
   const rows = await sql`
     SELECT
-      product_id,
-      AVG(rating)::float AS avg_rating,
+      pr.product_id,
+      AVG(pr.rating)::float AS avg_rating,
       COUNT(*)::int AS review_count
-    FROM product_reviews
-    WHERE status = 'approved'
-    GROUP BY product_id
+    FROM product_reviews pr
+    INNER JOIN orders o ON o.id = pr.order_id
+    WHERE pr.status = 'approved'
+    GROUP BY pr.product_id
   `;
 
   const map = new Map<number, ProductReviewSummaryCompact>();
@@ -160,10 +161,11 @@ export async function listApprovedProductReviews(
 ): Promise<PublicProductReview[]> {
   await ensureProductReviewsTable();
   const rows = await sql`
-    SELECT *
-    FROM product_reviews
-    WHERE product_id = ${productId} AND status = 'approved'
-    ORDER BY created_at DESC
+    SELECT pr.*
+    FROM product_reviews pr
+    INNER JOIN orders o ON o.id = pr.order_id
+    WHERE pr.product_id = ${productId} AND pr.status = 'approved'
+    ORDER BY pr.created_at DESC
     LIMIT ${limit}
   `;
   return (rows as ProductReviewRow[]).map(mapPublicReview);
@@ -173,18 +175,12 @@ async function findDeliveredOrderForUser(
   userId: number,
   orderId: string,
 ): Promise<Order | null> {
-  const profile = await getShopUserProfile(userId);
-  if (!profile?.phone?.trim()) return null;
-
-  const needle = normalizePhoneDigits(profile.phone);
-  if (needle.length < 10) return null;
-
   const rows = await sql`
     SELECT id, customer, phone, city, address, products, total, status, date, time
     FROM orders
     WHERE id = ${orderId}
       AND status = 'delivered'
-      AND RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${needle}
+      AND shop_user_id = ${userId}
     LIMIT 1
   `;
 
@@ -218,18 +214,14 @@ export function formatReviewDeliveredAt(date: string, time: string): string {
 }
 
 export async function getReviewableItemsForUser(userId: number): Promise<ReviewableItem[]> {
-  const [, profile] = await Promise.all([ensureProductReviewsTable(), getShopUserProfile(userId)]);
-  if (!profile?.phone?.trim()) return [];
-
-  const needle = normalizePhoneDigits(profile.phone);
-  if (needle.length < 10) return [];
+  await ensureProductReviewsTable();
 
   const [orderRows, reviewRows] = await Promise.all([
     sql`
       SELECT id, products, date, time
       FROM orders
       WHERE status = 'delivered'
-        AND RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${needle}
+        AND shop_user_id = ${userId}
       ORDER BY date DESC, time DESC
       LIMIT 30
     `,
@@ -548,4 +540,10 @@ export async function listNewPendingReviewsSince(
         r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
     };
   });
+}
+
+/** Remove all reviews tied to an order (e.g. when admin deletes the order). */
+export async function deleteReviewsForOrder(orderId: string): Promise<void> {
+  await ensureProductReviewsTable();
+  await sql`DELETE FROM product_reviews WHERE order_id = ${orderId.trim()}`;
 }

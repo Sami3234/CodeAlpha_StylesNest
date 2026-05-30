@@ -2,6 +2,7 @@ import { sql } from '@/lib/db';
 import { mapProductRow } from '@/lib/product-mapper';
 import { parseProductMeta } from '@/lib/product-meta';
 import { getLineTotal, getUnitPrice } from '@/lib/product-pricing';
+import { getOrderDeliveryFee } from '@/lib/product-delivery';
 import { isOutOfStock, isStockTracked } from '@/lib/product-stock';
 import {
   buildOrderProductName,
@@ -9,6 +10,7 @@ import {
   type CartLineOptions,
 } from '@/lib/cart-line-options';
 import { getProductTitle } from '@/utils/getProductText';
+import { getCodServiceFee, type PaymentMethodType } from '@/lib/payment-methods';
 
 export type OrderLineInput = {
   productId: number;
@@ -31,8 +33,19 @@ export type ValidatedOrderLine = {
 };
 
 export type ValidateOrderResult =
-  | { ok: true; products: ValidatedOrderLine[]; total: number }
+  | {
+      ok: true;
+      products: ValidatedOrderLine[];
+      subtotal: number;
+      deliveryFee: number;
+      codFee: number;
+      total: number;
+    }
   | { ok: false; error: string; status: number };
+
+export type ValidateOrderOptions = {
+  paymentMethodType?: PaymentMethodType;
+};
 
 function normalizeOptions(line: OrderLineInput): CartLineOptions {
   return {
@@ -43,6 +56,7 @@ function normalizeOptions(line: OrderLineInput): CartLineOptions {
 
 export async function validateAndPriceOrderLines(
   lines: OrderLineInput[],
+  options?: ValidateOrderOptions,
 ): Promise<ValidateOrderResult> {
   if (!Array.isArray(lines) || lines.length === 0) {
     return { ok: false, error: 'At least one product is required.', status: 400 };
@@ -50,6 +64,12 @@ export async function validateAndPriceOrderLines(
 
   const stockUse = new Map<number, number>();
   const validated: ValidatedOrderLine[] = [];
+  const orderProducts: Array<{
+    id: number;
+    freeDelivery: boolean;
+    deliveryCharge?: number;
+  }> = [];
+  const lineProductIds: number[] = [];
 
   for (const line of lines) {
     const productId = Math.floor(Number(line.productId));
@@ -66,7 +86,7 @@ export async function validateAndPriceOrderLines(
       SELECT
         id, title_en, title_ar, description_en, description_ar,
         current_price, original_price, discount, image, images,
-        free_delivery, sold_count, category, features_en, features_ar,
+        free_delivery, delivery_charge, sold_count, category, features_en, features_ar,
         pricing_tiers, clothes_options, shoes_options, product_meta, status
       FROM products
       WHERE id = ${productId}
@@ -128,10 +148,22 @@ export async function validateAndPriceOrderLines(
       selectedColor: options.selectedColor,
       pickPoint: product.productMeta?.pickPoint?.trim() || undefined,
     });
+
+    lineProductIds.push(productId);
+    if (!orderProducts.some((p) => p.id === productId)) {
+      orderProducts.push({
+        id: productId,
+        freeDelivery: product.freeDelivery,
+        deliveryCharge: product.deliveryCharge,
+      });
+    }
   }
 
-  const total = validated.reduce((sum, l) => sum + l.lineTotal, 0);
-  return { ok: true, products: validated, total };
+  const subtotal = validated.reduce((sum, l) => sum + l.lineTotal, 0);
+  const deliveryFee = getOrderDeliveryFee(orderProducts, lineProductIds);
+  const codFee = getCodServiceFee(options?.paymentMethodType);
+  const total = subtotal + deliveryFee + codFee;
+  return { ok: true, products: validated, subtotal, deliveryFee, codFee, total };
 }
 
 /** Decrement stock after successful order (when tracked). */

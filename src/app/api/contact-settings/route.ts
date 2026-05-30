@@ -6,6 +6,7 @@ import {
   ensureContactSocialColumns,
 } from '@/lib/contact-settings-schema';
 import { sanitizeFooterServices, sanitizeTopBarUrls } from '@/lib/sanitize-contact-extras';
+import { resolveSiteContact, SITE_CONTACT } from '@/lib/site-contact';
 
 type Row = {
   whatsapp: string;
@@ -24,10 +25,10 @@ type Row = {
 };
 
 const defaults: Row = {
-  whatsapp: '',
-  phone: '',
-  email: '',
-  address: '',
+  whatsapp: SITE_CONTACT.whatsapp,
+  phone: SITE_CONTACT.phone,
+  email: SITE_CONTACT.email,
+  address: SITE_CONTACT.address,
   social_whatsapp: '',
   social_facebook: '',
   social_tiktok: '',
@@ -58,7 +59,7 @@ function parseTopBarUrlsJson(raw: string | null | undefined): string[] {
 }
 
 function rowToSettings(r: Row) {
-  return {
+  return resolveSiteContact({
     whatsapp: r.whatsapp,
     phone: r.phone,
     email: r.email,
@@ -72,7 +73,7 @@ function rowToSettings(r: Row) {
     customer_care_url: r.customer_care_url ?? '',
     footer_services: parseFooterServicesJson(r.footer_services_json),
     top_bar_links: parseTopBarUrlsJson(r.top_bar_links_json),
-  };
+  });
 }
 
 // Public endpoint to get contact settings (no auth required)

@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { DEFAULT_FOOTER_SERVICES } from '@/lib/sanitize-contact-extras';
+import { resolveSiteContact, SITE_CONTACT } from '@/lib/site-contact';
 
 export type ContactSettings = {
   whatsapp: string;
@@ -27,11 +28,11 @@ export type ContactSettings = {
   top_bar_links: string[];
 };
 
-const DEFAULT_SETTINGS: ContactSettings = {
-  whatsapp: '',
-  phone: '',
-  email: '',
-  address: '',
+const DEFAULT_SETTINGS: ContactSettings = resolveSiteContact({
+  whatsapp: SITE_CONTACT.whatsapp,
+  phone: SITE_CONTACT.phone,
+  email: SITE_CONTACT.email,
+  address: SITE_CONTACT.address,
   social_whatsapp: '',
   social_facebook: '',
   social_tiktok: '',
@@ -41,7 +42,7 @@ const DEFAULT_SETTINGS: ContactSettings = {
   customer_care_url: '',
   footer_services: [...DEFAULT_FOOTER_SERVICES],
   top_bar_links: [],
-};
+});
 
 type ContactSettingsContextValue = {
   settings: ContactSettings;
@@ -61,7 +62,10 @@ async function fetchContactSettings(): Promise<ContactSettings> {
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && data.settings) {
-          return { ...DEFAULT_SETTINGS, ...data.settings } as ContactSettings;
+          return resolveSiteContact({
+            ...DEFAULT_SETTINGS,
+            ...data.settings,
+          }) as ContactSettings;
         }
         return DEFAULT_SETTINGS;
       })

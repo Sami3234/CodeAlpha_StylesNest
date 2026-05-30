@@ -29,13 +29,16 @@ import {
   buildOrderWhatsAppMessage,
   buildWhatsAppLink,
   formatPaymentMethodForOrder,
+  getCodServiceFee,
   type PaymentMethod,
 } from '@/lib/payment-methods';
 import { getLineTotal, getUnitPrice } from '@/lib/product-pricing';
+import { getOrderDeliveryFee } from '@/lib/product-delivery';
 import { isOutOfStock, validateStockForQuantity } from '@/lib/product-stock';
 import { saveOrderWhatsAppConfirm } from '@/lib/order-whatsapp-storage';
 import { notifyError } from '@/lib/notify';
 import '@/components/product-page.css';
+import '@/components/checkout-page.css';
 
 function sanitizeCustomerField(raw: string, maxLen: number): string {
   return raw.replace(/\s+/g, ' ').trim().slice(0, maxLen);
@@ -141,6 +144,23 @@ function CheckoutPageInner() {
     0,
   );
 
+  const deliveryFee = useMemo(
+    () =>
+      getOrderDeliveryFee(
+        checkoutRows.map((r) => r.product),
+        checkoutRows.map((r) => r.product.id),
+      ),
+    [checkoutRows],
+  );
+
+  const selectedPayment = useMemo(
+    () => paymentMethods.find((m) => m.id === selectedPaymentId) ?? null,
+    [paymentMethods, selectedPaymentId],
+  );
+
+  const codFee = getCodServiceFee(selectedPayment?.type);
+  const grandTotal = subtotal + deliveryFee + codFee;
+
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
@@ -175,10 +195,17 @@ function CheckoutPageInner() {
     }
 
     const selectedPayment = paymentMethods.find((m) => m.id === selectedPaymentId);
-    if (paymentMethods.length && !selectedPayment) {
-      setPaymentError('Please select a payment method');
+    if (!paymentMethods.length) {
+      showFormError('Payment methods are not available. Please try again later or contact support.');
       return;
     }
+    if (!selectedPayment?.type) {
+      const msg = 'Please select a payment method.';
+      setPaymentError(msg);
+      showFormError(msg);
+      return;
+    }
+    setPaymentError('');
 
     if (checkoutRows.length === 0) {
       showFormError('No valid items to order. Return to cart and try again.');
@@ -210,9 +237,7 @@ function CheckoutPageInner() {
       }
     }
 
-    const paymentLabel = selectedPayment
-      ? formatPaymentMethodForOrder(selectedPayment)
-      : 'Cash on Delivery';
+    const paymentLabel = formatPaymentMethodForOrder(selectedPayment);
 
     setSubmitting(true);
     try {
@@ -242,7 +267,12 @@ function CheckoutPageInner() {
         city,
         address,
         products: orderProducts,
-        total: subtotal,
+        subtotal,
+        deliveryFee,
+        codFee,
+        paymentMethodType: selectedPayment.type,
+        paymentMethodLabel: selectedPayment.label,
+        total: grandTotal,
         status: 'pending',
       });
 
@@ -321,8 +351,30 @@ function CheckoutPageInner() {
             Place order
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            You are buying <strong>{checkoutRows.length}</strong> product line(s). Total{' '}
-            <strong className="text-[#667eea]">{formatPrice(subtotal)} PKR</strong>.
+            You are buying <strong>{checkoutRows.length}</strong> product line(s).{' '}
+            {deliveryFee > 0 || codFee > 0 ? (
+              <>
+                Subtotal <strong className="text-[#667eea]">{formatPrice(subtotal)} PKR</strong>
+                {deliveryFee > 0 ? (
+                  <>
+                    {' · '}Delivery <strong>{formatPrice(deliveryFee)} PKR</strong>
+                  </>
+                ) : (
+                  <> · Free delivery</>
+                )}
+                {codFee > 0 ? (
+                  <>
+                    {' · '}COD fee <strong>{formatPrice(codFee)} PKR</strong>
+                  </>
+                ) : null}
+                {' · '}Total <strong className="text-[#c44569]">{formatPrice(grandTotal)} PKR</strong>
+              </>
+            ) : (
+              <>
+                Total <strong className="text-[#667eea]">{formatPrice(grandTotal)} PKR</strong>
+                {' '}(free delivery)
+              </>
+            )}
           </p>
         </div>
         <Link
@@ -333,18 +385,15 @@ function CheckoutPageInner() {
         </Link>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-5">
-        <section className="lg:col-span-3">
-          <h2 className="mb-4 text-lg font-bold text-slate-900">Order items</h2>
-          <ul className="flex flex-col gap-4">
+      <div className="checkout-layout">
+        <section className="checkout-layout__items">
+          <h2 className="checkout-items-heading">Order items</h2>
+          <ul className="checkout-item-list">
             {checkoutRows.map(({ line, product }) => {
               const optionsSummary = formatCartLineOptionsSummary(product, line);
               return (
-                <li
-                  key={line.lineKey}
-                  className="flex flex-col gap-4 rounded-2xl border border-[rgba(102,126,234,0.2)] bg-white p-4 shadow-sm sm:flex-row sm:items-center"
-                >
-                  <div className="relative mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:mx-0">
+                <li key={line.lineKey} className="checkout-item-card">
+                  <div className="relative mx-auto h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:mx-0">
                     <Image
                       src={product.image}
                       alt={getProductTitle(product)}
@@ -380,9 +429,10 @@ function CheckoutPageInner() {
           </ul>
         </section>
 
-        <section className="lg:col-span-2">
+        <section className="checkout-layout__form">
           <OrderDeliveryForm
             title="Order Now"
+            variant="checkout"
             formData={formData}
             onChange={handleInputChange}
             onSubmit={handleSubmit}
@@ -398,12 +448,11 @@ function CheckoutPageInner() {
             submitLabel="SUBMIT ORDER"
             submitting={submitting}
             error={error}
-            orderTotal={subtotal}
-          >
-            <p className="mt-4 text-sm text-slate-600 leading-relaxed">
-              After you submit, you can confirm your order on WhatsApp so we can process it faster.
-            </p>
-          </OrderDeliveryForm>
+            orderSubtotal={subtotal}
+            orderDeliveryFee={deliveryFee}
+            orderCodFee={codFee}
+            orderTotal={grandTotal}
+          />
         </section>
       </div>
     </>

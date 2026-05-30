@@ -8,12 +8,16 @@ import {
 } from '@/lib/normalize-order-payload';
 import { ensureOrdersAdminColumns } from '@/lib/orders-schema';
 import { getTodayDateInTimezone } from '@/lib/order-date';
+import { resolveOrderPayment } from '@/lib/order-payment';
 import type { Order } from '@/types/order';
 
 export type AdminOrdersListParams = {
   page?: number;
   limit?: number;
   status?: string | null;
+  payment?: string | null;
+  paystatus?: string | null;
+  city?: string | null;
   period?: string | null;
   from?: string | null;
   to?: string | null;
@@ -53,32 +57,50 @@ export function sanitizeAdminOrderStats(stats: AdminOrderStats): AdminOrderStats
 }
 
 function mapOrderRow(row: Record<string, unknown>): Order {
+  const total = parseFloat(String(row.total));
+  const deliveryFee = Math.max(0, parseFloat(String(row.delivery_fee ?? 0)) || 0);
+  const products = parseOrderProducts(row.products);
+  const payment = resolveOrderPayment(row, products);
   return {
     id: row.id as string,
     customer: row.customer as string,
     phone: row.phone as string,
     city: row.city as string,
     address: row.address as string,
-    products: parseOrderProducts(row.products),
-    total: parseFloat(String(row.total)),
+    products,
+    subtotal: Math.max(0, total - deliveryFee),
+    deliveryFee,
+    total,
     status: row.status as Order['status'],
     date: normalizeOrderDate(row.date),
     time: normalizeOrderTime(row.time),
     notes: String(row.notes ?? ''),
     trackingId: String(row.tracking_id ?? ''),
+    shopUserId:
+      row.shop_user_id != null && Number.isFinite(Number(row.shop_user_id))
+        ? Number(row.shop_user_id)
+        : undefined,
+    paymentMethodType: payment.paymentMethodType,
+    paymentMethodLabel: payment.paymentMethodLabel,
+    paymentStatus: payment.paymentStatus,
   };
 }
 
 function listFilters(params: AdminOrdersListParams) {
   const statusFilter =
     params.status && params.status !== 'all' ? params.status : null;
+  const paymentFilter =
+    params.payment && params.payment !== 'all' ? params.payment : null;
+  const payStatusFilter =
+    params.paystatus && params.paystatus !== 'all' ? params.paystatus : null;
+  const cityFilter = params.city?.trim() || null;
   const todayOnly = params.period === 'today';
   const today = getTodayDateInTimezone();
   const fromDate = params.from?.trim() || null;
   const toDate = params.to?.trim() || null;
   const search = params.search?.trim() || null;
   const searchPattern = search ? `%${search}%` : null;
-  return { statusFilter, todayOnly, today, fromDate, toDate, searchPattern };
+  return { statusFilter, paymentFilter, payStatusFilter, cityFilter, todayOnly, today, fromDate, toDate, searchPattern };
 }
 
 export async function queryAdminOrdersList(params: AdminOrdersListParams): Promise<{
@@ -93,7 +115,7 @@ export async function queryAdminOrdersList(params: AdminOrdersListParams): Promi
   const page = Math.max(1, params.page ?? 1);
   const limit = Math.min(100, Math.max(1, params.limit ?? 50));
   const offset = (page - 1) * limit;
-  const { statusFilter, todayOnly, today, fromDate, toDate, searchPattern } =
+  const { statusFilter, paymentFilter, payStatusFilter, cityFilter, todayOnly, today, fromDate, toDate, searchPattern } =
     listFilters(params);
 
   const countRows = await sql`
@@ -101,6 +123,9 @@ export async function queryAdminOrdersList(params: AdminOrdersListParams): Promi
     FROM orders
     WHERE
       (${statusFilter}::text IS NULL OR status = ${statusFilter})
+      AND (${paymentFilter}::text IS NULL OR payment_method_type = ${paymentFilter})
+      AND (${payStatusFilter}::text IS NULL OR payment_status = ${payStatusFilter})
+      AND (${cityFilter}::text IS NULL OR city = ${cityFilter})
       AND (${todayOnly}::boolean IS FALSE OR date = ${today}::date)
       AND (${fromDate}::text IS NULL OR date >= ${fromDate}::date)
       AND (${toDate}::text IS NULL OR date <= ${toDate}::date)
@@ -128,11 +153,19 @@ export async function queryAdminOrdersList(params: AdminOrdersListParams): Promi
       time,
       notes,
       tracking_id,
+      shop_user_id,
+      payment_method_type,
+      payment_method_label,
+      payment_status,
+      delivery_fee,
       created_at,
       updated_at
     FROM orders
     WHERE
       (${statusFilter}::text IS NULL OR status = ${statusFilter})
+      AND (${paymentFilter}::text IS NULL OR payment_method_type = ${paymentFilter})
+      AND (${payStatusFilter}::text IS NULL OR payment_status = ${payStatusFilter})
+      AND (${cityFilter}::text IS NULL OR city = ${cityFilter})
       AND (${todayOnly}::boolean IS FALSE OR date = ${today}::date)
       AND (${fromDate}::text IS NULL OR date >= ${fromDate}::date)
       AND (${toDate}::text IS NULL OR date <= ${toDate}::date)
@@ -213,6 +246,11 @@ export async function queryOrdersChangedSince(since: string): Promise<Order[]> {
       time,
       notes,
       tracking_id,
+      shop_user_id,
+      payment_method_type,
+      payment_method_label,
+      payment_status,
+      delivery_fee,
       created_at,
       updated_at
     FROM orders
@@ -240,6 +278,11 @@ export async function queryRecentOrders(limit = 8): Promise<Order[]> {
       time,
       notes,
       tracking_id,
+      shop_user_id,
+      payment_method_type,
+      payment_method_label,
+      payment_status,
+      delivery_fee,
       created_at,
       updated_at
     FROM orders

@@ -1,13 +1,15 @@
+import { SITE_CONTACT } from '@/lib/site-contact';
+
 /** Central SEO / site identity — used by metadata, sitemap, and JSON-LD */
 
 export const siteConfig = {
   name: 'StylesNest',
   legalName: 'StylesNest',
-  title: 'StylesNest — Online Shopping in Pakistan | Free Delivery',
+  title: 'StylesNest — Fashion for Men, Women & Kids | All in One Place',
   description:
-    'Shop cosmetics, electronics, clothes & jewelry at StylesNest Pakistan. Genuine products, free delivery & cash on delivery nationwide.',
-  phone: '+923001234567',
-  address: 'Vehari, Pakistan',
+    'StylesNest is your all-in-one online store in Pakistan — cosmetics, clothes, jewelry, watches, shoes, electronics, bags & men fashion. Free delivery on eligible orders, cash on delivery nationwide.',
+  phone: SITE_CONTACT.phone,
+  address: SITE_CONTACT.address,
   locale: 'en_PK',
   language: 'en',
   country: 'Pakistan',
@@ -26,10 +28,12 @@ export const siteConfig = {
     'COD Pakistan',
     'imported cosmetics',
     'men fashion Pakistan',
+    'women fashion Pakistan',
+    'all in one place shopping Pakistan',
     'general store online',
   ],
   twitterHandle: '@stylesnest',
-  contactEmail: 'info@stylesnest.com',
+  contactEmail: SITE_CONTACT.email,
   /** Large logo for Open Graph / social previews */
   logoPath: '/StylesNest_Nest.png',
   defaultOgImagePath: '/StylesNest_Nest.png',

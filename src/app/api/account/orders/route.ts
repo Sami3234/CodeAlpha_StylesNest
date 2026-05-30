@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { sql } from '@/lib/db';
-import { getShopUserProfile } from '@/lib/shop-users';
-import { normalizePhoneDigits } from '@/lib/phone-normalize';
+import { ensureOrdersAdminColumns } from '@/lib/orders-schema';
+import { resolveOrderPayment } from '@/lib/order-payment';
 import { apiErrorResponse } from '@/lib/safe-errors';
 import type { Order, OrderProduct } from '@/types/order';
 
@@ -65,10 +65,15 @@ function mapRow(row: Record<string, unknown>): Order {
     status: row.status as Order['status'],
     date,
     time,
+    shopUserId:
+      row.shop_user_id != null && Number.isFinite(Number(row.shop_user_id))
+        ? Number(row.shop_user_id)
+        : undefined,
+    ...resolveOrderPayment(row, parsedProducts),
   };
 }
 
-/** Customer's own orders only (matched by profile phone). */
+/** Customer's own orders (matched by signed-in shop account). */
 export async function GET() {
   try {
     const session = await auth();
@@ -77,23 +82,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await getShopUserProfile(userId);
-    if (!profile?.phone?.trim()) {
-      return NextResponse.json({
-        orders: [],
-        needsPhone: true,
-        message: 'Add your WhatsApp number in delivery details to see your orders.',
-      });
-    }
-
-    const needle = normalizePhoneDigits(profile.phone);
-    if (needle.length < 10) {
-      return NextResponse.json({
-        orders: [],
-        needsPhone: true,
-        message: 'Please save a valid mobile number to track orders.',
-      });
-    }
+    await ensureOrdersAdminColumns();
 
     const rows = await sql`
       SELECT
@@ -107,16 +96,20 @@ export async function GET() {
         status,
         date,
         time,
+        shop_user_id,
+        payment_method_type,
+        payment_method_label,
+        payment_status,
         created_at
       FROM orders
-      WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${needle}
+      WHERE shop_user_id = ${userId}
       ORDER BY date DESC, time DESC
       LIMIT 100
     `;
 
     const orders = rows.map((row: Record<string, unknown>) => mapRow(row));
 
-    return NextResponse.json({ orders, needsPhone: false });
+    return NextResponse.json({ orders });
   } catch (error) {
     return apiErrorResponse({ message: 'Failed to load your orders', status: 500, cause: error });
   }

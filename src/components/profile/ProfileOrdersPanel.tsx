@@ -23,8 +23,6 @@ type ProfileOrdersPanelProps = {
 export default function ProfileOrdersPanel({ refreshKey = 0 }: ProfileOrdersPanelProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [needsPhone, setNeedsPhone] = useState(false);
-  const [hint, setHint] = useState('');
   const [error, setError] = useState('');
   const [fetchError, setFetchError] = useState<'offline' | 'network' | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,8 +42,6 @@ export default function ProfileOrdersPanel({ refreshKey = 0 }: ProfileOrdersPane
       }
       const list: Order[] = Array.isArray(data.orders) ? data.orders : [];
       setOrders(list);
-      setNeedsPhone(Boolean(data.needsPhone));
-      setHint(typeof data.message === 'string' ? data.message : '');
       setSelectedId((prev) => (prev && list.some((o) => o.id === prev) ? prev : null));
     } catch (err) {
       if (err instanceof NetworkError) {
@@ -105,7 +101,9 @@ export default function ProfileOrdersPanel({ refreshKey = 0 }: ProfileOrdersPane
           <h2 id="orders-heading" className="profile-panel__title">
             My orders
           </h2>
-          <p className="profile-panel__desc">Select an order to view status and details</p>
+          <p className="profile-panel__desc">
+            Orders placed while signed in to your account appear here
+          </p>
         </div>
       </div>
 
@@ -115,20 +113,11 @@ export default function ProfileOrdersPanel({ refreshKey = 0 }: ProfileOrdersPane
         </p>
       ) : null}
 
-      {needsPhone ? (
-        <div className="profile-orders__empty">
-          <p>{hint || 'Save your mobile number in delivery details to see orders here.'}</p>
-          <p className="profile-orders__empty-hint">
-            Use the same WhatsApp number you enter when placing an order.
-          </p>
-        </div>
-      ) : null}
-
-      {!needsPhone && orders.length === 0 ? (
+      {orders.length === 0 ? (
         <div className="profile-orders__empty">
           <p>No orders yet</p>
           <p className="profile-orders__empty-hint">
-            When you place an order while signed in, it will appear here for tracking.
+            Sign in with your email, place an order, and track it here anytime.
           </p>
           <Link href="/shop" className="profile-btn profile-btn--primary profile-orders__shop-link">
             Start shopping
@@ -136,7 +125,7 @@ export default function ProfileOrdersPanel({ refreshKey = 0 }: ProfileOrdersPane
         </div>
       ) : null}
 
-      {!needsPhone && orders.length > 0 ? (
+      {orders.length > 0 ? (
         <ul className="profile-orders__list profile-orders__list--compact">
           {orders.map((order) => {
             const itemCount = order.products.reduce((s, p) => s + p.quantity, 0);

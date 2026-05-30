@@ -1,19 +1,23 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Product } from '@/data/products';
-import { MAX_TRENDING_PRODUCTS } from '@/lib/trending-products';
+import { MAX_TRENDING_PRODUCTS, SEO_TRENDING_IMAGE_COUNT } from '@/lib/trending-products';
 import { getProductTitle } from '@/utils/getProductText';
-import { formatPrice } from '@/utils/formatPrice';
 import AdminPkrAmount from '@/components/admin/AdminPkrAmount';
 import AdminLoading from '@/components/admin/AdminLoading';
+import './trending-products-picker.css';
 
 interface TrendingProductsPickerProps {
   isOpen: boolean;
   onClose: () => void;
   products: Product[];
   onToast?: (message: string, type: 'success' | 'error' | 'info') => void;
+}
+
+function isActiveProduct(p: Product): boolean {
+  return p.status === 'active' || !p.status;
 }
 
 export default function TrendingProductsPicker({
@@ -26,50 +30,98 @@ export default function TrendingProductsPicker({
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const userEditedRef = useRef(false);
+  const fetchedOpenRef = useRef(false);
+  const onToastRef = useRef(onToast);
+  onToastRef.current = onToast;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/trending-products', {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load');
-      const ids = Array.isArray(data.ids) ? data.ids.map((x: unknown) => Number(x)) : [];
-      setSelectedIds(ids.filter((n: number) => Number.isInteger(n) && n > 0));
-    } catch (e) {
-      console.error(e);
-      onToast?.('Could not load trending list', 'error');
-      setSelectedIds([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [onToast]);
+  const markEdited = () => {
+    userEditedRef.current = true;
+  };
 
+  const productById = useMemo(() => {
+    const map = new Map<number, Product>();
+    for (const p of products) map.set(p.id, p);
+    return map;
+  }, [products]);
+
+  /** Load saved trending list once per modal open — never overwrite in-progress picks. */
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      fetchedOpenRef.current = false;
+      userEditedRef.current = false;
+      return;
+    }
+    if (fetchedOpenRef.current) return;
+    fetchedOpenRef.current = true;
     setSearch('');
-    load();
-  }, [isOpen, load]);
+
+    let cancelled = false;
+    setLoading(true);
+
+    fetch('/api/admin/trending-products', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load');
+        const ids = Array.isArray(data.ids)
+          ? data.ids
+              .map((x: unknown) => Number(x))
+              .filter((n: number) => Number.isInteger(n) && n > 0)
+              .slice(0, MAX_TRENDING_PRODUCTS)
+          : [];
+        if (!cancelled && !userEditedRef.current) {
+          setSelectedIds(ids);
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+        onToastRef.current?.('Could not load saved trending list', 'error');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  const removeId = (id: number) => {
+    markEdited();
+    setSelectedIds((prev) => prev.filter((x) => x !== id));
+  };
 
   const toggleId = (id: number) => {
+    markEdited();
     setSelectedIds((prev) => {
-      const idx = prev.indexOf(id);
-      if (idx >= 0) {
-        return prev.filter((x) => x !== id);
-      }
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= MAX_TRENDING_PRODUCTS) {
-        onToast?.(`Maximum ${MAX_TRENDING_PRODUCTS} products`, 'info');
+        onToast?.(`Maximum ${MAX_TRENDING_PRODUCTS} products allowed`, 'info');
         return prev;
       }
       return [...prev, id];
     });
   };
 
-  const filtered = useMemo(() => {
+  const moveId = (id: number, direction: -1 | 1) => {
+    markEdited();
+    setSelectedIds((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx < 0) return prev;
+      const next = idx + direction;
+      if (next < 0 || next >= prev.length) return prev;
+      const copy = [...prev];
+      [copy[idx], copy[next]] = [copy[next], copy[idx]];
+      return copy;
+    });
+  };
+
+  const filteredBrowse = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = products.filter((p) => p.status === 'active' || !p.status);
+    const list = products.filter(isActiveProduct);
     if (!q) return list;
     return list.filter((p) => {
       const title = getProductTitle(p).toLowerCase();
@@ -78,21 +130,40 @@ export default function TrendingProductsPicker({
     });
   }, [products, search]);
 
+  const selectedEntries = useMemo(
+    () =>
+      selectedIds.map((id) => ({
+        id,
+        product: productById.get(id) ?? null,
+      })),
+    [selectedIds, productById],
+  );
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      const payload = selectedIds.slice(0, MAX_TRENDING_PRODUCTS);
       const res = await fetch('/api/admin/trending-products', {
         method: 'PUT',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
+        body: JSON.stringify({ ids: payload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed');
       setSelectedIds(
-        Array.isArray(data.ids) ? data.ids.map((x: unknown) => Number(x)) : []
+        Array.isArray(data.ids)
+          ? data.ids
+              .map((x: unknown) => Number(x))
+              .filter((n: number) => Number.isInteger(n) && n > 0)
+              .slice(0, MAX_TRENDING_PRODUCTS)
+          : [],
       );
-      onToast?.('Trending products saved', 'success');
+      userEditedRef.current = false;
+      onToast?.(
+        `Saved ${Math.min(payload.length, MAX_TRENDING_PRODUCTS)} trending products — home strip + top ${SEO_TRENDING_IMAGE_COUNT} SEO previews updated`,
+        'success',
+      );
       onClose();
     } catch (e) {
       console.error(e);
@@ -108,270 +179,195 @@ export default function TrendingProductsPicker({
 
   return (
     <div
+      className="tpp-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="trending-picker-title"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 12000,
-        backgroundColor: 'rgba(15, 23, 42, 0.55)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        overflowY: 'auto',
-      }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '720px',
-          maxHeight: 'min(92vh, 820px)',
-          backgroundColor: '#fff',
-          borderRadius: '16px',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            padding: '18px 20px',
-            borderBottom: '1px solid #eef2f7',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '12px',
-            flexShrink: 0,
-          }}
-        >
+      <div className="tpp-dialog">
+        <div className="tpp-head">
           <div>
-            <h2
-              id="trending-picker-title"
-              style={{
-                margin: 0,
-                fontSize: '20px',
-                fontWeight: '700',
-                color: '#1a1a2e',
-              }}
-            >
+            <h2 id="trending-picker-title" className="tpp-title">
               Trending products
             </h2>
-            <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b' }}>
-              Choose up to {MAX_TRENDING_PRODUCTS} products for the home page strip.
-              Order follows your selection sequence.
+            <p className="tpp-sub">
+              Pick up to <strong>{MAX_TRENDING_PRODUCTS}</strong> for the home page strip. Use{' '}
+              <strong>↑ ↓</strong> to set order — positions <strong>1–{SEO_TRENDING_IMAGE_COUNT}</strong>{' '}
+              become Google / social search preview images with product links.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              border: 'none',
-              background: '#f1f5f9',
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              fontSize: '20px',
-              lineHeight: 1,
-              color: '#475569',
-              flexShrink: 0,
-            }}
-          >
+          <button type="button" onClick={onClose} aria-label="Close" className="tpp-close">
             ×
           </button>
         </div>
 
-        <div style={{ padding: '14px 20px', flexShrink: 0 }}>
+        <div className="tpp-toolbar">
           <input
             type="search"
-            placeholder="Search by title, category, ID..."
+            className="tpp-search"
+            placeholder="Filter products by title, category, ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px 14px',
-              borderRadius: '10px',
-              border: '2px solid #e8eef4',
-              fontSize: '14px',
-              outline: 'none',
-              color: '#000',
-              boxSizing: 'border-box',
-            }}
           />
-          <div
-            style={{
-              marginTop: '10px',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: '10px',
-              fontSize: '13px',
-              color: '#475569',
-            }}
-          >
-            <span style={{ fontWeight: '600' }}>
-              Selected: {selectedIds.length} / {MAX_TRENDING_PRODUCTS}
+          <div className="tpp-toolbar-meta">
+            <span className="tpp-count">
+              Selected: <strong>{selectedIds.length}</strong> / {MAX_TRENDING_PRODUCTS}
+            </span>
+            <span className="tpp-seo-hint">
+              SEO previews: {Math.min(selectedIds.length, SEO_TRENDING_IMAGE_COUNT)} /{' '}
+              {SEO_TRENDING_IMAGE_COUNT}
             </span>
             <button
               type="button"
-              onClick={() => setSelectedIds([])}
-              disabled={selectedIds.length === 0 || saving}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
-                cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
-                fontSize: '12px',
-                fontWeight: '600',
-                color: '#64748b',
+              className="tpp-clear"
+              onClick={() => {
+                markEdited();
+                setSelectedIds([]);
               }}
+              disabled={selectedIds.length === 0 || saving}
             >
               Clear all
             </button>
             {loading ? (
-              <AdminLoading message="Loading products" variant="compact" className="admin-loading--inline-toolbar" />
+              <AdminLoading
+                message="Loading"
+                variant="compact"
+                className="admin-loading--inline-toolbar"
+              />
             ) : null}
           </div>
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '0 12px 12px',
-            minHeight: '200px',
-          }}
-        >
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-            {filtered.map((product) => {
-              const checked = selectedSet.has(product.id);
-              const title = getProductTitle(product) || 'Untitled';
-              return (
-                <li key={product.id} style={{ marginBottom: '8px' }}>
-                  <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '10px 12px',
-                      borderRadius: '12px',
-                      border: checked
-                        ? '2px solid rgba(102, 126, 234, 0.45)'
-                        : '1px solid #eef2f7',
-                      background: checked ? 'rgba(102, 126, 234, 0.06)' : '#fafbfc',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleId(product.id)}
-                      style={{ width: '18px', height: '18px', flexShrink: 0 }}
-                    />
-                    <div
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '10px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        flexShrink: 0,
-                        background: '#e8eef4',
-                      }}
-                    >
-                      <Image
-                        src={product.image}
-                        alt=""
-                        fill
-                        sizes="48px"
-                        style={{ objectFit: 'cover' }}
-                        unoptimized
+        <div className="tpp-body">
+          <section className="tpp-selected" aria-label="Selected trending order">
+            <h3 className="tpp-section-title">Selected order (home + SEO)</h3>
+            {selectedIds.length === 0 ? (
+              <p className="tpp-empty">
+                {loading ? 'Loading saved list…' : 'No products selected — check items below or use search.'}
+              </p>
+            ) : (
+              <ol className="tpp-selected-list">
+                {selectedEntries.map(({ id, product }, index) => {
+                  const title = product ? getProductTitle(product) || 'Untitled' : `Product #${id}`;
+                  const isSeo = index < SEO_TRENDING_IMAGE_COUNT;
+                  return (
+                    <li key={id} className={`tpp-selected-item${isSeo ? ' tpp-selected-item--seo' : ''}`}>
+                      <span className="tpp-rank">{index + 1}</span>
+                      <div className="tpp-thumb">
+                        {product?.image ? (
+                          <Image src={product.image} alt="" fill sizes="44px" unoptimized />
+                        ) : (
+                          <span className="tpp-thumb-ph" aria-hidden>
+                            …
+                          </span>
+                        )}
+                      </div>
+                      <div className="tpp-selected-text">
+                        <p className="tpp-selected-name">{title}</p>
+                        <p className="tpp-selected-meta">
+                          ID {id}
+                          {product ? ` · ${product.category}` : ' · details loading'}
+                          {isSeo ? (
+                            <span className="tpp-seo-badge">Google preview #{index + 1}</span>
+                          ) : null}
+                        </p>
+                      </div>
+                      {product ? (
+                        <AdminPkrAmount amount={product.currentPrice} size="compact" />
+                      ) : (
+                        <span className="tpp-price-ph">—</span>
+                      )}
+                      <div className="tpp-reorder">
+                        <button
+                          type="button"
+                          className="tpp-move"
+                          aria-label={`Move ${title} up`}
+                          disabled={index === 0 || saving}
+                          onClick={() => moveId(id, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="tpp-move"
+                          aria-label={`Move ${title} down`}
+                          disabled={index === selectedEntries.length - 1 || saving}
+                          onClick={() => moveId(id, 1)}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="tpp-remove"
+                          aria-label={`Remove ${title}`}
+                          disabled={saving}
+                          onClick={() => removeId(id)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
+
+          <section className="tpp-browse" aria-label="Browse products">
+            <h3 className="tpp-section-title">
+              {search.trim() ? 'Search results' : 'All active products'}
+            </h3>
+            <ul className="tpp-browse-list">
+              {filteredBrowse.map((product) => {
+                const checked = selectedSet.has(product.id);
+                const orderIndex = selectedIds.indexOf(product.id);
+                const title = getProductTitle(product) || 'Untitled';
+                return (
+                  <li key={product.id}>
+                    <label className={`tpp-browse-row${checked ? ' tpp-browse-row--on' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleId(product.id)}
                       />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {title}
-                      </p>
-                      <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94a3b8' }}>
-                        ID {product.id} · {product.category}
-                      </p>
-                    </div>
-                    <span style={{ flexShrink: 0, color: '#c44569' }}>
+                      <div className="tpp-thumb">
+                        <Image src={product.image} alt="" fill sizes="48px" unoptimized />
+                      </div>
+                      <div className="tpp-browse-text">
+                        <p className="tpp-browse-name">{title}</p>
+                        <p className="tpp-browse-meta">
+                          ID {product.id} · {product.category}
+                          {checked ? (
+                            <span className="tpp-order-tag"> · Slot #{orderIndex + 1}</span>
+                          ) : null}
+                        </p>
+                      </div>
                       <AdminPkrAmount amount={product.currentPrice} size="compact" />
-                    </span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-          {!loading && filtered.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
-              No products match your search.
-            </p>
-          ) : null}
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+            {!loading && filteredBrowse.length === 0 ? (
+              <p className="tpp-empty">No products match this filter.</p>
+            ) : null}
+          </section>
         </div>
 
-        <div
-          style={{
-            padding: '14px 20px',
-            borderTop: '1px solid #eef2f7',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '10px',
-            flexShrink: 0,
-            flexWrap: 'wrap',
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            style={{
-              padding: '12px 20px',
-              borderRadius: '10px',
-              border: '2px solid #e2e8f0',
-              background: '#fff',
-              fontWeight: '600',
-              cursor: saving ? 'wait' : 'pointer',
-              color: '#475569',
-            }}
-          >
+        <div className="tpp-foot">
+          <button type="button" className="tpp-btn tpp-btn--ghost" onClick={onClose} disabled={saving}>
             Cancel
           </button>
           <button
             type="button"
+            className="tpp-btn tpp-btn--primary"
             onClick={handleSave}
-            disabled={saving || loading}
-            style={{
-              padding: '12px 22px',
-              borderRadius: '10px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#fff',
-              fontWeight: '700',
-              cursor: saving || loading ? 'wait' : 'pointer',
-              boxShadow: '0 8px 22px rgba(102, 126, 234, 0.35)',
-            }}
+            disabled={saving || (loading && selectedIds.length === 0)}
           >
-            {saving ? 'Saving…' : 'Save trending'}
+            {saving ? 'Saving…' : `Save ${selectedIds.length} trending`}
           </button>
         </div>
       </div>

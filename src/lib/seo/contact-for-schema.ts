@@ -4,7 +4,7 @@ import {
   ensureContactLandingExtrasColumns,
   ensureContactSocialColumns,
 } from '@/lib/contact-settings-schema';
-import { siteConfig } from '@/lib/seo/site';
+import { resolveSiteContact, SITE_CONTACT } from '@/lib/site-contact';
 
 export type SchemaContact = {
   phone: string;
@@ -14,9 +14,9 @@ export type SchemaContact = {
 };
 
 const defaults: SchemaContact = {
-  phone: siteConfig.phone,
-  email: siteConfig.contactEmail,
-  address: siteConfig.address,
+  phone: SITE_CONTACT.phone,
+  email: SITE_CONTACT.email,
+  address: SITE_CONTACT.address,
   sameAs: [],
 };
 
@@ -77,12 +77,12 @@ export async function getContactForSchema(): Promise<SchemaContact> {
       social_daraz?: string;
       social_shopify?: string;
     };
-    return {
+    return resolveSiteContact({
       phone: (row.phone?.trim() || defaults.phone).replace(/\s+/g, ' '),
       email: row.email?.trim() || defaults.email,
       address: row.address?.trim() || defaults.address,
       sameAs: collectSameAs(row),
-    };
+    });
   } catch {
     return defaults;
   }
@@ -92,5 +92,5 @@ export function phoneToE164(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.startsWith('92')) return `+${digits}`;
   if (digits.startsWith('0')) return `+92${digits.slice(1)}`;
-  return digits ? `+${digits}` : siteConfig.phone;
+  return digits ? `+${digits}` : SITE_CONTACT.phone;
 }

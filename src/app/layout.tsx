@@ -9,6 +9,7 @@ import { getContactForSchema } from "@/lib/seo/contact-for-schema";
 import AppProviders from "@/components/providers/AppProviders";
 import MetaPixelScript from "@/components/analytics/MetaPixelScript";
 import MetaPixelPageView from "@/components/analytics/MetaPixelPageView";
+import { auth } from "@/auth";
 
 export { rootMetadata as metadata };
 
@@ -41,7 +42,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const contact = await getContactForSchema();
+  const [contact, session] = await Promise.all([getContactForSchema(), auth()]);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -56,7 +57,7 @@ export default async function RootLayout({
         <JsonLd
           data={[organizationJsonLd(contact), websiteJsonLd(contact), onlineStoreJsonLd()]}
         />
-        <AppProviders>{children}</AppProviders>
+        <AppProviders session={session}>{children}</AppProviders>
         <MetaPixelPageView />
       </body>
     </html>

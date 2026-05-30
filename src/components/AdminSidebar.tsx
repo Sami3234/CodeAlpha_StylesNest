@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, type ReactNode } from 'react';
 import './admin/admin-sidebar.css';
 import { clearAdminAuthCache } from '@/lib/admin-auth-client';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
-import { 
+import {
   BiSpa,
   BiChip,
   BiTime,
@@ -15,10 +15,9 @@ import {
   BiCog,
   BiPackage,
   BiCheckCircle,
-  BiXCircle
+  BiXCircle,
 } from 'react-icons/bi';
 
-// Categories for dropdown (excluding 'all')
 const categoryItems = [
   { id: 'cosmetics', icon: BiSpa },
   { id: 'jewelry', icon: BiShoppingBag },
@@ -31,7 +30,6 @@ const categoryItems = [
   { id: 'general', icon: BiBox },
 ];
 
-// Order statuses for dropdown
 const orderStatusItems = [
   { id: 'pending', icon: BiTimeFive },
   { id: 'processing', icon: BiCog },
@@ -39,37 +37,6 @@ const orderStatusItems = [
   { id: 'delivered', icon: BiCheckCircle },
   { id: 'cancelled', icon: BiXCircle },
 ];
-
-const menuItems = [
-  {
-    id: 'dashboard',
-    href: '/khanadmin',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    id: 'products',
-    href: '/khanadmin/products',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-        <line x1="7" y1="7" x2="7.01" y2="7" />
-      </svg>
-    ),
-  },
-];
-
-interface AdminSidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-  isMobile?: boolean;
-}
 
 const categoryLabels: Record<string, string> = {
   cosmetics: 'Cosmetics',
@@ -81,32 +48,108 @@ const categoryLabels: Record<string, string> = {
   general: 'General',
   bags: 'Bags',
   menfashion: 'Men Fashion',
-  mobile: 'Mobile',
-  kitchen: 'Kitchen',
-  other: 'Other',
 };
 
 const statusLabels: Record<string, string> = {
-  'pending': 'Pending',
-  'processing': 'Processing',
-  'shipped': 'Shipped',
-  'delivered': 'Delivered',
-  'cancelled': 'Cancelled'
+  pending: 'Pending',
+  processing: 'Processing',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
 };
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`admin-sidebar__chevron${open ? ' admin-sidebar__chevron--open' : ''}`}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function SidebarSection({ label }: { label: string }) {
+  return <li className="admin-sidebar__section" aria-hidden>{label}</li>;
+}
+
+function SidebarLink({
+  href,
+  active,
+  onNavigate,
+  icon,
+  children,
+  warn,
+}: {
+  href: string;
+  active: boolean;
+  onNavigate?: () => void;
+  icon: ReactNode;
+  children: ReactNode;
+  warn?: boolean;
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className={`admin-sidebar__link${active ? ' admin-sidebar__link--active' : ''}${warn ? ' admin-sidebar__link--warn' : ''}`}
+      >
+        <span className="admin-sidebar__link-icon">{icon}</span>
+        <span className="admin-sidebar__link-label">{children}</span>
+      </Link>
+    </li>
+  );
+}
+
+function SidebarSubLink({
+  href,
+  active,
+  onNavigate,
+  icon,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  onNavigate?: () => void;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className={`admin-sidebar__sublink${active ? ' admin-sidebar__sublink--active' : ''}`}
+    >
+      <span className="admin-sidebar__sublink-icon">{icon}</span>
+      <span>{children}</span>
+    </Link>
+  );
+}
+
+interface AdminSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  isMobile?: boolean;
+}
 
 function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  
-  // Get active category and status from URL
+
   const activeCategory = searchParams.get('category');
   const activeStatus = searchParams.get('status');
-  
-  // Derive state from URL params
-  const shouldCategoriesBeOpen = activeCategory && pathname === '/khanadmin/products';
+
+  const shouldCategoriesBeOpen = Boolean(activeCategory && pathname === '/khanadmin/products');
   const shouldOrdersBeOpen =
-    (activeStatus && pathname === '/khanadmin/orders') || pathname === '/khanadmin/cart-orders';
+    Boolean(activeStatus && pathname === '/khanadmin/orders') || pathname === '/khanadmin/cart-orders';
   const shouldLandingBeOpen =
     pathname === '/khanadmin/landing-images' || pathname.startsWith('/khanadmin/landing/');
 
@@ -114,995 +157,354 @@ function AdminSidebarContent({ isOpen, onClose, isMobile = false }: AdminSidebar
   const [ordersOpen, setOrdersOpen] = useState(shouldOrdersBeOpen);
   const [landingOpen, setLandingOpen] = useState(shouldLandingBeOpen);
 
-  // Track previous values to detect changes
   const prevShouldCategoriesBeOpenRef = useRef(shouldCategoriesBeOpen);
   const prevShouldOrdersBeOpenRef = useRef(shouldOrdersBeOpen);
   const prevShouldLandingBeOpenRef = useRef(shouldLandingBeOpen);
-  
-  // Sync state with URL params when they change
-  // This is a valid use case - syncing UI state with URL params
+
   useEffect(() => {
     if (prevShouldCategoriesBeOpenRef.current !== shouldCategoriesBeOpen) {
       prevShouldCategoriesBeOpenRef.current = shouldCategoriesBeOpen;
-      if (categoriesOpen !== shouldCategoriesBeOpen) {
-        setCategoriesOpen(shouldCategoriesBeOpen);
-      }
+      if (categoriesOpen !== shouldCategoriesBeOpen) setCategoriesOpen(shouldCategoriesBeOpen);
     }
     if (prevShouldOrdersBeOpenRef.current !== shouldOrdersBeOpen) {
       prevShouldOrdersBeOpenRef.current = shouldOrdersBeOpen;
-      if (ordersOpen !== shouldOrdersBeOpen) {
-        setOrdersOpen(shouldOrdersBeOpen);
-      }
+      if (ordersOpen !== shouldOrdersBeOpen) setOrdersOpen(shouldOrdersBeOpen);
     }
     if (prevShouldLandingBeOpenRef.current !== shouldLandingBeOpen) {
       prevShouldLandingBeOpenRef.current = shouldLandingBeOpen;
-      if (landingOpen !== shouldLandingBeOpen) {
-        setLandingOpen(shouldLandingBeOpen);
-      }
+      if (landingOpen !== shouldLandingBeOpen) setLandingOpen(shouldLandingBeOpen);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldCategoriesBeOpen, shouldOrdersBeOpen, shouldLandingBeOpen]);
 
+  const onNav = isMobile ? onClose : undefined;
+  const isProductsActive = pathname === '/khanadmin/products' && !activeCategory;
+  const isOrdersSection = pathname === '/khanadmin/orders' || pathname === '/khanadmin/cart-orders';
+  const hasCategoryActive = Boolean(activeCategory && pathname === '/khanadmin/products');
+
   return (
     <>
-      {/* Overlay for mobile */}
-      {isOpen && isMobile && (
+      {isOpen && isMobile ? (
         <div className="admin-sidebar-overlay" onClick={onClose} role="presentation" />
-      )}
+      ) : null}
 
-      <aside
-        className={`admin-sidebar${isOpen ? ' admin-sidebar--open' : ' admin-sidebar--closed'}`}
-      >
+      <aside className={`admin-sidebar${isOpen ? ' admin-sidebar--open' : ' admin-sidebar--closed'}`}>
         <div className="admin-sidebar__head">
-          <h2 className="admin-sidebar__title">Admin Panel</h2>
-          {isMobile && (
-            <button
-              type="button"
-              className="admin-sidebar__close"
-              onClick={onClose}
-              aria-label="Close menu"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="admin-sidebar__brand">
+            <div className="admin-sidebar__brand-mark" aria-hidden>
+              SN
+            </div>
+            <div className="admin-sidebar__brand-text">
+              <p className="admin-sidebar__brand-name">StylesNest</p>
+              <p className="admin-sidebar__brand-sub">Admin Panel</p>
+            </div>
+          </div>
+          {isMobile ? (
+            <button type="button" className="admin-sidebar__close" onClick={onClose} aria-label="Close menu">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
-          )}
+          ) : null}
         </div>
 
         <nav className="admin-sidebar__nav" aria-label="Admin navigation">
           <ul>
-            {menuItems.map((item) => {
-              // Products should not be active if a category is selected
-              const isActive = item.id === 'products' 
-                ? pathname === item.href && !activeCategory
-                : pathname === item.href;
-              return (
-                <li key={item.id}>
-                  <Link
-                    href={item.href}
-                    onClick={isMobile ? onClose : undefined}
-                    className={`admin-sidebar__link${isActive ? ' admin-sidebar__link--active' : ''}`}
-                  >
-                    <span className="admin-sidebar__link-icon">
-                      {item.icon}
-                    </span>
-                    <span style={{ 
-                      fontSize: '15px', 
-                      fontWeight: isActive ? '600' : '400',
-                      letterSpacing: '0.3px'
-                    }}>
-                      {item.id === 'dashboard' ? 'Dashboard' : 'Products'}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
+            <SidebarSection label="Overview" />
+            <SidebarLink
+              href="/khanadmin"
+              active={pathname === '/khanadmin'}
+              onNavigate={onNav}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              }
+            >
+              Dashboard
+            </SidebarLink>
 
-            {/* Categories Dropdown */}
+            <SidebarSection label="Catalog" />
+            <SidebarLink
+              href="/khanadmin/products"
+              active={isProductsActive}
+              onNavigate={onNav}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
+                </svg>
+              }
+            >
+              Products
+            </SidebarLink>
+
             <li>
-              {(() => {
-                const hasCategoryActive = activeCategory && pathname === '/khanadmin/products';
-                return (
-                  <button
-                    onClick={() => setCategoriesOpen(!categoriesOpen)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: '16px 20px',
-                      color: hasCategoryActive ? '#fff' : 'rgba(255,255,255,0.7)',
-                      backgroundColor: hasCategoryActive 
-                        ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                        : 'transparent',
-                      border: 'none',
-                      borderLeft: hasCategoryActive ? '4px solid #3498db' : '4px solid transparent',
-                      borderRadius: hasCategoryActive ? '0 12px 0 0' : '0',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      marginRight: '8px',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!hasCategoryActive) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                        e.currentTarget.style.transform = 'translateX(4px)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!hasCategoryActive) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.transform = 'translateX(0)';
-                      }
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: hasCategoryActive ? 1 : 0.7 }}>
-                        <line x1="8" y1="6" x2="21" y2="6" />
-                        <line x1="8" y1="12" x2="21" y2="12" />
-                        <line x1="8" y1="18" x2="21" y2="18" />
-                        <line x1="3" y1="6" x2="3.01" y2="6" />
-                        <line x1="3" y1="12" x2="3.01" y2="12" />
-                        <line x1="3" y1="18" x2="3.01" y2="18" />
-                      </svg>
-                      <span style={{ fontSize: '14px', fontWeight: hasCategoryActive ? '500' : '400' }}>
-                        Categories
-                      </span>
-                    </div>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      style={{
-                        transform: categoriesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease',
-                      }}
-                    >
-                      <polyline points="6 9 12 15 18 9" />
+              <button
+                type="button"
+                className={`admin-sidebar__toggle${hasCategoryActive ? ' admin-sidebar__toggle--active' : ''}`}
+                onClick={() => setCategoriesOpen(!categoriesOpen)}
+                aria-expanded={categoriesOpen}
+              >
+                <span className="admin-sidebar__toggle-inner">
+                  <span className="admin-sidebar__toggle-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="8" y1="6" x2="21" y2="6" />
+                      <line x1="8" y1="12" x2="21" y2="12" />
+                      <line x1="8" y1="18" x2="21" y2="18" />
+                      <line x1="3" y1="6" x2="3.01" y2="6" />
+                      <line x1="3" y1="12" x2="3.01" y2="12" />
+                      <line x1="3" y1="18" x2="3.01" y2="18" />
                     </svg>
-                  </button>
-                );
-              })()}
-
-              {/* Dropdown Items */}
+                  </span>
+                  <span className="admin-sidebar__toggle-label">Categories</span>
+                </span>
+                <Chevron open={categoriesOpen} />
+              </button>
               <div
-                style={{
-                  maxHeight: categoriesOpen ? '400px' : '0',
-                  overflow: 'hidden',
-                  transition: 'max-height 0.3s ease',
-                  backgroundColor: 'rgba(0,0,0,0.15)',
-                }}
+                className={`admin-sidebar__sub${categoriesOpen ? '' : ' admin-sidebar__sub--closed'}`}
+                style={{ maxHeight: categoriesOpen ? '420px' : 0 }}
               >
                 {categoryItems.map((cat) => {
-                  const IconComponent = cat.icon;
-                  const isActiveCategory = activeCategory === cat.id && pathname === '/khanadmin/products';
+                  const Icon = cat.icon;
+                  const active = activeCategory === cat.id && pathname === '/khanadmin/products';
                   return (
-                    <Link
+                    <SidebarSubLink
                       key={cat.id}
                       href={`/khanadmin/products?category=${cat.id}`}
-                      onClick={isMobile ? onClose : undefined}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 20px 12px 52px',
-                        color: isActiveCategory ? '#3498db' : 'rgba(255,255,255,0.6)',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        fontWeight: isActiveCategory ? '600' : '400',
-                        transition: 'all 0.3s ease',
-                        backgroundColor: isActiveCategory ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
-                        borderLeft: isActiveCategory ? '4px solid #3498db' : '4px solid transparent',
-                        borderRadius: isActiveCategory ? '0 8px 8px 0' : '0',
-                        marginRight: '8px',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActiveCategory) {
-                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                          e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActiveCategory) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                        }
-                      }}
+                      active={active}
+                      onNavigate={onNav}
+                      icon={<Icon size={15} />}
                     >
-                      <IconComponent size={16} style={{ color: isActiveCategory ? '#3498db' : 'inherit' }} />
-                      <span>{categoryLabels[cat.id] || cat.id}</span>
-                    </Link>
+                      {categoryLabels[cat.id] || cat.id}
+                    </SidebarSubLink>
                   );
                 })}
               </div>
             </li>
 
-            {/* Orders Dropdown */}
+            <SidebarSection label="Sales" />
             <li>
-              {(() => {
-                const isOrdersSection =
-                  pathname === '/khanadmin/orders' || pathname === '/khanadmin/cart-orders';
-                return (
-                  <button
-                    onClick={() => setOrdersOpen(!ordersOpen)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: '16px 20px',
-                      color: isOrdersSection ? '#fff' : 'rgba(255,255,255,0.7)',
-                      backgroundColor: isOrdersSection 
-                        ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                        : 'transparent',
-                      border: 'none',
-                      borderLeft: isOrdersSection ? '4px solid #3498db' : '4px solid transparent',
-                      borderRadius: isOrdersSection ? '0 12px 0 0' : '0',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      marginRight: '8px',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isOrdersSection) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                        e.currentTarget.style.transform = 'translateX(4px)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isOrdersSection) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.transform = 'translateX(0)';
-                      }
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: isOrdersSection ? 1 : 0.7 }}>
-                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                        <line x1="3" y1="6" x2="21" y2="6" />
-                        <path d="M16 10a4 4 0 0 1-8 0" />
-                      </svg>
-                      <span style={{ fontSize: '14px', fontWeight: isOrdersSection ? '500' : '400' }}>
-                        Orders
-                      </span>
-                    </div>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      style={{
-                        transform: ordersOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease',
-                      }}
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                );
-              })()}
-
-              {/* Orders Dropdown Items */}
-              <div
-                style={{
-                  maxHeight: ordersOpen ? '400px' : '0',
-                  overflow: 'hidden',
-                  transition: 'max-height 0.3s ease',
-                  backgroundColor: 'rgba(0,0,0,0.15)',
-                }}
+              <button
+                type="button"
+                className={`admin-sidebar__toggle${isOrdersSection ? ' admin-sidebar__toggle--active' : ''}`}
+                onClick={() => setOrdersOpen(!ordersOpen)}
+                aria-expanded={ordersOpen}
               >
-                {/* All Orders */}
-                <Link
+                <span className="admin-sidebar__toggle-inner">
+                  <span className="admin-sidebar__toggle-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                  </span>
+                  <span className="admin-sidebar__toggle-label">Orders</span>
+                </span>
+                <Chevron open={ordersOpen} />
+              </button>
+              <div
+                className={`admin-sidebar__sub${ordersOpen ? '' : ' admin-sidebar__sub--closed'}`}
+                style={{ maxHeight: ordersOpen ? '480px' : 0 }}
+              >
+                <SidebarSubLink
                   href="/khanadmin/orders"
-                  onClick={isMobile ? onClose : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 20px 12px 52px',
-                    color:
-                      pathname === '/khanadmin/orders' && !activeStatus ? '#3498db' : 'rgba(255,255,255,0.6)',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: pathname === '/khanadmin/orders' && !activeStatus ? '600' : '400',
-                    transition: 'all 0.3s ease',
-                    backgroundColor:
-                      pathname === '/khanadmin/orders' && !activeStatus ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
-                    borderLeft:
-                      pathname === '/khanadmin/orders' && !activeStatus ? '4px solid #3498db' : '4px solid transparent',
-                    borderRadius: pathname === '/khanadmin/orders' && !activeStatus ? '0 8px 8px 0' : '0',
-                    marginRight: '8px',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (pathname !== '/khanadmin/orders' || activeStatus) {
-                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (pathname !== '/khanadmin/orders' || activeStatus) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                    }
-                  }}
+                  active={pathname === '/khanadmin/orders' && !activeStatus}
+                  onNavigate={onNav}
+                  icon={<BiBox size={15} />}
                 >
-                  <BiBox size={16} style={{ color: pathname === '/khanadmin/orders' && !activeStatus ? '#3498db' : 'inherit' }} />
-                  <span>All</span>
-                </Link>
-
-                <Link
+                  All orders
+                </SidebarSubLink>
+                <SidebarSubLink
                   href="/khanadmin/cart-orders"
-                  onClick={isMobile ? onClose : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 20px 12px 52px',
-                    color: pathname === '/khanadmin/cart-orders' ? '#3498db' : 'rgba(255,255,255,0.6)',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: pathname === '/khanadmin/cart-orders' ? '600' : '400',
-                    transition: 'all 0.3s ease',
-                    backgroundColor:
-                      pathname === '/khanadmin/cart-orders' ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
-                    borderLeft: pathname === '/khanadmin/cart-orders' ? '4px solid #3498db' : '4px solid transparent',
-                    borderRadius: pathname === '/khanadmin/cart-orders' ? '0 8px 8px 0' : '0',
-                    marginRight: '8px',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (pathname !== '/khanadmin/cart-orders') {
-                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (pathname !== '/khanadmin/cart-orders') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                    }
-                  }}
+                  active={pathname === '/khanadmin/cart-orders'}
+                  onNavigate={onNav}
+                  icon={<BiShoppingBag size={15} />}
                 >
-                  <BiShoppingBag size={16} style={{ color: pathname === '/khanadmin/cart-orders' ? '#3498db' : 'inherit' }} />
-                  <span>Multi-item (cart)</span>
-                </Link>
-                
+                  Multi-item (cart)
+                </SidebarSubLink>
                 {orderStatusItems.map((status) => {
-                  const IconComponent = status.icon;
-                  const isActiveStatus = activeStatus === status.id && pathname === '/khanadmin/orders';
+                  const Icon = status.icon;
+                  const active = activeStatus === status.id && pathname === '/khanadmin/orders';
                   return (
-                    <Link
+                    <SidebarSubLink
                       key={status.id}
                       href={`/khanadmin/orders?status=${status.id}`}
-                      onClick={isMobile ? onClose : undefined}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 20px 12px 52px',
-                        color: isActiveStatus ? '#3498db' : 'rgba(255,255,255,0.6)',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        fontWeight: isActiveStatus ? '600' : '400',
-                        transition: 'all 0.3s ease',
-                        backgroundColor: isActiveStatus ? 'rgba(52, 152, 219, 0.15)' : 'transparent',
-                        borderLeft: isActiveStatus ? '4px solid #3498db' : '4px solid transparent',
-                        borderRadius: isActiveStatus ? '0 8px 8px 0' : '0',
-                        marginRight: '8px',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActiveStatus) {
-                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                          e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActiveStatus) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                        }
-                      }}
+                      active={active}
+                      onNavigate={onNav}
+                      icon={<Icon size={15} />}
                     >
-                      <IconComponent size={16} style={{ color: isActiveStatus ? '#3498db' : 'inherit' }} />
-                      <span>{statusLabels[status.id] || status.id}</span>
-                    </Link>
+                      {statusLabels[status.id]}
+                    </SidebarSubLink>
                   );
                 })}
               </div>
             </li>
 
-            {/* Unsubmitted Orders */}
-            <li>
-              <Link
-                href="/khanadmin/unsubmitted"
-                onClick={isMobile ? onClose : undefined}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '16px 20px',
-                  color: pathname === '/khanadmin/unsubmitted' ? '#fff' : 'rgba(255,255,255,0.7)',
-                  backgroundColor: pathname === '/khanadmin/unsubmitted' 
-                    ? 'linear-gradient(90deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.05) 100%)'
-                    : 'transparent',
-                  border: 'none',
-                  borderLeft: pathname === '/khanadmin/unsubmitted' ? '4px solid #FF9800' : '4px solid transparent',
-                  borderRadius: pathname === '/khanadmin/unsubmitted' ? '0 12px 12px 0' : '0',
-                  textDecoration: 'none',
-                  fontSize: '15px',
-                  fontWeight: pathname === '/khanadmin/unsubmitted' ? '600' : '400',
-                  transition: 'all 0.3s ease',
-                  marginRight: '8px',
-                }}
-                onMouseEnter={(e) => {
-                  if (pathname !== '/khanadmin/unsubmitted') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (pathname !== '/khanadmin/unsubmitted') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: pathname === '/khanadmin/unsubmitted' ? 1 : 0.7 }}>
+            <SidebarLink
+              href="/khanadmin/unsubmitted"
+              active={pathname === '/khanadmin/unsubmitted'}
+              onNavigate={onNav}
+              warn
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 11l3 3L22 4" />
                   <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                 </svg>
-                <span>Unsubmitted Orders</span>
-              </Link>
-            </li>
+              }
+            >
+              Unsubmitted
+            </SidebarLink>
 
-            {/* Landing (images, top bar, footer) */}
+            <SidebarSection label="Content" />
             <li>
-              {(() => {
-                const isLandingSection = shouldLandingBeOpen;
-                return (
-                  <button
-                    type="button"
-                    onClick={() => setLandingOpen(!landingOpen)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: '16px 20px',
-                      color: isLandingSection ? '#fff' : 'rgba(255,255,255,0.7)',
-                      backgroundColor: isLandingSection
-                        ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                        : 'transparent',
-                      border: 'none',
-                      borderLeft: isLandingSection ? '4px solid #3498db' : '4px solid transparent',
-                      borderRadius: isLandingSection ? '0 12px 0 0' : '0',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      marginRight: '8px',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isLandingSection) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                        e.currentTarget.style.transform = 'translateX(4px)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isLandingSection) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.transform = 'translateX(0)';
-                      }
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        style={{ opacity: isLandingSection ? 1 : 0.7 }}
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                      <span style={{ fontSize: '14px', fontWeight: isLandingSection ? '500' : '400' }}>
-                        Landing
-                      </span>
-                    </div>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      style={{
-                        transform: landingOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease',
-                      }}
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                );
-              })()}
-
-              <div
-                style={{
-                  maxHeight: landingOpen ? '280px' : '0',
-                  overflow: 'hidden',
-                  transition: 'max-height 0.3s ease',
-                  backgroundColor: 'rgba(0,0,0,0.15)',
-                }}
+              <button
+                type="button"
+                className={`admin-sidebar__toggle${shouldLandingBeOpen ? ' admin-sidebar__toggle--active' : ''}`}
+                onClick={() => setLandingOpen(!landingOpen)}
+                aria-expanded={landingOpen}
               >
-                <Link
+                <span className="admin-sidebar__toggle-inner">
+                  <span className="admin-sidebar__toggle-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </span>
+                  <span className="admin-sidebar__toggle-label">Landing</span>
+                </span>
+                <Chevron open={landingOpen} />
+              </button>
+              <div
+                className={`admin-sidebar__sub${landingOpen ? '' : ' admin-sidebar__sub--closed'}`}
+                style={{ maxHeight: landingOpen ? '280px' : 0 }}
+              >
+                <SidebarSubLink
                   href="/khanadmin/landing-images"
-                  onClick={isMobile ? onClose : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 20px 12px 52px',
-                    color:
-                      pathname === '/khanadmin/landing-images'
-                        ? '#3498db'
-                        : 'rgba(255,255,255,0.6)',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: pathname === '/khanadmin/landing-images' ? '600' : '400',
-                    transition: 'all 0.3s ease',
-                    backgroundColor:
-                      pathname === '/khanadmin/landing-images'
-                        ? 'rgba(52, 152, 219, 0.15)'
-                        : 'transparent',
-                    borderLeft:
-                      pathname === '/khanadmin/landing-images'
-                        ? '4px solid #3498db'
-                        : '4px solid transparent',
-                    borderRadius: pathname === '/khanadmin/landing-images' ? '0 8px 8px 0' : '0',
-                    marginRight: '8px',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (pathname !== '/khanadmin/landing-images') {
-                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (pathname !== '/khanadmin/landing-images') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                    }
-                  }}
+                  active={pathname === '/khanadmin/landing-images'}
+                  onNavigate={onNav}
+                  icon={
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  }
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                  <span>Landing images</span>
-                </Link>
-
-                <Link
+                  Landing images
+                </SidebarSubLink>
+                <SidebarSubLink
                   href="/khanadmin/landing/top-bar"
-                  onClick={isMobile ? onClose : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 20px 12px 52px',
-                    color:
-                      pathname === '/khanadmin/landing/top-bar'
-                        ? '#3498db'
-                        : 'rgba(255,255,255,0.6)',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: pathname === '/khanadmin/landing/top-bar' ? '600' : '400',
-                    transition: 'all 0.3s ease',
-                    backgroundColor:
-                      pathname === '/khanadmin/landing/top-bar'
-                        ? 'rgba(52, 152, 219, 0.15)'
-                        : 'transparent',
-                    borderLeft:
-                      pathname === '/khanadmin/landing/top-bar'
-                        ? '4px solid #3498db'
-                        : '4px solid transparent',
-                    borderRadius: pathname === '/khanadmin/landing/top-bar' ? '0 8px 8px 0' : '0',
-                    marginRight: '8px',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (pathname !== '/khanadmin/landing/top-bar') {
-                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (pathname !== '/khanadmin/landing/top-bar') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                    }
-                  }}
+                  active={pathname === '/khanadmin/landing/top-bar'}
+                  onNavigate={onNav}
+                  icon={
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 11h16v9H4zM9 11V7h6v4M12 2v3" />
+                    </svg>
+                  }
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 11h16v9H4zM9 11V7h6v4M12 2v3" />
-                  </svg>
-                  <span>Top bar</span>
-                </Link>
-
-                <Link
+                  Top bar
+                </SidebarSubLink>
+                <SidebarSubLink
                   href="/khanadmin/landing/footer"
-                  onClick={isMobile ? onClose : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 20px 12px 52px',
-                    color:
-                      pathname === '/khanadmin/landing/footer'
-                        ? '#3498db'
-                        : 'rgba(255,255,255,0.6)',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: pathname === '/khanadmin/landing/footer' ? '600' : '400',
-                    transition: 'all 0.3s ease',
-                    backgroundColor:
-                      pathname === '/khanadmin/landing/footer'
-                        ? 'rgba(52, 152, 219, 0.15)'
-                        : 'transparent',
-                    borderLeft:
-                      pathname === '/khanadmin/landing/footer'
-                        ? '4px solid #3498db'
-                        : '4px solid transparent',
-                    borderRadius: pathname === '/khanadmin/landing/footer' ? '0 8px 8px 0' : '0',
-                    marginRight: '8px',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (pathname !== '/khanadmin/landing/footer') {
-                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (pathname !== '/khanadmin/landing/footer') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                    }
-                  }}
+                  active={pathname === '/khanadmin/landing/footer'}
+                  onNavigate={onNav}
+                  icon={
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  }
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                  <span>Footer &amp; links</span>
-                </Link>
-
-                <Link
+                  Footer &amp; links
+                </SidebarSubLink>
+                <SidebarSubLink
                   href="/khanadmin/landing/legal-pages"
-                  onClick={isMobile ? onClose : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 20px 12px 52px',
-                    color:
-                      pathname === '/khanadmin/landing/legal-pages'
-                        ? '#3498db'
-                        : 'rgba(255,255,255,0.6)',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: pathname === '/khanadmin/landing/legal-pages' ? '600' : '400',
-                    transition: 'all 0.3s ease',
-                    backgroundColor:
-                      pathname === '/khanadmin/landing/legal-pages'
-                        ? 'rgba(52, 152, 219, 0.15)'
-                        : 'transparent',
-                    borderLeft:
-                      pathname === '/khanadmin/landing/legal-pages'
-                        ? '4px solid #3498db'
-                        : '4px solid transparent',
-                    borderRadius: pathname === '/khanadmin/landing/legal-pages' ? '0 8px 8px 0' : '0',
-                    marginRight: '8px',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (pathname !== '/khanadmin/landing/legal-pages') {
-                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (pathname !== '/khanadmin/landing/legal-pages') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                    }
-                  }}
+                  active={pathname === '/khanadmin/landing/legal-pages'}
+                  onNavigate={onNav}
+                  icon={
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  }
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                  </svg>
-                  <span>Policies &amp; legal</span>
-                </Link>
+                  Policies &amp; legal
+                </SidebarSubLink>
               </div>
             </li>
 
-            {/* Shop users (storefront accounts) */}
-            <li>
-              <Link
-                href="/khanadmin/users"
-                onClick={isMobile ? onClose : undefined}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '16px 20px',
-                  color: pathname === '/khanadmin/users' ? '#fff' : 'rgba(255,255,255,0.7)',
-                  textDecoration: 'none',
-                  backgroundColor: pathname === '/khanadmin/users'
-                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                    : 'transparent',
-                  borderLeft: pathname === '/khanadmin/users' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/khanadmin/users' ? '0 12px 12px 0' : '0',
-                  transition: 'all 0.3s ease',
-                  marginRight: '8px',
-                }}
-                onMouseEnter={(e) => {
-                  if (pathname !== '/khanadmin/users') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (pathname !== '/khanadmin/users') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
-                }}
-              >
-                <span
-                  style={{
-                    opacity: pathname === '/khanadmin/users' ? 1 : 0.7,
-                    color: pathname === '/khanadmin/users' ? '#3498db' : 'inherit',
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </span>
-                <span
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: pathname === '/khanadmin/users' ? '600' : '400',
-                    letterSpacing: '0.3px',
-                  }}
-                >
-                  Users
-                </span>
-              </Link>
-            </li>
+            <SidebarSection label="Store" />
+            <SidebarLink
+              href="/khanadmin/users"
+              active={pathname === '/khanadmin/users'}
+              onNavigate={onNav}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              }
+            >
+              Users
+            </SidebarLink>
+            <SidebarLink
+              href="/khanadmin/support"
+              active={pathname === '/khanadmin/support'}
+              onNavigate={onNav}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              }
+            >
+              Support
+            </SidebarLink>
+            <SidebarLink
+              href="/khanadmin/reviews"
+              active={pathname === '/khanadmin/reviews'}
+              onNavigate={onNav}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              }
+            >
+              Reviews
+            </SidebarLink>
+            <SidebarLink
+              href="/khanadmin/payment-methods"
+              active={pathname === '/khanadmin/payment-methods'}
+              onNavigate={onNav}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <line x1="2" y1="10" x2="22" y2="10" />
+                </svg>
+              }
+            >
+              Payment methods
+            </SidebarLink>
 
-            {/* Customer support */}
-            <li>
-              <Link
-                href="/khanadmin/support"
-                onClick={isMobile ? onClose : undefined}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '16px 20px',
-                  color: pathname === '/khanadmin/support' ? '#fff' : 'rgba(255,255,255,0.7)',
-                  textDecoration: 'none',
-                  backgroundColor: pathname === '/khanadmin/support'
-                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                    : 'transparent',
-                  borderLeft: pathname === '/khanadmin/support' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/khanadmin/support' ? '0 12px 12px 0' : '0',
-                  transition: 'all 0.3s ease',
-                  marginRight: '8px',
-                }}
-                onMouseEnter={(e) => {
-                  if (pathname !== '/khanadmin/support') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (pathname !== '/khanadmin/support') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
-                }}
-              >
-                <span
-                  style={{
-                    opacity: pathname === '/khanadmin/support' ? 1 : 0.7,
-                    color: pathname === '/khanadmin/support' ? '#3498db' : 'inherit',
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                </span>
-                <span
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: pathname === '/khanadmin/support' ? '600' : '400',
-                    letterSpacing: '0.3px',
-                  }}
-                >
-                  Support
-                </span>
-              </Link>
-            </li>
-
-            {/* Product reviews */}
-            <li>
-              <Link
-                href="/khanadmin/reviews"
-                onClick={isMobile ? onClose : undefined}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '16px 20px',
-                  color: pathname === '/khanadmin/reviews' ? '#fff' : 'rgba(255,255,255,0.7)',
-                  textDecoration: 'none',
-                  backgroundColor: pathname === '/khanadmin/reviews'
-                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                    : 'transparent',
-                  borderLeft: pathname === '/khanadmin/reviews' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/khanadmin/reviews' ? '0 12px 12px 0' : '0',
-                  transition: 'all 0.3s ease',
-                  marginRight: '8px',
-                }}
-                onMouseEnter={(e) => {
-                  if (pathname !== '/khanadmin/reviews') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (pathname !== '/khanadmin/reviews') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
-                }}
-              >
-                <span
-                  style={{
-                    opacity: pathname === '/khanadmin/reviews' ? 1 : 0.7,
-                    color: pathname === '/khanadmin/reviews' ? '#3498db' : 'inherit',
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                  </svg>
-                </span>
-                <span
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: pathname === '/khanadmin/reviews' ? '600' : '400',
-                    letterSpacing: '0.3px',
-                  }}
-                >
-                  Reviews
-                </span>
-              </Link>
-            </li>
-
-            {/* Payment methods */}
-            <li>
-              <Link
-                href="/khanadmin/payment-methods"
-                onClick={isMobile ? onClose : undefined}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '16px 20px',
-                  color: pathname === '/khanadmin/payment-methods' ? '#fff' : 'rgba(255,255,255,0.7)',
-                  textDecoration: 'none',
-                  backgroundColor: pathname === '/khanadmin/payment-methods'
-                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                    : 'transparent',
-                  borderLeft: pathname === '/khanadmin/payment-methods' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/khanadmin/payment-methods' ? '0 12px 12px 0' : '0',
-                  transition: 'all 0.3s ease',
-                  marginRight: '8px',
-                }}
-                onMouseEnter={(e) => {
-                  if (pathname !== '/khanadmin/payment-methods') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (pathname !== '/khanadmin/payment-methods') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
-                }}
-              >
-                <span style={{
-                  opacity: pathname === '/khanadmin/payment-methods' ? 1 : 0.7,
-                  color: pathname === '/khanadmin/payment-methods' ? '#3498db' : 'inherit',
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="2" y="5" width="20" height="14" rx="2" />
-                    <line x1="2" y1="10" x2="22" y2="10" />
-                  </svg>
-                </span>
-                <span style={{
-                  fontSize: '15px',
-                  fontWeight: pathname === '/khanadmin/payment-methods' ? '600' : '400',
-                  letterSpacing: '0.3px',
-                }}>
-                  Payment methods
-                </span>
-              </Link>
-            </li>
-
-            {/* Profile - End */}
-            <li>
-              <Link
-                href="/khanadmin/profile"
-                onClick={isMobile ? onClose : undefined}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '16px 20px',
-                  color: pathname === '/khanadmin/profile' ? '#fff' : 'rgba(255,255,255,0.7)',
-                  textDecoration: 'none',
-                  backgroundColor: pathname === '/khanadmin/profile' 
-                    ? 'linear-gradient(90deg, rgba(52, 152, 219, 0.2) 0%, rgba(52, 152, 219, 0.1) 100%)'
-                    : 'transparent',
-                  borderLeft: pathname === '/khanadmin/profile' ? '4px solid #3498db' : '4px solid transparent',
-                  borderRadius: pathname === '/khanadmin/profile' ? '0 12px 12px 0' : '0',
-                  transition: 'all 0.3s ease',
-                  marginRight: '8px',
-                  position: 'relative',
-                }}
-                onMouseEnter={(e) => {
-                  if (pathname !== '/khanadmin/profile') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (pathname !== '/khanadmin/profile') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
-                }}
-              >
-                <span style={{ 
-                  opacity: pathname === '/khanadmin/profile' ? 1 : 0.7,
-                  color: pathname === '/khanadmin/profile' ? '#3498db' : 'inherit',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                </span>
-                <span style={{ 
-                  fontSize: '15px', 
-                  fontWeight: pathname === '/khanadmin/profile' ? '600' : '400',
-                  letterSpacing: '0.3px'
-                }}>
-                  Profile
-                </span>
-              </Link>
-            </li>
+            <SidebarSection label="Account" />
+            <SidebarLink
+              href="/khanadmin/profile"
+              active={pathname === '/khanadmin/profile'}
+              onNavigate={onNav}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              }
+            >
+              Profile
+            </SidebarLink>
           </ul>
         </nav>
 
