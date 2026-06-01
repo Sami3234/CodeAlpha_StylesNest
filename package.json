@@ -1,6 +1,6 @@
 {
   "name": "stylesnest",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "engines": {
     "node": ">=20.9.0"
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.8.0",
     "dotenv": "^17.2.3",

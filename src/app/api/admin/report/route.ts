@@ -3,6 +3,9 @@ import { requireAdminSession } from '@/lib/require-admin-session';
 import { queryAdminBusinessReport } from '@/lib/admin-business-report';
 import { logAdminAction } from '@/lib/admin-audit';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdminSession(request);

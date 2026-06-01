@@ -4,6 +4,7 @@ import { queryAdminBootstrap } from '@/lib/admin-bootstrap';
 import { apiErrorResponse } from '@/lib/safe-errors';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /** Single admin load: orders, stats, products, dashboard counts — one auth check. */
 export async function GET(request: NextRequest) {

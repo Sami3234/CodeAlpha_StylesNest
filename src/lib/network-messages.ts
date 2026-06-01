@@ -6,7 +6,7 @@ export const OFFLINE_MESSAGE =
 
 export const NETWORK_ERROR_TITLE = 'Connection problem';
 export const NETWORK_ERROR_MESSAGE =
-  "We couldn't reach the server. Check your Wi‑Fi or mobile data, then try again.";
+  "We couldn't reach the server in time. Slow internet can cause this — wait a moment and tap Try again.";
 
 export const BACK_ONLINE_MESSAGE = "You're back online";
 

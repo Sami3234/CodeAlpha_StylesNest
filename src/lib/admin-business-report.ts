@@ -110,6 +110,7 @@ async function queryAllOrdersForReport(): Promise<Order[]> {
       payment_method_type, payment_method_label, payment_status, delivery_fee
     FROM orders
     ORDER BY date DESC, time DESC, id DESC
+    LIMIT 1500
   `;
   return rows.map((row: Record<string, unknown>) => mapReportOrderRow(row));
 }

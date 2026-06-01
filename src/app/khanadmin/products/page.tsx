@@ -8,8 +8,6 @@ import { useProducts } from '@/context/ProductContext';
 import { useToast } from '@/components/Toast';
 import TrendingProductsPicker from '@/components/admin/TrendingProductsPicker';
 import { getProductTitle } from '@/utils/getProductText';
-import { formatPrice } from '@/utils/formatPrice';
-
 import { adminProductT, type AdminProductTFunction } from '@/lib/admin/product-form-shared';
 import AdminLoading from '@/components/admin/AdminLoading';
 import AdminPkrAmount from '@/components/admin/AdminPkrAmount';

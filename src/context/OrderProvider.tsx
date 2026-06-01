@@ -19,7 +19,7 @@ import { sanitizeAdminOrderStats, type AdminOrderStats } from '@/lib/admin-order
 import { safeCount } from '@/lib/safe-number';
 import type { FetchErrorKind } from '@/lib/is-network-error';
 import { clientFetchWithDbRetry } from '@/lib/client-fetch-retry';
-import { clientFetch, NetworkError } from '@/lib/client-fetch';
+import { clientFetch, isGatewayTimeoutStatus, NetworkError } from '@/lib/client-fetch';
 import { dispatchAdminBootstrap, type AdminBootstrapPayload } from '@/lib/admin-bootstrap';
 import { isProtectedAdminPanelPath } from '@/lib/admin-path';
 import { ensureAdminAuthenticated } from '@/lib/admin-auth-client';
@@ -276,6 +276,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         cache: 'no-store',
       });
       if (response.status === 401) return false;
+      if (isGatewayTimeoutStatus(response.status)) {
+        setFetchError('network');
+        return false;
+      }
       if (!response.ok) {
         const errBody = await readApiErrorBody(response);
         console.error(
@@ -312,40 +316,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, [pathname, applyLivePayload]);
-
-  const fetchFullOrders = useCallback(async (): Promise<boolean> => {
-    if (!isProtectedAdminPanelPath(pathname)) return false;
-    if (!(await ensureAdminAuthenticated())) return false;
-    try {
-      const response = await clientFetchWithDbRetry('/api/admin/orders/list?limit=500&page=1', {
-        cache: 'no-store',
-      });
-      if (response.status === 401) return false;
-      if (!response.ok) {
-        const errBody = await readApiErrorBody(response);
-        console.error(
-          'Failed to fetch orders:',
-          response.status,
-          clientMessageFromApi(errBody),
-          errBody.code ?? '',
-        );
-        setFetchError(classifyFetchError());
-        return false;
-      }
-      const data = await response.json();
-      const incoming: Order[] = data.orders ?? [];
-      incoming.forEach((o) => knownOrderIdsRef.current.add(o.id));
-      setOrders(incoming);
-      pollInitializedRef.current = true;
-      setFetchError(null);
-      return true;
-    } catch (error) {
-      if (error instanceof NetworkError) setFetchError(error.kind);
-      else setFetchError(classifyFetchError());
-      console.error('Failed to fetch orders:', error);
-      return false;
-    }
-  }, [pathname]);
 
   const fetchReviewLive = useCallback(
     async (options?: { silent?: boolean; notify?: boolean }) => {
@@ -563,7 +533,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         setFetchError(null);
         await loadAdminBootstrap();
         if (!cancelled) {
-          await defer(2000);
+          await defer(400);
           if (!cancelled) await fetchReviewLive({ silent: true, notify: false });
           if (!cancelled) await fetchSupportLive({ silent: true, notify: false });
           if (!cancelled) await fetchUserLive({ silent: true, notify: false });

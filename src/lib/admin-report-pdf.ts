@@ -11,7 +11,6 @@ const FOOTER_Y = PAGE_H - 10;
 const LINE_H = 3.6;
 const FONT_SM = 7.5;
 const FONT_MD = 8.5;
-const FONT_LG = 10;
 
 const BRAND = 'StylesNest';
 const ACCENT: [number, number, number] = [255, 107, 53];

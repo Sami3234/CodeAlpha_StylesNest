@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { IoDownloadOutline, IoDocumentTextOutline } from 'react-icons/io5';
+import { clientFetchWithDbRetry } from '@/lib/client-fetch-retry';
 import { downloadAdminReportPdf } from '@/lib/admin-report-pdf';
 import type { AdminReportPayload } from '@/lib/admin-business-report';
 import './admin-report-download.css';
@@ -15,7 +16,11 @@ export default function AdminReportDownload() {
     setError('');
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/report');
+      const response = await clientFetchWithDbRetry(
+        '/api/admin/report',
+        { cache: 'no-store', timeoutMs: 55_000 },
+        2,
+      );
       const data = (await response.json()) as {
         success?: boolean;
         report?: AdminReportPayload;
@@ -23,14 +28,18 @@ export default function AdminReportDownload() {
       };
 
       if (!response.ok || !data.success || !data.report) {
-        setError(data.error || 'Could not load report data');
+        setError(
+          response.status === 504
+            ? 'Report took too long (server timeout). Try again on faster internet.'
+            : data.error || 'Could not load report data',
+        );
         return;
       }
 
       downloadAdminReportPdf(data.report);
       setLastGenerated(data.report.generatedAt);
     } catch {
-      setError('Network error while preparing report');
+      setError('Connection timed out or network error. Try again on stable internet.');
     } finally {
       setLoading(false);
     }

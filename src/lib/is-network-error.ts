@@ -18,7 +18,7 @@ export function isLikelyNetworkError(error: unknown): boolean {
     );
   }
   if (error instanceof Error && error.name === 'AbortError') {
-    return false;
+    return true;
   }
   return false;
 }

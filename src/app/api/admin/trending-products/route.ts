@@ -11,6 +11,7 @@ import {
 import { requireAdminSession } from '@/lib/require-admin-session';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const admin = await requireAdminSession(request);

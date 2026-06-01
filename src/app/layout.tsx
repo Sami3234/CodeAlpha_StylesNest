@@ -9,6 +9,7 @@ import { getContactForSchema } from "@/lib/seo/contact-for-schema";
 import AppProviders from "@/components/providers/AppProviders";
 import MetaPixelScript from "@/components/analytics/MetaPixelScript";
 import MetaPixelPageView from "@/components/analytics/MetaPixelPageView";
+import { Analytics } from "@vercel/analytics/next";
 import { auth } from "@/auth";
 
 export { rootMetadata as metadata };
@@ -59,6 +60,7 @@ export default async function RootLayout({
         />
         <AppProviders session={session}>{children}</AppProviders>
         <MetaPixelPageView />
+        <Analytics />
       </body>
     </html>
   );

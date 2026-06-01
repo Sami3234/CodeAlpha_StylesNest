@@ -78,14 +78,6 @@ export default function OrderDateRangeBar({ filterToday, onClearToday }: Props) 
     pushParams(router, params);
   };
 
-  const clearRange = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('from');
-    params.delete('to');
-    params.delete('period');
-    pushParams(router, params);
-  };
-
   const applyPreset = (key: 'today' | '7d' | '30d' | 'month') => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('period');

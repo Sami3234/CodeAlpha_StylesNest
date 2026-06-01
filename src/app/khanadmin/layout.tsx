@@ -80,11 +80,12 @@ export default function AdminLayout({
     }
   }, [router]);
 
+  const checkingAuth = !isPublicRoute && isCheckingAuth;
+  const authenticated = !isPublicRoute && isAuthenticated;
+
   useEffect(() => {
     if (isPublicRoute) {
       verifyStartedRef.current = false;
-      setIsCheckingAuth(false);
-      setIsAuthenticated(false);
       return;
     }
 
@@ -93,14 +94,17 @@ export default function AdminLayout({
     }
     verifyStartedRef.current = true;
 
-    if (canTrustAdminSessionLocally()) {
-      setIsAuthenticated(true);
-      setIsCheckingAuth(false);
-    } else {
-      setIsCheckingAuth(true);
-    }
-
     let cancelled = false;
+
+    const optimisticFrame = requestAnimationFrame(() => {
+      if (cancelled) return;
+      if (canTrustAdminSessionLocally()) {
+        setIsAuthenticated(true);
+        setIsCheckingAuth(false);
+      } else {
+        setIsCheckingAuth(true);
+      }
+    });
 
     void (async () => {
       const ok = await runAuthCheck();
@@ -111,6 +115,7 @@ export default function AdminLayout({
 
     return () => {
       cancelled = true;
+      cancelAnimationFrame(optimisticFrame);
     };
   }, [isPublicRoute, runAuthCheck]);
 
@@ -136,7 +141,7 @@ export default function AdminLayout({
     );
   }
 
-  if (isCheckingAuth) {
+  if (checkingAuth) {
     return (
       <AdminLoading
         variant="fullscreen"
@@ -150,7 +155,7 @@ export default function AdminLayout({
     return <>{children}</>;
   }
 
-  if (!isAuthenticated) {
+  if (!authenticated) {
     return null;
   }
 

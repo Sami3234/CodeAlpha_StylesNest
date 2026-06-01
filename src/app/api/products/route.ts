@@ -9,8 +9,6 @@ import { parseProductMeta } from '@/lib/product-meta';
 import { apiErrorResponse } from '@/lib/safe-errors';
 import { hasValidAdminSession, requireAdminSession } from '@/lib/require-admin-session';
 import {
-  applyRealSoldCounts,
-  getSoldCountsMapFromOrders,
   repairSoldCountsInBackground,
 } from '@/lib/product-sold-count';
 import {
@@ -23,6 +21,7 @@ import {
 } from '@/lib/product-code';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 function serializeClothesOptions(category: string, clothesOptions: unknown) {
   if (isShoesCategory(category)) return null;
@@ -79,17 +78,14 @@ export async function GET(request: NextRequest) {
 
     const mapped = rows.map((row: Record<string, unknown>) => mapProductRow(row));
 
-    // Storefront: real sold counts from orders. Admin list: use DB values (faster).
-    let products = includeInactive
-      ? mapped
-      : applyRealSoldCounts(mapped, await getSoldCountsMapFromOrders());
-
-    const reviewSummaries = await getProductReviewSummariesMap();
-    products = attachReviewSummariesToProducts(products, reviewSummaries);
-
+    // Storefront: use DB sold_count (fast). Full order scan runs in background only.
+    let products = mapped;
     if (!includeInactive) {
       repairSoldCountsInBackground();
     }
+
+    const reviewSummaries = await getProductReviewSummariesMap();
+    products = attachReviewSummariesToProducts(products, reviewSummaries);
 
     return NextResponse.json(
       { products },

@@ -5,9 +5,7 @@ import {
   queryRecentOrders,
 } from '@/lib/admin-orders-query';
 import { queryAdminDashboardStats } from '@/lib/admin-dashboard-stats';
-import { ensureProductSchema } from '@/lib/ensure-product-schema';
 import { mapProductRow } from '@/lib/product-mapper';
-import { sql } from '@/lib/db';
 import { safeCount } from '@/lib/safe-number';
 
 export const ADMIN_BOOTSTRAP_EVENT = 'stylesnest:admin-bootstrap';
@@ -18,6 +16,7 @@ export type AdminBootstrapPayload = {
   stats: Awaited<ReturnType<typeof queryAdminOrderStats>>;
   recentOrders: Awaited<ReturnType<typeof queryRecentOrders>>;
   abandonedCount: number;
+  /** Empty — catalog loads via GET /api/products (faster bootstrap on slow networks). */
   products: ReturnType<typeof mapProductRow>[];
   totalUsers: number;
   totalReviews: number;
@@ -28,21 +27,6 @@ export type AdminBootstrapPayload = {
   unsubmittedOrders: number;
 };
 
-async function queryAdminCatalogProducts() {
-  await ensureProductSchema();
-  const rows = await sql`
-    SELECT
-      id, title_en, title_ar, description_en, description_ar,
-      current_price, original_price, discount, image, images,
-      free_delivery, sold_count, category, features_en, features_ar,
-      pricing_tiers, clothes_options, shoes_options, product_meta,
-      status, created_at, updated_at
-    FROM products
-    ORDER BY created_at DESC
-  `;
-  return rows.map((row: Record<string, unknown>) => mapProductRow(row));
-}
-
 async function safeAbandonedCount(): Promise<number> {
   try {
     return safeCount(await queryAbandonedCount());
@@ -51,15 +35,14 @@ async function safeAbandonedCount(): Promise<number> {
   }
 }
 
-/** One DB auth window: orders + stats + products + dashboard counts for admin panel load. */
+/** Orders + stats + dashboard counts. Products fetched separately to avoid Vercel timeouts. */
 export async function queryAdminBootstrap(): Promise<AdminBootstrapPayload> {
-  const listResult = await queryAdminOrdersList({ limit: 500, page: 1 });
+  const listResult = await queryAdminOrdersList({ limit: 200, page: 1 });
   const stats = await queryAdminOrderStats();
-  const [recentOrders, abandonedCount, dashboard, products] = await Promise.all([
+  const [recentOrders, abandonedCount, dashboard] = await Promise.all([
     queryRecentOrders(8),
     safeAbandonedCount(),
     queryAdminDashboardStats(),
-    queryAdminCatalogProducts(),
   ]);
 
   return {
@@ -68,7 +51,7 @@ export async function queryAdminBootstrap(): Promise<AdminBootstrapPayload> {
     stats,
     recentOrders,
     abandonedCount,
-    products,
+    products: [],
     ...dashboard,
   };
 }

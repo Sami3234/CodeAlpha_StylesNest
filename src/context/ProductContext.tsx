@@ -93,21 +93,21 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!adminPanel) return;
 
-    let handled = false;
+    void fetchProducts();
+
     const onBootstrap = (event: Event) => {
       const detail = (event as CustomEvent<AdminBootstrapPayload>).detail;
-      if (Array.isArray(detail?.products)) {
+      if (Array.isArray(detail?.products) && detail.products.length > 0) {
         setProducts(detail.products);
         setFetchError(null);
-        handled = true;
       }
       setLoading(false);
     };
 
     window.addEventListener(ADMIN_BOOTSTRAP_EVENT, onBootstrap);
     const fallbackTimer = window.setTimeout(() => {
-      if (!handled) void fetchProducts();
-    }, 10_000);
+      setLoading(false);
+    }, 30_000);
 
     return () => {
       window.removeEventListener(ADMIN_BOOTSTRAP_EVENT, onBootstrap);
@@ -135,7 +135,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [adminPanel, fetchProducts]);
+  }, [adminPanel, fetchProducts, pathname]);
 
   const addProduct = async (productData: Partial<Product>) => {
     // Extract text - English only

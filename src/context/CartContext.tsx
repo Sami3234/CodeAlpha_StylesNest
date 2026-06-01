@@ -95,9 +95,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
+  // Load cart after mount so server HTML matches first client paint (empty cart).
   useEffect(() => {
-    setLines(loadInitialLines());
-    setHydrated(true);
+    const frame = requestAnimationFrame(() => {
+      setLines(loadInitialLines());
+      setHydrated(true);
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
